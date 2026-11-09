@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Brigade Harmony Engine Architecture",
+    "output": ".archify/architecture-harmony-engine-20261109-213600/harmony-engine.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "input-melody",
+      "type": "external",
+      "label": "Melody Input",
+      "sublabel": "Soprano MIDI / Notes",
+      "pos": [40, 260],
+      "size": [130, 60]
+    },
+    {
+      "id": "melody-analyzer",
+      "type": "backend",
+      "label": "Melody & Phrase Parser",
+      "sublabel": "Period & Metric Grid",
+      "pos": [280, 260],
+      "size": [150, 60],
+      "tag": "Form Analysis"
+    },
+    {
+      "id": "rule-knowledge",
+      "type": "database",
+      "label": "Brigade Rule Base",
+      "sublabel": "T-S-D & Doublings",
+      "pos": [540, 100],
+      "size": [160, 60]
+    },
+    {
+      "id": "syntax-engine",
+      "type": "backend",
+      "label": "Harmonic Syntax Engine",
+      "sublabel": "Hierarchical CFG / AST",
+      "pos": [540, 260],
+      "size": [160, 60],
+      "tag": "Macro Syntax"
+    },
+    {
+      "id": "voicing-generator",
+      "type": "backend",
+      "label": "SATB State Generator",
+      "sublabel": "Combinatorial Voicings",
+      "pos": [810, 260],
+      "size": [160, 60],
+      "tag": "Micro States"
+    },
+    {
+      "id": "voice-validator",
+      "type": "security",
+      "label": "Voice-Leading Checker",
+      "sublabel": "Zero 5ths/8ves & Leaps",
+      "pos": [810, 420],
+      "size": [160, 64],
+      "tag": "Hard Constraint Gate"
+    },
+    {
+      "id": "style-prior",
+      "type": "cloud",
+      "label": "Neural Style Prior",
+      "sublabel": "Expressive Soft Weights",
+      "pos": [1080, 100],
+      "size": [160, 60],
+      "tag": "Optional ML"
+    },
+    {
+      "id": "dp-solver",
+      "type": "backend",
+      "label": "Viterbi DP Optimizer",
+      "sublabel": "Global Cost Minimizer",
+      "pos": [1080, 260],
+      "size": [160, 60],
+      "tag": "O(N*K^2)"
+    },
+    {
+      "id": "score-export",
+      "type": "frontend",
+      "label": "Score Exporter",
+      "sublabel": "MusicXML / LilyPond / MIDI",
+      "pos": [1350, 260],
+      "size": [150, 60]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Macro-Level: Phrase & Syntax",
+      "wraps": ["melody-analyzer", "rule-knowledge", "syntax-engine"]
+    },
+    {
+      "kind": "region",
+      "label": "Micro-Level: Voice Leading & DP Optimization",
+      "wraps": ["voicing-generator", "voice-validator", "style-prior", "dp-solver"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-input-analyzer",
+      "from": "input-melody",
+      "to": "melody-analyzer",
+      "label": "parse notes",
+      "variant": "emphasis"
+    },
+    {
+      "id": "conn-analyzer-syntax",
+      "from": "melody-analyzer",
+      "to": "syntax-engine",
+      "label": "phrase metrics"
+    },
+    {
+      "id": "conn-rules-syntax",
+      "from": "rule-knowledge",
+      "to": "syntax-engine",
+      "label": "CFG grammar",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "conn-syntax-voicing",
+      "from": "syntax-engine",
+      "to": "voicing-generator",
+      "label": "chord plan",
+      "variant": "emphasis"
+    },
+    {
+      "id": "conn-voicing-validator",
+      "from": "voicing-generator",
+      "to": "voice-validator",
+      "label": "candidate edges",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "conn-validator-solver",
+      "from": "voice-validator",
+      "to": "dp-solver",
+      "label": "valid transitions",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "conn-voicing-solver",
+      "from": "voicing-generator",
+      "to": "dp-solver",
+      "label": "state lattice"
+    },
+    {
+      "id": "conn-prior-solver",
+      "from": "style-prior",
+      "to": "dp-solver",
+      "label": "soft weights",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "conn-solver-export",
+      "from": "dp-solver",
+      "to": "score-export",
+      "label": "optimal SATB",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Macro Syntax (Период & Каденции)",
+      "items": [
+        "Контекстно-свободная грамматика (CFG) функционального круга T-S-D-T",
+        "Опорные каденционные узлы (K64 -> D7 -> T) ставятся детерминированно в 4 и 8 тактах",
+        "Полный запрет оборотов D -> S и недопустимых разрешений обращения"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Micro SATB (Голосоведение & Витерби)",
+      "items": [
+        "Комбинаторная генерация вертикалей SATB с фильтрацией диапазонов и удвоений",
+        "Валидатор переходов жестко отсекает параллельные 5/8 и ходы на ув.2",
+        "Алгоритм Витерби находит глобально оптимальное голосоведение за O(N*K^2)"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Expressive AI Prior",
+      "items": [
+        "Легковесная нейросеть дает мягкие веса (heuristic score) переходам",
+        "Сетка не может сломать правила: запрещенные ветки получают бесконечный штраф"
+      ]
+    }
+  ]
+}

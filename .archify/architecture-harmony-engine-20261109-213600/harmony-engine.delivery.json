@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "2a11b266-e8bf-469b-a5d1-d8bfc854ab46",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "D:\\aitraining\\.archify\\architecture-harmony-engine-20261109-213600\\candidate.json",
+  "output": "D:\\aitraining\\.archify\\architecture-harmony-engine-20261109-213600\\harmony-engine.html",
+  "specification": {
+    "sha256": "e0a818cadda22144a8dda8c23c1036c98ab9ff68a70896bfbddde5b6a4c0b86e",
+    "bytes": 5692
+  },
+  "artifact": {
+    "sha256": "b038c60687da6dd0f5157ed58b99584353ccfdf0883d008a879b6399a87a1fd0",
+    "bytes": 766319
+  }
+}

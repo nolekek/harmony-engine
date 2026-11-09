@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "Машиночитаемый каталог правил гармонизации по Бригадному учебнику (Способин, Дубовский, Евсеев, Соколов)",
+  "rules": [
+    {
+      "id": "VOICE_RANGE_BOUNDS",
+      "category": "spacing",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Выход голоса за пределы допустимого диапазона (S: 60-81, A: 55-74, T: 48-67, B: 40-60 MIDI)."
+    },
+    {
+      "id": "VOICE_CROSSING",
+      "category": "spacing",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Перекрещивание голосов: нарушение вертикального порядка S >= A >= T >= B."
+    },
+    {
+      "id": "UPPER_VOICE_SPACING_LIMIT",
+      "category": "spacing",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Разрыв фактуры: расстояние между S и A или между A и T превышает чистую октаву (12 полутонов)."
+    },
+    {
+      "id": "BASS_TENOR_SPACING_LIMIT",
+      "category": "spacing",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Расстояние между тенором и басом превышает две октавы (24 полутона)."
+    },
+    {
+      "id": "PARALLEL_FIFTHS",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Параллельные чистые квинты между любой парой голосов в прямом движении."
+    },
+    {
+      "id": "PARALLEL_OCTAVES",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Параллельные чистые октавы или унисоны между любой парой голосов в прямом движении."
+    },
+    {
+      "id": "CONTRARY_FIFTHS",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Противоположные чистые квинты между любой парой голосов."
+    },
+    {
+      "id": "CONTRARY_OCTAVES",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Противоположные чистые октавы между любой парой голосов."
+    },
+    {
+      "id": "HIDDEN_FIFTHS_OCTAVES",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Скрытые квинты/октавы в крайних голосах: S и B идут в одном направлении в 5 или 8 без поступенного шага в S."
+    },
+    {
+      "id": "VOICE_OVERLAPPING",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Перекрывание голосов: голос идет выше предыдущей ноты верхнего соседа или ниже предыдущей ноты нижнего соседа."
+    },
+    {
+      "id": "MELODIC_AUGMENTED_INTERVAL",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Мелодический ход на увеличенный интервал (ув.2, ув.4) в любом голосе без разрешения."
+    },
+    {
+      "id": "MELODIC_SEVENTH_LEAP",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Мелодический ход на септиму в любом голосе."
+    },
+    {
+      "id": "DOUBLING_MAIN_TRIAD_ROOT",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В главных трезвучиях (T, S, D) удваивается строго прима. Удвоение терции запрещено."
+    },
+    {
+      "id": "DOUBLING_K64_BASS_ONLY",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В каденционном квартсекстаккорде (K64) строго удваивается бас (квинта аккорда)."
+    },
+    {
+      "id": "DOUBLING_DECEPTIVE_VI_THIRD",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В трезвучии VI ступени при прерванном обороте (D -> VI) строго удваивается терция (I ступень тоники)."
+    },
+    {
+      "id": "RESOLUTION_SEVENTH_DOWN",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Септима доминантсептаккорда (D7 и обращений) обязана разрешаться на ступень вниз."
+    },
+    {
+      "id": "RESOLUTION_D43_TO_T6",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "D43 обязан разрешаться в T6, так как септима в басу обязана сделать шаг вниз в терцию тоники."
+    },
+    {
+      "id": "RESOLUTION_LEADING_TONE_UP",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Вводный тон (VII) в крайних голосах при автентическом обороте обязан идти в тонику (I)."
+    },
+    {
+      "id": "CADENCE_K64_STRONG_BEAT",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "K64 обязан стоять на сильной или относительно сильной доле по сравнению с последующим D/D7."
+    },
+    {
+      "id": "SYNTAX_NO_D_TO_S",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Запрещен функциональный откат из доминантовой группы в субдоминантовую (D -> S, D -> II)."
+    },
+    {
+      "id": "SOFT_SHORTEST_PATH_LAW",
+      "category": "voice_leading",
+      "severity": "soft_penalty",
+      "penalty": 1.0,
+      "description": "Закон кратчайшего пути: штраф пропорционален сумме смещений средних голосов |dA| + |dT|."
+    },
+    {
+      "id": "SOFT_CONTRARY_BASS_MOTION",
+      "category": "voice_leading",
+      "severity": "soft_penalty",
+      "penalty": -5.0,
+      "description": "Поощрение (бонус): противоположное движение баса относительно сопрано."
+    },
+    {
+      "id": "SOFT_SMOOTH_BASS_LINE",
+      "category": "voice_leading",
+      "severity": "soft_penalty",
+      "penalty": 2.0,
+      "description": "Штраф за избыточные скачки баса шире кварты/квинты без необходимости."
+    }
+  ]
+}
