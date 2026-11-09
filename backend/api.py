@@ -44,6 +44,7 @@ class MelodyNoteItem(BaseModel):
 class HarmonizeRequest(BaseModel):
     melody: list[MelodyNoteItem]
     key: KeyRequest = Field(default_factory=KeyRequest)
+    time_signature: str = "4/4"
     allow_extended_ranges: bool = False
     allow_secondary_dominants: bool = True
     max_plans: int = 50
@@ -56,23 +57,29 @@ class VoicingItem(BaseModel):
     bass: int
     measure: int | None = None
     is_downbeat: bool = False
+    duration: str | None = None
 
 
 class GradeRequest(BaseModel):
     voicings: list[VoicingItem]
     key: KeyRequest = Field(default_factory=KeyRequest)
     chords: list[str] | None = None
+    time_signature: str = "4/4"
+    durations: list[str] | None = None
     allow_extended_ranges: bool = False
 
 
 class ParseTextRequest(BaseModel):
     text: str
     key: KeyRequest = Field(default_factory=KeyRequest)
+    time_signature: str = "4/4"
 
 
 class ExportMidiRequest(BaseModel):
     voicings: list[VoicingItem]
     bpm: int = 80
+    time_signature: str = "4/4"
+    durations: list[str] | None = None
 
 
 class ExportMusicXmlRequest(BaseModel):
@@ -80,6 +87,8 @@ class ExportMusicXmlRequest(BaseModel):
     chords: list[str] | None = None
     key: KeyRequest = Field(default_factory=KeyRequest)
     title: str = "Harmonization Exercise"
+    time_signature: str = "4/4"
+    durations: list[str] | None = None
 
 
 @router.get("/keys")
@@ -99,7 +108,12 @@ def api_detect_key(melody: list[MelodyNoteItem]) -> dict[str, Any]:
 @router.post("/parse-text")
 def api_parse_text(req: ParseTextRequest) -> list[dict[str, Any]]:
     """Parses text notation (note names, MIDI numbers, or scale degrees)."""
-    return parse_text_melody(req.text, key_tonic=req.key.tonic, key_mode=req.key.mode)
+    return parse_text_melody(
+        req.text,
+        key_tonic=req.key.tonic,
+        key_mode=req.key.mode,
+        time_signature=req.time_signature,
+    )
 
 
 @router.post("/harmonize")
@@ -114,11 +128,28 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
     if not req.melody:
         raise HTTPException(status_code=400, detail="Мелодия не может быть пустой.")
 
-    melody_dicts = [
-        {"pitch": m.pitch, "is_downbeat": m.is_downbeat, "duration": m.duration}
-        for m in req.melody
-    ]
+    from src.harmony.core.types import TimeSignature, calculate_metric_structure
+
     parsed_key = Key(tonic=req.key.tonic, mode=req.key.mode)
+    time_sig = TimeSignature.parse(req.time_signature)
+
+    # Derive exact metric structure, downbeats, and durations
+    metric_info = calculate_metric_structure(
+        [
+            {
+                "pitch": m.pitch,
+                "duration": m.duration,
+                "is_downbeat": m.is_downbeat if m.is_downbeat else None,
+            }
+            for m in req.melody
+        ],
+        default_time_signature=time_sig,
+    )
+    melody_dicts = [
+        {"pitch": info["pitch"], "is_downbeat": info["is_downbeat"], "duration": info["duration"]}
+        for info in metric_info
+    ]
+    durations_list = [info["duration"] for info in metric_info]
 
     # 1. Synthesize candidate functional plans
     grammar = HarmonicGrammar(key=parsed_key)
@@ -171,6 +202,8 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
                 chords=plan,
                 key=parsed_key,
                 title=f"Гармонизация в {parsed_key.tonic} {parsed_key.mode}",
+                durations=durations_list,
+                time_signature=str(time_sig),
             )
 
             # Generate descriptive summary for the candidate card
@@ -186,6 +219,8 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
                 "chords": chords_list,
                 "progression_preview": progression_str,
                 "description": cadence_type,
+                "time_signature": str(time_sig),
+                "durations": durations_list,
                 "voicings": voicings_list,
                 "musicxml": colored_xml,
                 "ascii_score": ascii_text,
@@ -222,11 +257,14 @@ def api_grade(req: GradeRequest) -> dict[str, Any]:
     ]
     parsed_key = Key(tonic=req.key.tonic, mode=req.key.mode)
 
+    durs = req.durations or [v.duration for v in req.voicings if v.duration]
     report = grade_satb_solution(
         voicings=voicings,
         key=parsed_key,
         chords=req.chords,
         allow_extended_ranges=req.allow_extended_ranges,
+        time_signature=req.time_signature,
+        durations=durs,
     )
 
     colored_xml = build_colored_musicxml(
@@ -234,6 +272,8 @@ def api_grade(req: GradeRequest) -> dict[str, Any]:
         chords=req.chords,
         key=parsed_key,
         title=f"Проверка голосоведения: {report.grade}",
+        durations=durs,
+        time_signature=req.time_signature,
     )
     ascii_score = format_ascii_score(
         voicings=voicings,
@@ -320,7 +360,13 @@ def api_export_midi(req: ExportMidiRequest):
         Voicing(soprano=v.soprano, alto=v.alto, tenor=v.tenor, bass=v.bass)
         for v in req.voicings
     ]
-    data = generate_midi_bytes(voicings, bpm=req.bpm)
+    durs = req.durations or [v.duration for v in req.voicings if v.duration]
+    data = generate_midi_bytes(
+        voicings,
+        bpm=req.bpm,
+        durations=durs,
+        time_signature=req.time_signature,
+    )
     return Response(
         content=data,
         media_type="audio/midi",
@@ -336,11 +382,14 @@ def api_export_musicxml(req: ExportMusicXmlRequest):
         for v in req.voicings
     ]
     parsed_key = Key(tonic=req.key.tonic, mode=req.key.mode)
+    durs = req.durations or [v.duration for v in req.voicings if v.duration]
     xml_str = build_colored_musicxml(
         voicings=voicings,
         chords=req.chords,
         key=parsed_key,
         title=req.title,
+        durations=durs,
+        time_signature=req.time_signature,
     )
     return Response(
         content=xml_str,

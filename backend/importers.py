@@ -22,18 +22,60 @@ def midi_to_note_name(pitch: int) -> str:
     return f"{names[pc]}{octave}"
 
 
-def parse_text_melody(text: str, key_tonic: str = "C", key_mode: str = "Major") -> list[dict[str, Any]]:
+def normalize_duration_str(dur_str: str | None) -> str:
+    if not dur_str:
+        return "half"
+    s = dur_str.strip().lower()
+    if s in ("dotted_half", "half.", "half_dot", "3", "3.0"):
+        return "dotted_half"
+    if s in ("dotted_quarter", "quarter.", "quarter_dot", "1.5"):
+        return "dotted_quarter"
+    if s in ("dotted_eighth", "eighth.", "eighth_dot", "0.75"):
+        return "dotted_eighth"
+    if s in ("dotted_whole", "whole.", "whole_dot", "6", "6.0"):
+        return "dotted_whole"
+    if s in ("quarter", "1", "1.0", "4"):
+        return "quarter"
+    if s in ("half", "2", "2.0"):
+        return "half"
+    if s in ("whole", "w"):
+        return "whole"
+    if s in ("eighth", "8", "0.5"):
+        return "eighth"
+    if s in ("sixteenth", "16", "0.25"):
+        return "sixteenth"
+    return s
+
+
+def parse_text_melody(
+    text: str,
+    key_tonic: str = "C",
+    key_mode: str = "Major",
+    time_signature: str = "4/4",
+) -> list[dict[str, Any]]:
     """
     Parses melody from text string.
     Supports:
     1. Note names with octave: 'C4 E4 F4 G4 E4 D4 C4' or comma-separated 'C4, E4, F4, G4'
-    2. Note names with duration: 'C4:half E4:quarter F4:quarter'
-    3. Scale degrees for theorists: '1 3 4 5 3 2 1' (maps relative to key_tonic in octave 4)
-    4. Comma-separated MIDI pitch numbers: '60, 64, 65, 67, 64, 62, 60'
+    2. Note names with duration and dots: 'C4:dotted_quarter D4:eighth E4:dotted_half' or 'C4:quarter.'
+    3. Inline time signature tags: '[3/4] C4:quarter E4:quarter G4:quarter'
+    4. Scale degrees for theorists: '1 3 4 5 3 2 1' (maps relative to key_tonic in octave 4)
+    5. Comma-separated MIDI pitch numbers: '60, 64, 65, 67, 64, 62, 60'
     """
     cleaned = text.strip()
     if not cleaned:
         return []
+
+    # Check for inline meter like [3/4] or leading 3/4
+    ts_bracket = re.search(r"\[(\d+/\d+)\]", cleaned)
+    if ts_bracket:
+        time_signature = ts_bracket.group(1)
+        cleaned = cleaned.replace(ts_bracket.group(0), " ").strip()
+    elif re.match(r"^(\d+/\d+)\b", cleaned):
+        m_lead = re.match(r"^(\d+/\d+)\b", cleaned)
+        if m_lead:
+            time_signature = m_lead.group(1)
+            cleaned = cleaned[m_lead.end():].strip()
 
     tokens = [t.strip().rstrip(",") for t in re.split(r"[\s,]+", cleaned) if t.strip().rstrip(",")]
     if not tokens:
@@ -44,68 +86,65 @@ def parse_text_melody(text: str, key_tonic: str = "C", key_mode: str = "Major") 
     # Check if tokens are MIDI numbers (>= 36 and <= 96)
     all_midi = all(t.isdigit() and int(t) >= 36 for t in tokens)
 
-    from src.harmony.core.types import Key
+    from src.harmony.core.types import Key, calculate_metric_structure
     parsed_key = Key(tonic=key_tonic, mode=key_mode)
     scale_pcs = parsed_key.scale_pcs
 
-    melody: list[dict[str, Any]] = []
+    raw_items: list[dict[str, Any]] = []
 
     if all_degrees:
         for i, tok in enumerate(tokens):
             deg = int(tok)
-            # Map degree 1-7 to scale PC
             deg_idx = (deg - 1) % 7
             pc = scale_pcs[deg_idx]
-            # Place in octave 4 or 5
             pitch = 60 + pc
             if pitch < 60:
                 pitch += 12
-            melody.append({
-                "pitch": pitch,
-                "is_downbeat": (i % 2 == 0),
-                "duration": "half",
-                "name": midi_to_note_name(pitch),
-            })
-        return melody
+            raw_items.append({"pitch": pitch, "duration": "half"})
 
-    if all_midi:
+    elif all_midi:
         for i, tok in enumerate(tokens):
             p = int(tok)
-            melody.append({
-                "pitch": p,
-                "is_downbeat": (i % 2 == 0),
-                "duration": "half",
-                "name": midi_to_note_name(p),
-            })
-        return melody
+            raw_items.append({"pitch": p, "duration": "half"})
 
-    # Parse note names like C4, D#4, Eb4, G5
-    note_pattern = re.compile(r"^([A-Ga-g])([#bB]?)(-?\d+)?(?::(\w+))?$")
-    for i, tok in enumerate(tokens):
-        m = note_pattern.match(tok)
-        if not m:
-            continue
-        step = m.group(1).upper()
-        acc = m.group(2)
-        oct_str = m.group(3)
-        dur_str = m.group(4) or "half"
+    else:
+        # Parse note names like C4, D#4, Eb4, G5:quarter., C4:dotted_half
+        note_pattern = re.compile(r"^([A-Ga-g])([#bB]?)(-?\d+)?(?::([A-Za-z0-9_./]+))?$")
+        for i, tok in enumerate(tokens):
+            m = note_pattern.match(tok)
+            if not m:
+                continue
+            step = m.group(1).upper()
+            acc = m.group(2)
+            oct_str = m.group(3)
+            dur_str = normalize_duration_str(m.group(4))
 
-        octave = int(oct_str) if oct_str is not None else 4
-        pc = STEP_TO_PC.get(step, 0)
-        if acc in ("#", "S"):
-            pc = (pc + 1) % 12
-        elif acc in ("B", "b"):
-            pc = (pc - 1) % 12
+            octave = int(oct_str) if oct_str is not None else 4
+            pc = STEP_TO_PC.get(step, 0)
+            if acc in ("#", "S"):
+                pc = (pc + 1) % 12
+            elif acc in ("B", "b"):
+                pc = (pc - 1) % 12
 
-        pitch = (octave + 1) * 12 + pc
-        melody.append({
-            "pitch": pitch,
-            "is_downbeat": (i % 2 == 0),
-            "duration": dur_str,
-            "name": midi_to_note_name(pitch),
-        })
+            pitch = (octave + 1) * 12 + pc
+            raw_items.append({"pitch": pitch, "duration": dur_str})
 
-    return melody
+    if not raw_items:
+        return []
+
+    # Calculate exact metric coordinates and downbeats
+    metric_info = calculate_metric_structure(raw_items, default_time_signature=time_signature)
+    return [
+        {
+            "pitch": info["pitch"],
+            "name": midi_to_note_name(info["pitch"]),
+            "duration": info["duration"],
+            "is_downbeat": info["is_downbeat"],
+            "measure": info["measure"],
+            "time_signature": str(info["time_signature"]),
+        }
+        for info in metric_info
+    ]
 
 
 def parse_musicxml_content(xml_text: str) -> dict[str, Any]:
@@ -202,7 +241,9 @@ def parse_musicxml_content(xml_text: str) -> dict[str, Any]:
             staff_val = staff_elem.text.strip() if staff_elem is not None and staff_elem.text else "1"
 
             type_elem = note.find("type")
-            duration_name = type_elem.text.strip() if type_elem is not None and type_elem.text else "half"
+            duration_name = type_elem.text.strip().lower() if type_elem is not None and type_elem.text else "half"
+            if note.find("dot") is not None:
+                duration_name = f"dotted_{duration_name}"
 
             lyric_elem = note.find(".//lyric/text")
             lyric_text = lyric_elem.text.strip() if lyric_elem is not None and lyric_elem.text else ""
@@ -282,14 +323,17 @@ def parse_midi_file(data: bytes) -> dict[str, Any]:
 
     mid = mido.MidiFile(file=io.BytesIO(data))
     
-    # Collect note-on events with timestamp
+    # Collect note-on events with timestamp and detect time signature
     events: list[dict[str, Any]] = []
+    detected_ts = {"beats": 4, "beat_type": 4}
 
     for track_idx, track in enumerate(mid.tracks):
         current_time = 0
         for msg in track:
             current_time += msg.time
-            if msg.type == "note_on" and msg.velocity > 0:
+            if msg.type == "time_signature":
+                detected_ts = {"beats": msg.numerator, "beat_type": msg.denominator}
+            elif msg.type == "note_on" and msg.velocity > 0:
                 events.append({
                     "pitch": msg.note,
                     "time": current_time,
@@ -298,7 +342,7 @@ def parse_midi_file(data: bytes) -> dict[str, Any]:
                 })
 
     if not events:
-        return {"soprano_melody": [], "satb_voicings": []}
+        return {"soprano_melody": [], "satb_voicings": [], "time_signature": detected_ts}
 
     # Sort events by time
     events.sort(key=lambda e: e["time"])
@@ -342,4 +386,5 @@ def parse_midi_file(data: bytes) -> dict[str, Any]:
     return {
         "soprano_melody": soprano_melody,
         "satb_voicings": satb_voicings,
+        "time_signature": detected_ts,
     }

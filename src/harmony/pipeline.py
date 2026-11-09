@@ -5,10 +5,16 @@ and Multi-Format Score Exporting.
 """
 
 from typing import Any, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from src.harmony.core.types import Voicing, Key, Chord
+from src.harmony.core.types import (
+    Voicing,
+    Key,
+    Chord,
+    TimeSignature,
+    calculate_metric_structure,
+)
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.syntax.grammar import HarmonicGrammar
 from src.harmony.solver.viterbi import ViterbiSolver, SolverResult
@@ -23,9 +29,17 @@ class HarmonizationSolution:
     voicings: list[Voicing]
     cost: float
     ascii_score: str
+    durations: list[str] = field(default_factory=list)
+    time_signature: str = "4/4"
 
     def to_musicxml(self, title: str = "Harmonization Exercise") -> str:
-        return export_to_musicxml(self.voicings, self.chords, title=title)
+        return export_to_musicxml(
+            self.voicings,
+            self.chords,
+            title=title,
+            durations=self.durations,
+            time_signature=self.time_signature,
+        )
 
     def save_musicxml(self, output_path: str | Path, title: str = "Harmonization Exercise") -> Path:
         p = Path(output_path)
@@ -34,7 +48,13 @@ class HarmonizationSolution:
         return p
 
     def save_midi(self, output_path: str | Path, bpm: int = 80) -> Path:
-        return export_to_midi(self.voicings, output_path, bpm=bpm)
+        return export_to_midi(
+            self.voicings,
+            output_path,
+            bpm=bpm,
+            durations=self.durations,
+            time_signature=self.time_signature,
+        )
 
 
 @dataclass
@@ -66,6 +86,7 @@ class Harmonizer:
         melody: Sequence[int | dict[str, Any]],
         key: Key | str,
         chords: Sequence[Chord | str] | None = None,
+        time_signature: Any = "4/4",
         max_plans: int = 30,
         allow_extended_ranges: bool = False,
     ) -> HarmonizationResult:
@@ -73,8 +94,22 @@ class Harmonizer:
         Harmonizes a soprano melody.
         If 'chords' is provided, uses that functional plan directly.
         Otherwise, uses the HarmonicGrammar to synthesize valid plans.
+        Supports custom time signatures (3/4, 2/4, 6/8, 4/4) and dotted durations.
         """
         parsed_key = key if isinstance(key, Key) else Key(key)
+        parsed_ts = TimeSignature.parse(time_signature)
+
+        # Pre-process melody with exact metric structure and durations
+        metric_info = calculate_metric_structure(melody, default_time_signature=parsed_ts)
+        processed_melody = [
+            {
+                "pitch": info["pitch"],
+                "duration": info["duration"],
+                "is_downbeat": info["is_downbeat"],
+            }
+            for info in metric_info
+        ]
+        durations_list = [info["duration"] for info in metric_info]
 
         # 1. Determine functional plans to try
         plans_to_try: list[list[Chord]] = []
@@ -83,7 +118,7 @@ class Harmonizer:
             plans_to_try.append(parsed_chords)
         else:
             grammar = HarmonicGrammar(key=parsed_key)
-            plans_to_try = grammar.generate_plans(melody=melody, key=parsed_key, max_plans=max_plans)
+            plans_to_try = grammar.generate_plans(melody=processed_melody, key=parsed_key, max_plans=max_plans)
 
         if not plans_to_try:
             return HarmonizationResult(
@@ -98,7 +133,7 @@ class Harmonizer:
         # 2. Run Viterbi optimization on candidate plans
         for plan in plans_to_try:
             res: SolverResult = self.solver.solve(
-                melody=melody,
+                melody=processed_melody,
                 chords=plan,
                 key=parsed_key,
                 allow_extended_ranges=allow_extended_ranges,
@@ -116,6 +151,8 @@ class Harmonizer:
                         voicings=res.voicings,
                         cost=res.total_cost,
                         ascii_score=ascii_view,
+                        durations=durations_list,
+                        time_signature=str(parsed_ts),
                     )
                 )
                 if len(solutions) >= 3:

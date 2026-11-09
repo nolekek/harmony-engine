@@ -67,6 +67,12 @@ def main(argv: list[str] | None = None) -> int:
         default="Brigade Harmony Exercise",
         help="Title for the score",
     )
+    parser.add_argument(
+        "--time-signature",
+        type=str,
+        default="4/4",
+        help="Time signature (meter), e.g. 4/4, 3/4, 2/4, 6/8 (default: 4/4)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -77,9 +83,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error parsing inputs: {e}", file=sys.stderr)
         return 1
 
-    print(f"Harmonizing {len(melody)} notes in {key.name}...")
+    print(f"Harmonizing {len(melody)} notes in {key.name} ({args.time_signature})...")
     harmonizer = Harmonizer()
-    result = harmonizer.harmonize(melody=melody, key=key)
+    result = harmonizer.harmonize(melody=melody, key=key, time_signature=args.time_signature)
 
     if not result.is_success or not result.best_solution:
         print(f"FAILED: {result.message}", file=sys.stderr)

@@ -26,6 +26,8 @@ interface ControlPanelProps {
   selectedKey: { tonic: string; mode: string };
   onKeyChange: (key: { tonic: string; mode: string }) => void;
   onAutoDetectKey: () => void;
+  timeSignature: string;
+  onTimeSignatureChange: (val: string) => void;
   allowExtendedRanges: boolean;
   onToggleExtendedRanges: (val: boolean) => void;
   allowSecondaryDominants: boolean;
@@ -43,6 +45,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   selectedKey,
   onKeyChange,
   onAutoDetectKey,
+  timeSignature,
+  onTimeSignatureChange,
   allowExtendedRanges,
   onToggleExtendedRanges,
   allowSecondaryDominants,
@@ -101,6 +105,29 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>Авто</span>
           </button>
+        </div>
+      </div>
+
+      {/* Time Signature (Meter) Selector */}
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-slate-300">
+          Размер (Метр)
+        </label>
+        <div className="flex gap-2">
+          {["4/4", "3/4", "2/4", "6/8", "3/8"].map((ts) => (
+            <button
+              key={ts}
+              type="button"
+              onClick={() => onTimeSignatureChange(ts)}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+                timeSignature === ts
+                  ? "bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-500/30"
+                  : "bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 text-slate-300"
+              }`}
+            >
+              {ts}
+            </button>
+          ))}
         </div>
       </div>
 

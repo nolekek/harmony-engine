@@ -31,8 +31,11 @@ interface MelodyInputProps {
 
 const DURATIONS = [
   { id: "whole", label: "Целая (𝅝)", beats: 4 },
+  { id: "dotted_half", label: "Половинная с точкой (𝅗𝅥.)", beats: 3 },
   { id: "half", label: "Половинная (𝅗𝅥)", beats: 2 },
+  { id: "dotted_quarter", label: "Четверть с точкой (𝅘𝅥.)", beats: 1.5 },
   { id: "quarter", label: "Четверть (𝅘𝅥)", beats: 1 },
+  { id: "dotted_eighth", label: "Восьмая с точкой (𝅘𝅥𝅮.)", beats: 0.75 },
   { id: "eighth", label: "Восьмая (𝅘𝅥𝅮)", beats: 0.5 },
 ];
 

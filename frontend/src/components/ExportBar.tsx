@@ -6,6 +6,7 @@ interface ExportBarProps {
   voicings: SATBVoicing[];
   chords?: string[];
   keyObj: { tonic: string; mode: string };
+  timeSignature?: string;
   asciiScore?: string;
 }
 
@@ -13,6 +14,7 @@ export const ExportBar: React.FC<ExportBarProps> = ({
   voicings,
   chords = [],
   keyObj,
+  timeSignature = "4/4",
   asciiScore = "",
 }) => {
   const [copied, setCopied] = useState(false);
@@ -26,7 +28,7 @@ export const ExportBar: React.FC<ExportBarProps> = ({
       const resp = await fetch("/api/export/midi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voicings, bpm: 80 }),
+        body: JSON.stringify({ voicings, bpm: 80, time_signature: timeSignature }),
       });
       if (!resp.ok) throw new Error("Failed to export MIDI");
 
@@ -58,6 +60,7 @@ export const ExportBar: React.FC<ExportBarProps> = ({
           chords,
           key: keyObj,
           title: `Гармонизация в ${keyObj.tonic} ${keyObj.mode}`,
+          time_signature: timeSignature,
         }),
       });
       if (!resp.ok) throw new Error("Failed to export MusicXML");

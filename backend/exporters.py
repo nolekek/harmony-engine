@@ -27,6 +27,8 @@ def build_colored_musicxml(
     chords: Sequence[Chord | str] | None = None,
     key: Any = None,
     title: str = "Гармонизация мелодии (Бригадный учебник)",
+    durations: Sequence[Any] | None = None,
+    time_signature: Any = "4/4",
 ) -> str:
     """
     Generates standard MusicXML 3.1 partwise score and enriches it with:
@@ -37,8 +39,16 @@ def build_colored_musicxml(
        - Voice 4 (Bass): #dc2626 (red)
     2. Relocates harmonic functional analysis (T, S, D, K64...) from soprano to Bass
        so OSMD renders Sposobin markings directly under the bass staff.
+    3. Respects time signatures, meter changes, and dotted durations.
     """
-    raw_xml = export_to_musicxml(voicings=voicings, chords=chords, key=key, title=title)
+    raw_xml = export_to_musicxml(
+        voicings=voicings,
+        chords=chords,
+        key=key,
+        title=title,
+        durations=durations,
+        time_signature=time_signature,
+    )
     
     root = ET.fromstring(raw_xml)
 
@@ -98,13 +108,24 @@ def build_colored_musicxml(
     return reparsed.toprettyxml(indent="  ")
 
 
-def generate_midi_bytes(voicings: Sequence[Any], bpm: int = 80) -> bytes:
+def generate_midi_bytes(
+    voicings: Sequence[Any],
+    bpm: int = 80,
+    durations: Sequence[Any] | None = None,
+    time_signature: Any = "4/4",
+) -> bytes:
     """Generates standard MIDI file in-memory and returns raw bytes."""
     import tempfile
     with tempfile.NamedTemporaryFile(suffix=".mid", delete=False) as tmp:
         tmp_path = Path(tmp.name)
     try:
-        export_to_midi(voicings=voicings, output_path=tmp_path, bpm=bpm)
+        export_to_midi(
+            voicings=voicings,
+            output_path=tmp_path,
+            bpm=bpm,
+            durations=durations,
+            time_signature=time_signature,
+        )
         return tmp_path.read_bytes()
     finally:
         if tmp_path.exists():

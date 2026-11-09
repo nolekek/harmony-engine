@@ -271,3 +271,196 @@ def parse_chord_symbol(chord: Any) -> str:
     if upper_c in ("D6", "D-6"):
         return "D6"
     return cleaned
+
+
+@dataclass(frozen=True)
+class TimeSignature:
+    """
+    Musical time signature (meter), e.g. 4/4, 3/4, 6/8, 2/4.
+    """
+    beats: int = 4
+    beat_type: int = 4
+
+    @property
+    def measure_duration_quarters(self) -> float:
+        """Total duration of one complete measure in quarter notes."""
+        return self.beats * (4.0 / self.beat_type)
+
+    @classmethod
+    def parse(cls, val: Any) -> "TimeSignature":
+        if isinstance(val, TimeSignature):
+            return val
+        if isinstance(val, (tuple, list)) and len(val) >= 2:
+            return cls(int(val[0]), int(val[1]))
+        if isinstance(val, str):
+            s = val.strip().lower()
+            if s == "c":
+                return cls(4, 4)
+            if s in ("c/", "cut", "alla_breve", "allabreve"):
+                return cls(2, 2)
+            if "/" in s:
+                parts = s.split("/")
+                return cls(int(parts[0]), int(parts[1]))
+        return cls(4, 4)
+
+    def is_downbeat(self, beat_offset_quarters: float) -> bool:
+        """
+        Determines whether a quarter-note offset from measure start is a metric downbeat/accent.
+        """
+        offset = round(beat_offset_quarters, 4)
+        if offset == 0.0:
+            return True
+        # Secondary downbeat in 4/4 or 2/2 (the 3rd quarter note)
+        if self.beats == 4 and self.beat_type == 4 and abs(offset - 2.0) < 1e-4:
+            return True
+        if self.beats == 2 and self.beat_type == 2 and abs(offset - 2.0) < 1e-4:
+            return True
+        # In 6/8, the 4th eighth note (offset 1.5 quarters) is the secondary accent
+        if self.beats == 6 and self.beat_type == 8 and abs(offset - 1.5) < 1e-4:
+            return True
+        return False
+
+    def __str__(self) -> str:
+        return f"{self.beats}/{self.beat_type}"
+
+
+DURATION_TO_QUARTERS: dict[str, float] = {
+    "whole": 4.0,
+    "dotted_whole": 6.0,
+    "whole.": 6.0,
+    "dotted_half": 3.0,
+    "half_dot": 3.0,
+    "half.": 3.0,
+    "half": 2.0,
+    "dotted_quarter": 1.5,
+    "quarter_dot": 1.5,
+    "quarter.": 1.5,
+    "quarter": 1.0,
+    "dotted_eighth": 0.75,
+    "eighth_dot": 0.75,
+    "eighth.": 0.75,
+    "eighth": 0.5,
+    "dotted_sixteenth": 0.375,
+    "sixteenth": 0.25,
+}
+
+
+def parse_duration_quarters(dur: Any) -> float:
+    """Converts a duration string, float, or int to quarter-note units."""
+    if isinstance(dur, (int, float)):
+        return float(dur)
+    if isinstance(dur, str):
+        key = dur.strip().lower()
+        if key in DURATION_TO_QUARTERS:
+            return DURATION_TO_QUARTERS[key]
+        try:
+            return float(key)
+        except ValueError:
+            pass
+    return 2.0
+
+
+def quarters_to_xml_type_and_dots(quarters: float) -> tuple[str, int]:
+    """
+    Returns (xml_type_name, dot_count) for a given duration in quarter units.
+    """
+    q = round(quarters, 4)
+    if abs(q - 6.0) < 1e-4:
+        return ("whole", 1)
+    if abs(q - 4.0) < 1e-4:
+        return ("whole", 0)
+    if abs(q - 3.0) < 1e-4:
+        return ("half", 1)
+    if abs(q - 2.0) < 1e-4:
+        return ("half", 0)
+    if abs(q - 1.5) < 1e-4:
+        return ("quarter", 1)
+    if abs(q - 1.0) < 1e-4:
+        return ("quarter", 0)
+    if abs(q - 0.75) < 1e-4:
+        return ("eighth", 1)
+    if abs(q - 0.5) < 1e-4:
+        return ("eighth", 0)
+    if abs(q - 0.375) < 1e-4:
+        return ("sixteenth", 1)
+    if abs(q - 0.25) < 1e-4:
+        return ("sixteenth", 0)
+    if q >= 2.0:
+        return ("half", 0)
+    return ("quarter", 0)
+
+
+def calculate_metric_structure(
+    notes: Sequence[Any],
+    default_time_signature: Any = "4/4",
+) -> list[dict[str, Any]]:
+    """
+    Calculates exact metric coordinates for a sequence of melody notes or chord slices.
+    Handles variable durations, dotted notes, and time signature changes.
+    Returns for each note:
+    - measure (int, 1-indexed)
+    - offset_in_measure (float, in quarters)
+    - is_downbeat (bool)
+    - time_signature (TimeSignature)
+    - duration (str)
+    - duration_quarters (float)
+    - time_sig_changed (bool)
+    """
+    curr_time_sig = TimeSignature.parse(default_time_signature)
+    curr_measure = 1
+    curr_offset = 0.0
+    prev_time_sig = None
+
+    result: list[dict[str, Any]] = []
+
+    for n in notes:
+        # Check if note carries its own time signature change
+        note_time_sig = None
+        if isinstance(n, dict):
+            if "time_signature" in n and n["time_signature"]:
+                note_time_sig = TimeSignature.parse(n["time_signature"])
+            dur_raw = n.get("duration", "half")
+            pitch = n.get("pitch", 60)
+            explicit_db = n.get("is_downbeat")
+        else:
+            dur_raw = "half"
+            pitch = int(n)
+            explicit_db = None
+
+        if note_time_sig is not None and note_time_sig != curr_time_sig:
+            if curr_offset > 1e-4:
+                curr_measure += 1
+                curr_offset = 0.0
+            curr_time_sig = note_time_sig
+
+        dur_q = parse_duration_quarters(dur_raw)
+
+        if curr_offset >= curr_time_sig.measure_duration_quarters - 1e-4:
+            curr_measure += 1
+            curr_offset = 0.0
+
+        time_sig_changed = (curr_time_sig != prev_time_sig)
+        prev_time_sig = curr_time_sig
+
+        if explicit_db is not None:
+            is_db = bool(explicit_db)
+        else:
+            is_db = curr_time_sig.is_downbeat(curr_offset)
+
+        xml_type, dots = quarters_to_xml_type_and_dots(dur_q)
+        norm_dur_name = f"dotted_{xml_type}" if dots > 0 else xml_type
+
+        result.append({
+            "pitch": pitch,
+            "duration": norm_dur_name,
+            "duration_quarters": dur_q,
+            "measure": curr_measure,
+            "offset_in_measure": round(curr_offset, 4),
+            "is_downbeat": is_db,
+            "time_signature": curr_time_sig,
+            "time_sig_changed": time_sig_changed,
+        })
+
+        curr_offset += dur_q
+
+    return result

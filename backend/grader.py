@@ -162,11 +162,14 @@ def grade_satb_solution(
     key: Any = "C Major",
     chords: Sequence[Any] | None = None,
     allow_extended_ranges: bool = False,
+    time_signature: Any = "4/4",
+    durations: Sequence[Any] | None = None,
 ) -> GraderReport:
     """
     Grades an entire 4-part SATB progression using the Brigade RuleEngine.
     Returns structured diagnostic feedback with problem measures, severity,
     and a final pedagogical grade according to the Moscow Conservatory standards.
+    Supports variable meters (3/4, 2/4, 6/8, 4/4) and dotted durations.
     """
     if not voicings:
         return GraderReport(
@@ -188,8 +191,16 @@ def grade_satb_solution(
             grade="2 (Не зачтено)",
         )
 
+    from src.harmony.core.types import calculate_metric_structure, to_satb
     parsed_key = key if isinstance(key, Key) else Key(tonic=parse_key(key)[0], mode=parse_key(key)[1])
     engine = RuleEngine(allow_extended_ranges=allow_extended_ranges)
+
+    # Calculate metric structure and exact measure indices
+    melody_items = []
+    for i, v in enumerate(voicings):
+        dur = durations[i] if durations and i < len(durations) else "half"
+        melody_items.append({"pitch": to_satb(v)[0], "duration": dur})
+    metric_info = calculate_metric_structure(melody_items, default_time_signature=time_signature)
 
     violations_list: list[GraderViolation] = []
     problem_measures_set: set[int] = set()
@@ -198,8 +209,8 @@ def grade_satb_solution(
 
     # 1. Validate each vertical slice
     for i, v in enumerate(voicings):
-        measure_num = (i // 2) + 1
-        is_downbeat = (i % 2 == 0)
+        measure_num = metric_info[i]["measure"]
+        is_downbeat = metric_info[i]["is_downbeat"]
         curr_chord = chord_list[i] if i < len(chord_list) else None
 
         res_static = engine.validate_voicing(
@@ -233,8 +244,8 @@ def grade_satb_solution(
 
     # 2. Validate each horizontal transition
     for i in range(1, len(voicings)):
-        measure_num = (i // 2) + 1
-        is_downbeat = (i % 2 == 0)
+        measure_num = metric_info[i]["measure"]
+        is_downbeat = metric_info[i]["is_downbeat"]
         prev_v = voicings[i - 1]
         curr_v = voicings[i]
         prev_chord = chord_list[i - 1] if (i - 1) < len(chord_list) else None

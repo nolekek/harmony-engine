@@ -1,15 +1,44 @@
 """
 MusicXML exporter for classical four-part harmony (SATB).
 Produces valid MusicXML 3.1 / 4.0 partwise score files readable by MuseScore, Sibelius, Dorico, and Finale.
+Supports variable durations, dotted notes, and time signature changes across measures.
 """
 
 from typing import Any, Sequence
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from src.harmony.core.types import Voicing, Key, Chord, to_satb, parse_key
+from src.harmony.core.types import (
+    Voicing,
+    Key,
+    Chord,
+    TimeSignature,
+    to_satb,
+    parse_key,
+    quarters_to_xml_type_and_dots,
+    calculate_metric_structure,
+)
 
 STEP_NAMES = ("C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B")
 ALTERS = (0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0)
+
+FIFTHS_TABLE = {
+    # Major
+    ("C", "MAJOR"): 0, ("G", "MAJOR"): 1, ("D", "MAJOR"): 2, ("A", "MAJOR"): 3,
+    ("E", "MAJOR"): 4, ("B", "MAJOR"): 5, ("F#", "MAJOR"): 6, ("C#", "MAJOR"): 7,
+    ("F", "MAJOR"): -1, ("BB", "MAJOR"): -2, ("EB", "MAJOR"): -3, ("AB", "MAJOR"): -4,
+    ("DB", "MAJOR"): -5, ("GB", "MAJOR"): -6,
+    # Minor
+    ("A", "MINOR"): 0, ("E", "MINOR"): 1, ("B", "MINOR"): 2, ("F#", "MINOR"): 3,
+    ("C#", "MINOR"): 4, ("G#", "MINOR"): 5, ("D#", "MINOR"): 6, ("A#", "MINOR"): 7,
+    ("D", "MINOR"): -1, ("G", "MINOR"): -2, ("C", "MINOR"): -3, ("F", "MINOR"): -4,
+    ("BB", "MINOR"): -5, ("EB", "MINOR"): -6,
+}
+
+
+def get_fifths(tonic: str, mode: str) -> int:
+    t_clean = tonic.strip().upper().replace("H", "B")
+    m_clean = "MINOR" if "MINOR" in mode.upper() else "MAJOR"
+    return FIFTHS_TABLE.get((t_clean, m_clean), 0)
 
 
 def midi_to_pitch_element(midi_pitch: int) -> ET.Element:
@@ -34,14 +63,21 @@ def midi_to_pitch_element(midi_pitch: int) -> ET.Element:
 
 
 def export_to_musicxml(
-    voicings: Sequence[Voicing | tuple[int, int, int, int]],
+    voicings: Sequence[Voicing | tuple[int, int, int, int] | dict[str, int]],
     chords: Sequence[Chord | str] | None = None,
     key: Any = None,
     title: str = "Harmonization Exercise",
     composer: str = "Brigade Harmony Engine",
+    durations: Sequence[Any] | None = None,
+    time_signature: Any = "4/4",
 ) -> str:
     """
     Exports a sequence of SATB voicings to a standard MusicXML 3.1 Partwise document.
+    Properly formats:
+    - Custom time signatures (e.g. 3/4, 2/4, 6/8, 4/4) and meter changes
+    - Dotted notes (<type> + <dot/> elements)
+    - Dynamic measure grouping based on accumulated duration
+    - 4 independent polyphonic SATB voices across two staves
     """
     root = ET.Element("score-partwise", version="3.1")
 
@@ -63,139 +99,197 @@ def export_to_musicxml(
     # Part
     part = ET.SubElement(root, "part", id="P1")
 
-    # Group chords into measures (e.g., 2 chords per measure for half notes in 4/4)
-    chords_per_measure = 2
-    total_voicings = len(voicings)
+    if not voicings:
+        rough_string = ET.tostring(root, encoding="utf-8")
+        reparsed = minidom.parseString(rough_string)
+        return reparsed.toprettyxml(indent="  ")
 
-    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    # Key signature
+    tonic_str = "C"
+    mode_str = "Major"
+    if key is not None:
+        if isinstance(key, Key):
+            tonic_str = key.tonic
+            mode_str = key.mode
+        elif isinstance(key, str):
+            parts = key.split()
+            tonic_str = parts[0] if parts else "C"
+            mode_str = parts[1] if len(parts) > 1 else "Major"
 
-    measure_idx = 1
-    for m_start in range(0, total_voicings, chords_per_measure):
-        m_slice = voicings[m_start : m_start + chords_per_measure]
-        m_chords = chords[m_start : m_start + chords_per_measure] if chords else []
+    fifths_val = get_fifths(tonic_str, mode_str)
 
-        measure = ET.SubElement(part, "measure", number=str(measure_idx))
+    # Build metric structure
+    melody_items = []
+    for i, v in enumerate(voicings):
+        dur = durations[i] if durations and i < len(durations) else "half"
+        melody_items.append({"pitch": to_satb(v)[0], "duration": dur})
 
-        # Attributes on measure 1
-        if measure_idx == 1:
+    metric_info = calculate_metric_structure(melody_items, default_time_signature=time_signature)
+
+    # Group note indices by measure
+    measures_dict: dict[int, list[int]] = {}
+    for idx, info in enumerate(metric_info):
+        m_num = info["measure"]
+        measures_dict.setdefault(m_num, []).append(idx)
+
+    measure_numbers = sorted(measures_dict.keys())
+    divisions_per_quarter = 4
+
+    for m_num in measure_numbers:
+        m_indices = measures_dict[m_num]
+        first_info = metric_info[m_indices[0]]
+        m_time_sig = first_info["time_signature"]
+        time_changed = first_info["time_sig_changed"]
+
+        measure = ET.SubElement(part, "measure", number=str(m_num))
+
+        # Attributes on measure 1 or upon meter change
+        if m_num == 1 or time_changed:
             attrs = ET.SubElement(measure, "attributes")
-            divs = ET.SubElement(attrs, "divisions")
-            divs.text = "2"  # 2 divisions per quarter note
+            if m_num == 1:
+                divs = ET.SubElement(attrs, "divisions")
+                divs.text = str(divisions_per_quarter)
 
-            # Key
-            key_elem = ET.SubElement(attrs, "key")
-            fifths_elem = ET.SubElement(key_elem, "fifths")
-            fifths_elem.text = "0"  # Default 0 fifths
+                key_elem = ET.SubElement(attrs, "key")
+                fifths_elem = ET.SubElement(key_elem, "fifths")
+                fifths_elem.text = str(fifths_val)
+                mode_elem = ET.SubElement(key_elem, "mode")
+                mode_elem.text = "minor" if "MINOR" in mode_str.upper() else "major"
 
-            # Time 4/4
             time_elem = ET.SubElement(attrs, "time")
             beats = ET.SubElement(time_elem, "beats")
-            beats.text = "4"
+            beats.text = str(m_time_sig.beats)
             beat_type = ET.SubElement(time_elem, "beat-type")
-            beat_type.text = "4"
+            beat_type.text = str(m_time_sig.beat_type)
 
-            # 2 staves (treble and bass)
-            staves = ET.SubElement(attrs, "staves")
-            staves.text = "2"
+            if m_num == 1:
+                staves = ET.SubElement(attrs, "staves")
+                staves.text = "2"
 
-            # Clef 1: Treble
-            clef1 = ET.SubElement(attrs, "clef", number="1")
-            sign1 = ET.SubElement(clef1, "sign")
-            sign1.text = "G"
-            line1 = ET.SubElement(clef1, "line")
-            line1.text = "2"
+                clef1 = ET.SubElement(attrs, "clef", number="1")
+                sign1 = ET.SubElement(clef1, "sign")
+                sign1.text = "G"
+                line1 = ET.SubElement(clef1, "line")
+                line1.text = "2"
 
-            # Clef 2: Bass
-            clef2 = ET.SubElement(attrs, "clef", number="2")
-            sign2 = ET.SubElement(clef2, "sign")
-            sign2.text = "F"
-            line2 = ET.SubElement(clef2, "line")
-            line2.text = "4"
+                clef2 = ET.SubElement(attrs, "clef", number="2")
+                sign2 = ET.SubElement(clef2, "sign")
+                sign2.text = "F"
+                line2 = ET.SubElement(clef2, "line")
+                line2.text = "4"
 
-        # Write notes: Staff 1 (Soprano & Alto), Staff 2 (Tenor & Bass)
-        duration_val = "4"  # Half note = 4 divisions
-        type_val = "half"
+        m_total_divisions = sum(
+            int(round(metric_info[idx]["duration_quarters"] * divisions_per_quarter))
+            for idx in m_indices
+        )
 
-        # Staff 1: Voice 1 (Soprano)
-        for i, v in enumerate(m_slice):
+        # Voice 1 (Soprano) - Staff 1
+        for idx in m_indices:
+            v = voicings[idx]
+            info = metric_info[idx]
+            dur_divs = int(round(info["duration_quarters"] * divisions_per_quarter))
+            xml_type, dots = quarters_to_xml_type_and_dots(info["duration_quarters"])
             satb = to_satb(v)
+
             note = ET.SubElement(measure, "note")
             note.append(midi_to_pitch_element(satb[0]))
             dur = ET.SubElement(note, "duration")
-            dur.text = duration_val
+            dur.text = str(dur_divs)
             voice = ET.SubElement(note, "voice")
             voice.text = "1"
             ntype = ET.SubElement(note, "type")
-            ntype.text = type_val
+            ntype.text = xml_type
+            if dots > 0:
+                for _ in range(dots):
+                    ET.SubElement(note, "dot")
             staff = ET.SubElement(note, "staff")
             staff.text = "1"
 
-            # Add harmonic Roman numeral as lyric under the first beat if available
-            chord_idx = m_start + i
-            if chords and chord_idx < len(chords):
-                c_sym = chords[chord_idx].function if hasattr(chords[chord_idx], "function") else str(chords[chord_idx])
+            if chords and idx < len(chords):
+                c = chords[idx]
+                c_sym = c.function if hasattr(c, "function") else str(c)
                 lyric = ET.SubElement(note, "lyric", number="1")
                 ltext = ET.SubElement(lyric, "text")
                 ltext.text = c_sym
 
-        # Staff 1: Voice 2 (Alto)
-        # Backup to start of measure for Voice 2
+        # Voice 2 (Alto) - Staff 1
         backup = ET.SubElement(measure, "backup")
         b_dur = ET.SubElement(backup, "duration")
-        b_dur.text = str(int(duration_val) * len(m_slice))
+        b_dur.text = str(m_total_divisions)
 
-        for v in m_slice:
+        for idx in m_indices:
+            v = voicings[idx]
+            info = metric_info[idx]
+            dur_divs = int(round(info["duration_quarters"] * divisions_per_quarter))
+            xml_type, dots = quarters_to_xml_type_and_dots(info["duration_quarters"])
             satb = to_satb(v)
+
             note = ET.SubElement(measure, "note")
             note.append(midi_to_pitch_element(satb[1]))
             dur = ET.SubElement(note, "duration")
-            dur.text = duration_val
+            dur.text = str(dur_divs)
             voice = ET.SubElement(note, "voice")
             voice.text = "2"
             ntype = ET.SubElement(note, "type")
-            ntype.text = type_val
+            ntype.text = xml_type
+            if dots > 0:
+                for _ in range(dots):
+                    ET.SubElement(note, "dot")
             staff = ET.SubElement(note, "staff")
             staff.text = "1"
 
-        # Staff 2: Voice 3 (Tenor)
+        # Voice 3 (Tenor) - Staff 2
         backup2 = ET.SubElement(measure, "backup")
         b_dur2 = ET.SubElement(backup2, "duration")
-        b_dur2.text = str(int(duration_val) * len(m_slice))
+        b_dur2.text = str(m_total_divisions)
 
-        for v in m_slice:
+        for idx in m_indices:
+            v = voicings[idx]
+            info = metric_info[idx]
+            dur_divs = int(round(info["duration_quarters"] * divisions_per_quarter))
+            xml_type, dots = quarters_to_xml_type_and_dots(info["duration_quarters"])
             satb = to_satb(v)
+
             note = ET.SubElement(measure, "note")
             note.append(midi_to_pitch_element(satb[2]))
             dur = ET.SubElement(note, "duration")
-            dur.text = duration_val
+            dur.text = str(dur_divs)
             voice = ET.SubElement(note, "voice")
             voice.text = "3"
             ntype = ET.SubElement(note, "type")
-            ntype.text = type_val
+            ntype.text = xml_type
+            if dots > 0:
+                for _ in range(dots):
+                    ET.SubElement(note, "dot")
             staff = ET.SubElement(note, "staff")
             staff.text = "2"
 
-        # Staff 2: Voice 4 (Bass)
+        # Voice 4 (Bass) - Staff 2
         backup3 = ET.SubElement(measure, "backup")
         b_dur3 = ET.SubElement(backup3, "duration")
-        b_dur3.text = str(int(duration_val) * len(m_slice))
+        b_dur3.text = str(m_total_divisions)
 
-        for v in m_slice:
+        for idx in m_indices:
+            v = voicings[idx]
+            info = metric_info[idx]
+            dur_divs = int(round(info["duration_quarters"] * divisions_per_quarter))
+            xml_type, dots = quarters_to_xml_type_and_dots(info["duration_quarters"])
             satb = to_satb(v)
+
             note = ET.SubElement(measure, "note")
             note.append(midi_to_pitch_element(satb[3]))
             dur = ET.SubElement(note, "duration")
-            dur.text = duration_val
+            dur.text = str(dur_divs)
             voice = ET.SubElement(note, "voice")
             voice.text = "4"
             ntype = ET.SubElement(note, "type")
-            ntype.text = type_val
+            ntype.text = xml_type
+            if dots > 0:
+                for _ in range(dots):
+                    ET.SubElement(note, "dot")
             staff = ET.SubElement(note, "staff")
             staff.text = "2"
 
-        measure_idx += 1
-
-    # Pretty print XML string
     rough_string = ET.tostring(root, encoding="utf-8")
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")

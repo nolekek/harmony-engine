@@ -42,6 +42,7 @@ export function App() {
   // Strictness settings
   const [allowExtendedRanges, setAllowExtendedRanges] = useState<boolean>(false);
   const [allowSecondaryDominants, setAllowSecondaryDominants] = useState<boolean>(true);
+  const [timeSignature, setTimeSignature] = useState<string>("4/4");
 
   // Harmonization state
   const [isHarmonizing, setIsHarmonizing] = useState<boolean>(false);
@@ -88,6 +89,7 @@ export function App() {
             is_downbeat: m.is_downbeat,
           })),
           key: selectedKey,
+          time_signature: timeSignature,
           allow_extended_ranges: allowExtendedRanges,
           allow_secondary_dominants: allowSecondaryDominants,
           max_plans: 50,
@@ -241,6 +243,8 @@ export function App() {
                 selectedKey={selectedKey}
                 onKeyChange={setSelectedKey}
                 onAutoDetectKey={handleAutoDetectKey}
+                timeSignature={timeSignature}
+                onTimeSignatureChange={setTimeSignature}
                 allowExtendedRanges={allowExtendedRanges}
                 onToggleExtendedRanges={setAllowExtendedRanges}
                 allowSecondaryDominants={allowSecondaryDominants}
@@ -276,6 +280,7 @@ export function App() {
                 voicings={activeVoicings}
                 chords={activeChords}
                 keyObj={selectedKey}
+                timeSignature={timeSignature}
                 asciiScore={asciiScore}
               />
             </div>
