@@ -23,12 +23,22 @@ def test_grammar_syntax_transitions():
     # D -> S forbidden
     assert not grammar.is_valid_syntax_transition("D", "S")
     assert not grammar.is_valid_syntax_transition("D7", "II")
-    # S -> D allowed
+    # S -> D and S -> K64 allowed
     assert grammar.is_valid_syntax_transition("S", "D")
     assert grammar.is_valid_syntax_transition("II6", "K64")
+    # D -> K64 strictly forbidden across all dominant chord types
+    assert not grammar.is_valid_syntax_transition("D", "K64")
+    assert not grammar.is_valid_syntax_transition("D6", "K64")
+    assert not grammar.is_valid_syntax_transition("D7", "K64")
+    # K64 must resolve to D / D7, cannot leap straight to T
+    assert not grammar.is_valid_syntax_transition("K64", "T")
+    assert grammar.is_valid_syntax_transition("K64", "D")
+    assert grammar.is_valid_syntax_transition("K64", "D7")
     # D43 -> T6 allowed, D43 -> II forbidden
     assert grammar.is_valid_syntax_transition("D43", "T6")
     assert not grammar.is_valid_syntax_transition("D43", "II")
+    # K64 cannot be penultimate chord immediately before final T
+    assert "K64" not in grammar.get_compatible_chords_for_pitch(60, is_penultimate=True, is_downbeat=True)
 
 
 def test_grammar_plan_generation():

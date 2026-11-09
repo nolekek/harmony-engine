@@ -77,8 +77,9 @@ class HarmonicGrammar:
             if is_final_cadence and fn not in ("T", "t"):
                 continue
 
-            # Position rule: Penultimate chord in authentic cadence is typically D, D7, or K64
-            if is_penultimate and fn not in ("D", "D7", "K64"):
+            # Position rule: Penultimate chord in authentic cadence is typically D, D7, etc.
+            # K64 CANNOT be penultimate immediately before final T, because K64 must resolve to D!
+            if is_penultimate and fn in ("K64", "T64", "S64"):
                 continue
 
             # Dissonance resolution rule: If a 7th chord is chosen and the soprano note IS the 7th,
@@ -138,9 +139,12 @@ class HarmonicGrammar:
         if prev_upper in DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP:
             return False
 
+        # Dominants cannot move to K64 (D -> K64, D6 -> K64 is strictly forbidden; K64 resolves TO dominant)
+        if prev_upper in DOMINANT_GROUP and curr_upper == "K64":
+            return False
+
         # Dominant 7th chords cannot un-resolve back into dominant triad (D or D6)
-        # or regress into K64
-        if prev_upper in ("D7", "D65", "D43", "D2") and curr_upper in ("D", "D6", "K64"):
+        if prev_upper in ("D7", "D65", "D43", "D2") and curr_upper in ("D", "D6"):
             return False
 
         # Secondary dominant (DD) cannot resolve to subdominant or regress to tonic
