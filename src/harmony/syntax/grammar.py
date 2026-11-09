@@ -17,10 +17,12 @@ ALL_FUNCTIONS = [
     "K64",
     "VI",
     "II6", "II",
+    "DD", "DD7",
 ]
 
 DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2"}
 SUBDOMINANT_GROUP = {"S", "S6", "S64", "II", "II6", "II65"}
+SECONDARY_DOMINANT_GROUP = {"DD", "DD7", "DD65", "DD43", "DD2"}
 
 
 @dataclass
@@ -81,6 +83,9 @@ class HarmonicGrammar:
             if fn in ("D7", "D65", "D43", "D2"):
                 seventh = (tonic_pc + 5) % 12
                 allowed_pcs.add(seventh)
+            elif fn in ("DD7", "DD65", "DD43", "DD2"):
+                seventh = tonic_pc % 12
+                allowed_pcs.add(seventh)
 
             if pc in allowed_pcs:
                 compatible.append(fn)
@@ -105,6 +110,14 @@ class HarmonicGrammar:
 
         # D -> S regression forbidden
         if prev_upper in DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP:
+            return False
+
+        # Secondary dominant (DD) cannot resolve to subdominant or regress to tonic
+        if prev_upper in SECONDARY_DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP:
+            return False
+
+        # Dominant cannot regress to secondary dominant (D -> DD)
+        if prev_upper in DOMINANT_GROUP and curr_upper in SECONDARY_DOMINANT_GROUP:
             return False
 
         # D43 must resolve to T6
@@ -132,6 +145,7 @@ class HarmonicGrammar:
         Backtracks through the compatible function lattice with beam search pruning.
         """
         k = key or self.key
+        tonic_pc, mode = parse_key(k)
         n = len(melody)
         if n == 0:
             return []
@@ -183,9 +197,19 @@ class HarmonicGrammar:
                         # Heuristic transitions
                         trans_score = 0.0
                         # Reward standard cycles: T -> S (+1), S -> D (+2), D -> T (+2), K64 -> D7 (+3)
+                        is_chromatic_note = (notes[i].pitch % 12) == (tonic_pc + 6) % 12
                         if prev_fn == "K64" and cand in ("D", "D7"):
                             trans_score += 3.0
                         elif prev_fn in SUBDOMINANT_GROUP and cand in DOMINANT_GROUP:
+                            trans_score += 2.0
+                        elif cand in SECONDARY_DOMINANT_GROUP:
+                            if is_chromatic_note:
+                                trans_score += 4.0
+                            elif prev_fn in SUBDOMINANT_GROUP:
+                                trans_score += 0.5
+                            else:
+                                trans_score -= 1.0
+                        elif prev_fn in SECONDARY_DOMINANT_GROUP and cand in ("K64", "D", "D7"):
                             trans_score += 2.0
                         elif prev_fn in DOMINANT_GROUP and cand in ("T", "T6"):
                             trans_score += 2.0

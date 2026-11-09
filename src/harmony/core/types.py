@@ -189,9 +189,33 @@ def to_satb(voicing: Any) -> tuple[int, int, int, int]:
 def parse_key(key: Any) -> tuple[int, str]:
     """
     Extracts (tonic_pc, normalized_mode) from Key object, dict, or string.
+    Supports both core.types.Key and core.key.Key seamlessly.
     """
-    if isinstance(key, Key):
-        return key.tonic_pc, key.normalized_mode
+    if hasattr(key, "tonic") and hasattr(key, "mode"):
+        t = key.tonic
+        if hasattr(t, "value"):  # PitchClass enum/class
+            t_pc = int(t.value) % 12
+        elif isinstance(t, int):
+            t_pc = t % 12
+        elif isinstance(t, str):
+            t_str = t.strip().upper()
+            t_pc = PITCH_CLASS_NAMES.get(t_str, 0)
+        else:
+            t_pc = 0
+
+        m = key.mode
+        m_str = m.value if hasattr(m, "value") else str(m)
+        m_clean = m_str.strip().upper().replace(" ", "").replace("_", "").replace("-", "")
+        if "HARMONIC" in m_clean:
+            norm_mode = "MINORHARMONIC"
+        elif "NATURAL" in m_clean:
+            norm_mode = "MINORNATURAL"
+        elif "MINOR" in m_clean:
+            norm_mode = "MINORHARMONIC"
+        else:
+            norm_mode = "MAJOR"
+        return t_pc, norm_mode
+
     if isinstance(key, Mapping):
         k = Key(tonic=str(key.get("tonic", "C")), mode=str(key.get("mode", "Major")))
         return k.tonic_pc, k.normalized_mode

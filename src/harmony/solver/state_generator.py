@@ -57,8 +57,19 @@ def generate_candidate_voicings(
     is_seventh = hasattr(chord, "is_seventh") and chord.is_seventh
     seventh_pc = None
     if is_seventh or "7" in chord_sym or "65" in chord_sym or "43" in chord_sym or "2" in chord_sym:
-        # For dominant 7th, 7th is IV degree (tonic + 5)
-        seventh_pc = (tonic_pc + 5) % 12
+        sym_clean = chord_sym.strip().upper().replace("/", "")
+        if sym_clean.startswith("DD") or sym_clean.startswith("D7V") or sym_clean.startswith("DV"):
+            # For double dominant 7th, 7th is tonic (scale degree I)
+            seventh_pc = tonic_pc % 12
+        elif "II" in sym_clean:
+            seventh_pc = (tonic_pc + 7) % 12
+        elif "VI" in sym_clean:
+            seventh_pc = (tonic_pc + 2) % 12
+        elif "IV" in sym_clean:
+            seventh_pc = (tonic_pc + 10) % 12
+        else:
+            # For dominant 7th, 7th is IV degree (tonic + 5)
+            seventh_pc = (tonic_pc + 5) % 12
         allowed_pcs.add(seventh_pc)
 
     # Check that soprano belongs to chord

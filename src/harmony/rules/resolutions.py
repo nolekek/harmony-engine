@@ -244,6 +244,104 @@ def check_vii7_resolution(
     return violations
 
 
+def check_secondary_dominant_resolution(
+    prev_voicing: Any,
+    curr_voicing: Any,
+    prev_chord: Any,
+    curr_chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    Validates resolution of Secondary Dominant chords (DD, DD7, D7/V, D7/II, D7/VI, D7/IV):
+    - Secondary leading tone (e.g. F# in C-dur for DD) must resolve up by semitone (+1)
+      into target root (e.g. G in D, D7, or K64), OR step down chromatically (-1).
+    - Secondary seventh (e.g. C in DD7) must resolve down by step (-1 or -2)
+      into the third of the target chord (e.g. B in G).
+    """
+    if prev_chord is None or curr_chord is None:
+        return []
+
+    prev_sym = parse_chord_symbol(prev_chord).strip().upper().replace("/", "")
+    if not (
+        prev_sym.startswith("DD")
+        or prev_sym in ("D7V", "DV")
+        or "D7II" in prev_sym
+        or "DII" in prev_sym
+        or "D7VI" in prev_sym
+        or "DVI" in prev_sym
+        or "D7IV" in prev_sym
+        or "DIV" in prev_sym
+    ):
+        return []
+
+    tonic_pc, _ = parse_key(key) if key is not None else (0, "MAJOR")
+
+    # Determine secondary leading tone and secondary seventh
+    sec_leading_pc = None
+    sec_seventh_pc = None
+
+    if prev_sym.startswith("DD") or prev_sym in ("D7V", "DV"):
+        sec_leading_pc = (tonic_pc + 6) % 12
+        if any(x in prev_sym for x in ("7", "65", "43", "2")):
+            sec_seventh_pc = tonic_pc % 12
+    elif "II" in prev_sym:
+        sec_leading_pc = (tonic_pc + 1) % 12
+        if any(x in prev_sym for x in ("7", "65", "43", "2")):
+            sec_seventh_pc = (tonic_pc + 7) % 12
+    elif "VI" in prev_sym:
+        sec_leading_pc = (tonic_pc + 8) % 12
+        if any(x in prev_sym for x in ("7", "65", "43", "2")):
+            sec_seventh_pc = (tonic_pc + 2) % 12
+    elif "IV" in prev_sym:
+        sec_leading_pc = (tonic_pc + 4) % 12
+        if any(x in prev_sym for x in ("7", "65", "43", "2")):
+            sec_seventh_pc = (tonic_pc + 10) % 12
+
+    prev_satb = to_satb(prev_voicing)
+    curr_satb = to_satb(curr_voicing)
+    violations: list[RuleViolation] = []
+
+    for idx in range(4):
+        p = prev_satb[idx] % 12
+        delta = curr_satb[idx] - prev_satb[idx]
+
+        # Check secondary leading tone resolution
+        if sec_leading_pc is not None and p == sec_leading_pc:
+            # Must step up by semitone (+1) or step down chromatically (-1)
+            if delta not in (1, -1):
+                violations.append(
+                    RuleViolation(
+                        rule_id="RESOLUTION_SECONDARY_DOMINANT",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Secondary leading tone (PC {sec_leading_pc}) in {VOICE_NAMES[idx]} "
+                            f"must resolve up by semitone (+1) or down chromatically (-1), moved {delta:+d}"
+                        ),
+                        voices=(idx,),
+                    )
+                )
+
+        # Check secondary seventh resolution
+        if sec_seventh_pc is not None and p == sec_seventh_pc:
+            # Must resolve down by step (-1 or -2)
+            if delta not in (-1, -2):
+                violations.append(
+                    RuleViolation(
+                        rule_id="RESOLUTION_SECONDARY_DOMINANT",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Secondary seventh (PC {sec_seventh_pc}) of {prev_sym} in {VOICE_NAMES[idx]} "
+                            f"must resolve down by step (-1 or -2), moved {delta:+d}"
+                        ),
+                        voices=(idx,),
+                    )
+                )
+
+    return violations
+
+
 def validate_resolutions(
     prev_voicing: Any,
     curr_voicing: Any,
@@ -272,6 +370,11 @@ def validate_resolutions(
     )
     violations.extend(
         check_vii7_resolution(
+            prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
+        )
+    )
+    violations.extend(
+        check_secondary_dominant_resolution(
             prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
         )
     )

@@ -13,6 +13,16 @@ from __future__ import annotations
 
 from .chord import ChordDefinition, ChordFunction, Inversion
 from .key import Key, Mode
+from .modulation import (
+    FirstDegreeRelations,
+    PivotChord,
+    RelatedKeyInfo,
+    SecondaryDominant,
+    build_modulation_plan,
+    find_pivot_chords,
+    get_related_keys_first_degree,
+    get_secondary_dominants,
+)
 from .pitch import Interval, Pitch, PitchClass, ScaleDegree
 from .voicing import Spacing, Voice, Voicing
 
@@ -33,4 +43,13 @@ __all__ = [
     "Voicing",
     "Spacing",
     "Voice",
+    # Modulation & tonality domain
+    "FirstDegreeRelations",
+    "RelatedKeyInfo",
+    "get_related_keys_first_degree",
+    "PivotChord",
+    "find_pivot_chords",
+    "build_modulation_plan",
+    "SecondaryDominant",
+    "get_secondary_dominants",
 ]

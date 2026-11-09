@@ -22,6 +22,34 @@ def get_triad_tones(symbol: str, tonic_pc: int, mode: str) -> tuple[int, int, in
     is_minor = "MINOR" in mode or symbol.islower()
     sym_upper = symbol.strip().upper()
 
+    if sym_upper.startswith("DD") or sym_upper in ("D7V", "DV", "D7/V", "D/V"):
+        # Double Dominant (D of V): Root = II degree, Third = raised IV (secondary leading tone), Fifth = VI degree
+        root = (tonic_pc + 2) % 12
+        third = (tonic_pc + 6) % 12
+        fifth = (tonic_pc + 9) % 12
+        return root, third, fifth
+
+    if "D7II" in sym_upper or "D/II" in sym_upper or "D7/II" in sym_upper:
+        # Dominant to II: Root = VI degree, Third = raised I degree, Fifth = III degree
+        root = (tonic_pc + 9) % 12
+        third = (tonic_pc + 1) % 12
+        fifth = (tonic_pc + 4) % 12
+        return root, third, fifth
+
+    if "D7VI" in sym_upper or "D/VI" in sym_upper or "D7/VI" in sym_upper:
+        # Dominant to VI: Root = III degree in major, Third = raised V degree, Fifth = VII degree
+        root = (tonic_pc + 4) % 12
+        third = (tonic_pc + 8) % 12
+        fifth = (tonic_pc + 11) % 12
+        return root, third, fifth
+
+    if "D7IV" in sym_upper or "D/IV" in sym_upper or "D7/IV" in sym_upper:
+        # Dominant to IV: Root = I degree, Third = III degree, Fifth = V degree
+        root = tonic_pc
+        third = (tonic_pc + 4) % 12
+        fifth = (tonic_pc + 7) % 12
+        return root, third, fifth
+
     if sym_upper.startswith("K64"):
         # Cadential 6/4 is tonic chord tones over fifth degree (dominant bass)
         root = tonic_pc
@@ -210,6 +238,60 @@ def check_deceptive_vi_doubling(
     return violations
 
 
+def check_secondary_dominant_doubling(
+    voicing: Any,
+    chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    In Secondary Dominant triads (e.g. DD 5/3):
+    The root (prima) must be doubled.
+    Doubling the third (secondary leading tone) is strictly forbidden!
+    """
+    sym = parse_chord_symbol(chord).strip().upper().replace("/", "")
+    if not (sym == "DD" or sym == "DV"):
+        return []
+
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    root, third, fifth = get_triad_tones(sym, tonic_pc, mode)
+
+    satb = to_satb(voicing)
+    pcs = [p % 12 for p in satb]
+    counts = Counter(pcs)
+
+    violations: list[RuleViolation] = []
+
+    # Third (secondary leading tone) NEVER doubled
+    if counts[third] > 1:
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_SECONDARY_DOMINANT",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In DD triad, the third (secondary leading tone, PC {third}) "
+                    f"must NEVER be doubled (found {counts[third]} times)"
+                ),
+            )
+        )
+
+    # Root must be doubled
+    if counts[root] < 2:
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_SECONDARY_DOMINANT",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In DD triad, the root (PC {root}) must strictly be doubled "
+                    f"(found {counts[root]} times)"
+                ),
+            )
+        )
+
+    return violations
+
+
 def check_doubling(
     voicing: Any,
     chord: Any,
@@ -222,6 +304,7 @@ def check_doubling(
     violations = []
     violations.extend(check_main_triad_doubling(voicing, chord, key=key, prev_chord=prev_chord))
     violations.extend(check_k64_doubling(voicing, chord, key=key))
+    violations.extend(check_secondary_dominant_doubling(voicing, chord, key=key))
     if prev_chord is not None:
         violations.extend(check_deceptive_vi_doubling(voicing, prev_chord, chord, key=key))
     return violations
