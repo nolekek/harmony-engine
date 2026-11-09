@@ -33,6 +33,7 @@ class RuleEngine:
         rules_catalog_path: str | Path | None = None,
         allow_extended_ranges: bool = False,
         weights: Mapping[str, float] | None = None,
+        style_scorer: Any | None = None,
     ):
         self.allow_extended_ranges = allow_extended_ranges
         self.rules_registry: dict[str, dict[str, Any]] = {}
@@ -44,6 +45,7 @@ class RuleEngine:
         }
         if weights:
             self.weights.update(weights)
+        self.style_scorer = style_scorer
 
         self._load_catalog(rules_catalog_path)
 
@@ -150,6 +152,10 @@ class RuleEngine:
         abs_db = abs(db)
         if abs_db > 7:
             cost += self.weights["bass_leap_penalty"] * ((abs_db - 7) / 2.0)
+
+        # Neuro-symbolic style prior scorer (if provided)
+        if self.style_scorer is not None:
+            cost += self.style_scorer.score_transition(prev_satb, curr_satb)
 
         return cost
 
