@@ -114,6 +114,28 @@ class RuleEngine:
                 )
             )
 
+        # Dominant cannot move to K64 (D -> K64 regression)
+        if prev_sym in DOMINANT_GROUP and curr_sym == "K64":
+            violations.append(
+                RuleViolation(
+                    rule_id="SYNTAX_NO_D_TO_K64",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=f"Forbidden regression from dominant ({prev_sym}) to K64",
+                )
+            )
+
+        # K64 must resolve to dominant (D or D7)
+        if prev_sym == "K64" and curr_sym not in ("D", "D7"):
+            violations.append(
+                RuleViolation(
+                    rule_id="SYNTAX_K64_MUST_RESOLVE_TO_D",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=f"K64 must resolve to D or D7, got {curr_sym}",
+                )
+            )
+
         return violations
 
     def compute_soft_cost(

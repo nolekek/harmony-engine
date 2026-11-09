@@ -153,6 +153,12 @@ def _format_rule_message(
     if rule_id == "SYNTAX_NO_D_TO_S":
         return (f"Такт {measure}: Запрещенный функциональный откат из доминанты в субдоминанту (D -> S)", involved_voices, involved_notes)
 
+    if rule_id == "SYNTAX_NO_D_TO_K64":
+        return (f"Такт {measure}: Запрещенный переход из доминанты в кадансовый квартсекстаккорд (D -> K64)", involved_voices, involved_notes)
+
+    if rule_id == "SYNTAX_K64_MUST_RESOLVE_TO_D":
+        return (f"Такт {measure}: Кадансовый квартсекстаккорд обязан разрешаться в доминанту (D или D7)", involved_voices, involved_notes)
+
     # Fallback to description
     return (f"Такт {measure}: {desc or rule_id}", involved_voices, involved_notes)
 

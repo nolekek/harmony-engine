@@ -222,6 +222,32 @@ class TestSyntaxRules:
         assert not res.is_valid
         assert any(v.rule_id == "SYNTAX_NO_D_TO_S" for v in res.hard_violations)
 
+    def test_functional_regression_d_to_k64(self, engine):
+        chord_d = Chord(function="D")
+        chord_k64 = Chord(function="K64")
+        v_d = Voicing(soprano=62, alto=59, tenor=50, bass=43)
+        v_k64 = Voicing(soprano=64, alto=60, tenor=55, bass=43)
+        res = engine.validate(v_d, v_k64, prev_chord=chord_d, curr_chord=chord_k64, is_downbeat=True)
+        assert not res.is_valid
+        assert any(v.rule_id == "SYNTAX_NO_D_TO_K64" for v in res.hard_violations)
+
+    def test_k64_must_resolve_to_dominant(self, engine):
+        chord_k64 = Chord(function="K64")
+        chord_t = Chord(function="T")
+        chord_d = Chord(function="D")
+        v_k64 = Voicing(soprano=64, alto=60, tenor=55, bass=43)
+        v_t = Voicing(soprano=64, alto=60, tenor=52, bass=48)
+        v_d = Voicing(soprano=62, alto=59, tenor=55, bass=43)
+
+        # K64 -> T is strictly invalid in classical cadence
+        res_bad = engine.validate(v_k64, v_t, prev_chord=chord_k64, curr_chord=chord_t)
+        assert not res_bad.is_valid
+        assert any(v.rule_id == "SYNTAX_K64_MUST_RESOLVE_TO_D" for v in res_bad.hard_violations)
+
+        # K64 -> D is valid
+        res_good = engine.validate(v_k64, v_d, prev_chord=chord_k64, curr_chord=chord_d)
+        assert not any(v.rule_id == "SYNTAX_K64_MUST_RESOLVE_TO_D" for v in res_good.hard_violations)
+
 
 class TestHumanBenchmarkCorpus:
     """
