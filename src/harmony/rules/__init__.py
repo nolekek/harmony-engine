@@ -44,6 +44,11 @@ from src.harmony.rules.resolutions import (
 from src.harmony.rules.engine import (
     RuleEngine,
 )
+from src.harmony.rules.non_chord_tones import (
+    NonChordToneType,
+    classify_melodic_tone,
+    check_voice_embellishments,
+)
 
 __all__ = [
     # Core types
