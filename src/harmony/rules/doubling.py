@@ -74,13 +74,20 @@ def check_main_triad_doubling(
     voicing: Any,
     chord: Any,
     key: Any = None,
+    prev_chord: Any = None,
 ) -> list[RuleViolation]:
     """
     In root-position main triads (T, S, D, t, s), the root (prima) must be doubled.
-    Doubling the third is strictly forbidden.
+    Doubling the third is strictly forbidden, EXCEPT when resolving directly from VII7,
+    where doubling the third in T is mandatory by Brigade rules to avoid parallel fifths.
     """
     sym = parse_chord_symbol(chord)
     if sym not in ("T", "S", "D", "t", "s"):
+        return []
+
+    # Check if coming from VII7 resolution: in VII7 -> T, doubling the third of T is mandatory!
+    prev_sym = parse_chord_symbol(prev_chord) if prev_chord is not None else ""
+    if sym in ("T", "t") and prev_sym.startswith("VII"):
         return []
 
     tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
@@ -213,7 +220,7 @@ def check_doubling(
     Runs all doubling validation checks relevant to the given chord and context.
     """
     violations = []
-    violations.extend(check_main_triad_doubling(voicing, chord, key=key))
+    violations.extend(check_main_triad_doubling(voicing, chord, key=key, prev_chord=prev_chord))
     violations.extend(check_k64_doubling(voicing, chord, key=key))
     if prev_chord is not None:
         violations.extend(check_deceptive_vi_doubling(voicing, prev_chord, chord, key=key))

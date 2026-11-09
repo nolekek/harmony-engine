@@ -172,6 +172,78 @@ def check_leading_tone_resolution(
     return violations
 
 
+def check_vii7_resolution(
+    prev_voicing: Any,
+    curr_voicing: Any,
+    prev_chord: Any,
+    curr_chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    In leading-tone seventh chords (VII7, VII65, VII43, VII2) resolving to T/t:
+    - The seventh (scale degree VI) must resolve down by step into degree V.
+    - The fifth (scale degree IV) must resolve down by step into degree III.
+    - The leading tone (scale degree VII) must resolve up by half-step into degree I.
+    - The resulting tonic triad T strictly requires a doubled third!
+    """
+    if prev_chord is None or curr_chord is None:
+        return []
+
+    prev_sym = parse_chord_symbol(prev_chord)
+    curr_sym = parse_chord_symbol(curr_chord)
+
+    if not prev_sym.startswith("VII") or curr_sym not in ("T", "t"):
+        return []
+
+    tonic_pc, _ = parse_key(key) if key is not None else (0, "MAJOR")
+    leading_pc = (tonic_pc + 11) % 12
+    fifth_pc = (tonic_pc + 5) % 12    # Scale degree IV is 5th of VII7
+    seventh_pc = (tonic_pc + 9) % 12  # Scale degree VI (or 8 in minor)
+    seventh_pc_alt = (tonic_pc + 8) % 12
+
+    prev_satb = to_satb(prev_voicing)
+    curr_satb = to_satb(curr_voicing)
+    violations: list[RuleViolation] = []
+
+    for idx in range(4):
+        p = prev_satb[idx] % 12
+        delta = curr_satb[idx] - prev_satb[idx]
+
+        # Seventh must resolve down by step (-1 or -2)
+        if p in (seventh_pc, seventh_pc_alt):
+            if delta not in (-1, -2):
+                violations.append(
+                    RuleViolation(
+                        rule_id="RESOLUTION_VII7_SEVENTH_DOWN",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Seventh of {prev_sym} in {VOICE_NAMES[idx]} must resolve down by step, "
+                            f"moved {delta:+d}"
+                        ),
+                        voices=(idx,),
+                    )
+                )
+
+        # Fifth of VII7 must resolve down by step (-1 or -2) into 3rd of T
+        elif p == fifth_pc:
+            if delta not in (-1, -2):
+                violations.append(
+                    RuleViolation(
+                        rule_id="RESOLUTION_VII7_FIFTH_DOWN",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Fifth of {prev_sym} in {VOICE_NAMES[idx]} must resolve down into third of T, "
+                            f"moved {delta:+d}"
+                        ),
+                        voices=(idx,),
+                    )
+                )
+
+    return violations
+
+
 def validate_resolutions(
     prev_voicing: Any,
     curr_voicing: Any,
@@ -195,6 +267,11 @@ def validate_resolutions(
     )
     violations.extend(
         check_leading_tone_resolution(
+            prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
+        )
+    )
+    violations.extend(
+        check_vii7_resolution(
             prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
         )
     )
