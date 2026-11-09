@@ -66,7 +66,7 @@ class Harmonizer:
         melody: Sequence[int | dict[str, Any]],
         key: Key | str,
         chords: Sequence[Chord | str] | None = None,
-        max_plans: int = 3,
+        max_plans: int = 30,
         allow_extended_ranges: bool = False,
     ) -> HarmonizationResult:
         """
@@ -118,6 +118,8 @@ class Harmonizer:
                         ascii_score=ascii_view,
                     )
                 )
+                if len(solutions) >= 3:
+                    break
 
         if not solutions:
             return HarmonizationResult(

@@ -54,14 +54,19 @@ class HarmonicGrammar:
         is_downbeat: bool = False,
         is_final_cadence: bool = False,
         is_penultimate: bool = False,
+        next_pitch: int | None = None,
     ) -> list[str]:
         """
         Returns all chord functions that can harmonically accommodate the soprano pitch.
+        If next_pitch is provided, ensures that unstable tendency tones (like 7ths in soprano)
+        can actually resolve smoothly without illegal leaps.
         """
         k = key or self.key
         tonic_pc, mode = parse_key(k)
         pc = pitch % 12
         compatible: list[str] = []
+
+        can_step_down = (next_pitch is not None) and ((next_pitch - pitch) in (-1, -2))
 
         for fn in ALL_FUNCTIONS:
             # Metric rule: K64 cannot be on weak beat
@@ -76,8 +81,29 @@ class HarmonicGrammar:
             if is_penultimate and fn not in ("D", "D7", "K64"):
                 continue
 
+            # Dissonance resolution rule: If a 7th chord is chosen and the soprano note IS the 7th,
+            # the soprano MUST step down (-1 or -2) into the next note. Leaps from the 7th are forbidden!
+            if next_pitch is not None and not can_step_down:
+                if fn in ("D7", "D65", "D43", "D2") and pc == (tonic_pc + 5) % 12:
+                    continue
+                if fn in ("DD7", "DD65", "DD43", "DD2") and pc == tonic_pc % 12:
+                    continue
+
             root, third, fifth = get_triad_tones(fn, tonic_pc, mode)
             allowed_pcs = {root, third, fifth}
+
+            # Inversion doubling rules:
+            # In D6 and D65, the bass has the leading tone (third).
+            # Doubling the leading tone in the soprano is strictly forbidden!
+            if fn in ("D6", "D65") and pc == third:
+                continue
+
+            # In D2 and D43, the bass has the 7th.
+            # Doubling the 7th in soprano is strictly forbidden!
+            if fn in ("D2", "D43") and pc == (tonic_pc + 5) % 12:
+                continue
+            if fn in ("DD2", "DD43") and pc == tonic_pc % 12:
+                continue
 
             # Add 7th for dominant seventh chords
             if fn in ("D7", "D65", "D43", "D2"):
@@ -110,6 +136,11 @@ class HarmonicGrammar:
 
         # D -> S regression forbidden
         if prev_upper in DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP:
+            return False
+
+        # Dominant 7th chords cannot un-resolve back into dominant triad (D or D6)
+        # or regress into K64
+        if prev_upper in ("D7", "D65", "D43", "D2") and curr_upper in ("D", "D6", "K64"):
             return False
 
         # Secondary dominant (DD) cannot resolve to subdominant or regress to tonic
@@ -168,12 +199,14 @@ class HarmonicGrammar:
         for i, note in enumerate(notes):
             is_final = (i == n - 1)
             is_penult = (i == n - 2)
+            next_p = notes[i + 1].pitch if i < n - 1 else None
             cands = self.get_compatible_chords_for_pitch(
                 pitch=note.pitch,
                 key=k,
                 is_downbeat=note.is_downbeat,
                 is_final_cadence=is_final,
                 is_penultimate=is_penult,
+                next_pitch=next_p,
             )
             if not cands:
                 # Fallback to any triad containing note
@@ -194,6 +227,31 @@ class HarmonicGrammar:
                         prev_fn = path[-1]
                         if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat):
                             continue
+                        # Second-relationship voice leading law:
+                        # In root-position S, bass is scale degree 4. Moving to dominant with soprano rising from 1 to 2
+                        # mathematically guarantees either parallel fifths (bass to 5) or a tritone leap (bass to 7).
+                        if prev_fn in ("S", "s") and cand in DOMINANT_GROUP:
+                            if (notes[i - 1].pitch % 12) == tonic_pc and (notes[i].pitch % 12) == (tonic_pc + 2) % 12:
+                                continue
+
+                        # Root-position fifth-to-fifth law:
+                        # If both prev_fn and cand are root-position triads (T, S, D, II, VI),
+                        # and soprano has the fifth in both chords, outer voices form a pure 5th
+                        # in both chords, mathematically forcing either parallel or contrary fifths.
+                        root_triads = {"T", "S", "D", "II", "VI", "t", "s", "d"}
+                        if prev_fn in root_triads and cand in root_triads:
+                            _, _, p_fifth = get_triad_tones(prev_fn, tonic_pc, mode)
+                            _, _, c_fifth = get_triad_tones(cand, tonic_pc, mode)
+                            if (notes[i - 1].pitch % 12) == p_fifth and (notes[i].pitch % 12) == c_fifth:
+                                continue
+
+                        # D6 / D65 has leading tone in bass which must resolve up by step into tonic.
+                        # If soprano leaps up into the fifth of the tonic (|dS| > 2), direct motion into a 5th
+                        # mathematically guarantees a forbidden hidden fifth (outer voices).
+                        if prev_fn in ("D6", "D65") and cand in ("T", "t"):
+                            if (notes[i].pitch - notes[i - 1].pitch) > 2 and (notes[i].pitch % 12) == (tonic_pc + 7) % 12:
+                                continue
+
                         # Heuristic transitions
                         trans_score = 0.0
                         # Reward standard cycles: T -> S (+1), S -> D (+2), D -> T (+2), K64 -> D7 (+3)
@@ -202,6 +260,9 @@ class HarmonicGrammar:
                             trans_score += 3.0
                         elif prev_fn in SUBDOMINANT_GROUP and cand in DOMINANT_GROUP:
                             trans_score += 2.0
+                        elif prev_fn in SUBDOMINANT_GROUP and cand in ("T", "T6"):
+                            # Plagal return (S -> T)
+                            trans_score += 1.5
                         elif cand in SECONDARY_DOMINANT_GROUP:
                             if is_chromatic_note:
                                 trans_score += 4.0
@@ -215,9 +276,15 @@ class HarmonicGrammar:
                             trans_score += 2.0
                         elif prev_fn in ("T", "T6") and cand in SUBDOMINANT_GROUP:
                             trans_score += 1.5
-                        # Penalize rapid repetitions
+                        elif prev_fn in ("T", "T6") and cand in DOMINANT_GROUP:
+                            # Tonic opening into dominant (T -> D, T -> D7, etc.)
+                            trans_score += 1.5
+                        # Penalize rapid repetitions, UNLESS soprano pitch is sustained/repeated
                         elif prev_fn == cand:
-                            trans_score -= 1.0
+                            if notes[i].pitch == notes[i - 1].pitch:
+                                trans_score += 1.0  # Harmonic sustenance on repeated melody note
+                            else:
+                                trans_score -= 1.0
                     else:
                         # Starting chord preference: T
                         trans_score = 3.0 if cand in ("T", "t") else 0.0

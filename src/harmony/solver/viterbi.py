@@ -62,13 +62,13 @@ class ViterbiSolver:
         # Parse melody and chords
         melody_pitches: list[int] = []
         downbeats: list[bool] = []
-        for m in melody:
+        for i, m in enumerate(melody):
             if isinstance(m, dict):
                 melody_pitches.append(int(m["pitch"]))
-                downbeats.append(bool(m.get("is_downbeat", False)))
+                downbeats.append(bool(m.get("is_downbeat", i % 2 == 0)))
             else:
                 melody_pitches.append(int(m))
-                downbeats.append(False)
+                downbeats.append(i % 2 == 0)
 
         parsed_chords: list[Chord] = []
         for c in chords:
