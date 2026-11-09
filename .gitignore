@@ -4,5 +4,6 @@ __pycache__/
 .pytest_cache/
 *.swp
 *.swo
+*.jsonl
 .DS_Store
 Thumbs.db
