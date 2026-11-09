@@ -18,6 +18,7 @@ from src.harmony.rules.spacing import validate_spacing
 from src.harmony.rules.voice_leading import validate_voice_leading
 from src.harmony.rules.doubling import check_doubling
 from src.harmony.rules.resolutions import validate_resolutions
+from src.harmony.rules.chromatic import validate_chromatic_rules
 
 DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2"}
 SUBDOMINANT_GROUP = {"S", "S6", "S64", "s", "s6", "s64", "II", "II6", "II65"}
@@ -206,6 +207,9 @@ class RuleEngine:
                     curr_chord,
                     key=key,
                 )
+            )
+            violations.extend(
+                validate_chromatic_rules(prev_voicing, curr_voicing, key=key)
             )
             soft_cost = self.compute_soft_cost(prev_voicing, curr_voicing)
 
