@@ -74,6 +74,13 @@
       "description": "Перекрывание голосов: голос идет выше предыдущей ноты верхнего соседа или ниже предыдущей ноты нижнего соседа."
     },
     {
+      "id": "DIRECT_UNISON",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Взятие или оставление унисона прямым движением голосов воспрещается."
+    },
+    {
       "id": "MELODIC_AUGMENTED_INTERVAL",
       "category": "voice_leading",
       "severity": "hard_gate",
@@ -93,6 +100,20 @@
       "severity": "hard_gate",
       "penalty": 100000.0,
       "description": "В главных трезвучиях (T, S, D) удваивается строго прима. Удвоение терции запрещено."
+    },
+    {
+      "id": "DOUBLING_SEXTACCORD",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В секстаккордах удваивается прима или квинта. Удвоение терции в T6 запрещено."
+    },
+    {
+      "id": "DOUBLING_D6_LEADING_TONE",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В секстаккорде D6 удвоение вводного тона (терции) категорически запрещено."
     },
     {
       "id": "DOUBLING_K64_BASS_ONLY",
@@ -121,6 +142,27 @@
       "severity": "hard_gate",
       "penalty": 100000.0,
       "description": "D43 обязан разрешаться в T6, так как септима в басу обязана сделать шаг вниз в терцию тоники."
+    },
+    {
+      "id": "RESOLUTION_D2_TO_T6",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "D2 обязан разрешаться в T6, так как септима в басу обязана шагнуть на секунду вниз в терцию тоники."
+    },
+    {
+      "id": "RESOLUTION_VII7_LEADING_TONE_UP",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Вводный тон (VII) в аккорде VII7 обязан разрешаться на полутон вверх в тонику."
+    },
+    {
+      "id": "RESOLUTION_DD_TARGET",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Двойная доминанта обязана разрешаться в K64, D или D7."
     },
     {
       "id": "RESOLUTION_LEADING_TONE_UP",

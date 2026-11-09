@@ -8,7 +8,7 @@ from __future__ import annotations
 import io
 import time
 from typing import Any
-from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field
 
 from src.harmony.core.types import Key, Chord, Voicing
@@ -257,7 +257,7 @@ def api_grade(req: GradeRequest) -> dict[str, Any]:
     ]
     parsed_key = Key(tonic=req.key.tonic, mode=req.key.mode)
 
-    durs = req.durations or [v.duration for v in req.voicings if v.duration]
+    durs = req.durations or ([v.duration or "half" for v in req.voicings] if any(v.duration for v in req.voicings) else None)
     report = grade_satb_solution(
         voicings=voicings,
         key=parsed_key,
@@ -296,7 +296,8 @@ class FileUploadJsonRequest(BaseModel):
 
 @router.post("/import-file")
 async def api_import_file(
-    file: UploadFile | None = File(None),
+    request: Request,
+    file: UploadFile | None = None,
     json_body: FileUploadJsonRequest | None = None,
 ) -> dict[str, Any]:
     """
@@ -308,20 +309,33 @@ async def api_import_file(
     filename = ""
     content = b""
 
-    if file is not None:
-        filename = file.filename or "upload"
-        content = await file.read()
-    elif json_body is not None:
-        filename = json_body.filename
-        if json_body.xml_content:
-            content = json_body.xml_content.encode("utf-8")
-        elif json_body.content_base64:
-            content = base64.b64decode(json_body.content_base64)
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        body = await request.json()
+        filename = body.get("filename", "upload")
+        if body.get("xml_content"):
+            content = body["xml_content"].encode("utf-8")
+        elif body.get("content_base64"):
+            content = base64.b64decode(body["content_base64"])
     else:
-        raise HTTPException(status_code=400, detail="Файл не передан.")
+        # Multipart form upload
+        form = await request.form()
+        uploaded_file = form.get("file")
+        if uploaded_file is not None and hasattr(uploaded_file, "read"):
+            filename = getattr(uploaded_file, "filename", "upload") or "upload"
+            content = await uploaded_file.read()
+        elif file is not None:
+            filename = file.filename or "upload"
+            content = await file.read()
+        elif json_body is not None:
+            filename = json_body.filename
+            if json_body.xml_content:
+                content = json_body.xml_content.encode("utf-8")
+            elif json_body.content_base64:
+                content = base64.b64decode(json_body.content_base64)
 
-    if not content:
-        raise HTTPException(status_code=400, detail="Файл пуст.")
+    if not filename or not content:
+        raise HTTPException(status_code=400, detail="Файл не передан.")
 
     if filename.endswith((".xml", ".musicxml")):
         xml_text = content.decode("utf-8", errors="ignore")
@@ -360,7 +374,7 @@ def api_export_midi(req: ExportMidiRequest):
         Voicing(soprano=v.soprano, alto=v.alto, tenor=v.tenor, bass=v.bass)
         for v in req.voicings
     ]
-    durs = req.durations or [v.duration for v in req.voicings if v.duration]
+    durs = req.durations or ([v.duration or "half" for v in req.voicings] if any(v.duration for v in req.voicings) else None)
     data = generate_midi_bytes(
         voicings,
         bpm=req.bpm,
@@ -382,7 +396,7 @@ def api_export_musicxml(req: ExportMusicXmlRequest):
         for v in req.voicings
     ]
     parsed_key = Key(tonic=req.key.tonic, mode=req.key.mode)
-    durs = req.durations or [v.duration for v in req.voicings if v.duration]
+    durs = req.durations or ([v.duration or "half" for v in req.voicings] if any(v.duration for v in req.voicings) else None)
     xml_str = build_colored_musicxml(
         voicings=voicings,
         chords=req.chords,

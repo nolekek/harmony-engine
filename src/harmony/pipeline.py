@@ -31,6 +31,7 @@ class HarmonizationSolution:
     ascii_score: str
     durations: list[str] = field(default_factory=list)
     time_signature: str = "4/4"
+    metric_info: list[dict[str, Any]] = field(default_factory=list)
 
     def to_musicxml(self, title: str = "Harmonization Exercise") -> str:
         return export_to_musicxml(
@@ -96,7 +97,7 @@ class Harmonizer:
         Otherwise, uses the HarmonicGrammar to synthesize valid plans.
         Supports custom time signatures (3/4, 2/4, 6/8, 4/4) and dotted durations.
         """
-        parsed_key = key if isinstance(key, Key) else Key(key)
+        parsed_key = Key.parse(key)
         parsed_ts = TimeSignature.parse(time_signature)
 
         # Pre-process melody with exact metric structure and durations
@@ -153,6 +154,7 @@ class Harmonizer:
                         ascii_score=ascii_view,
                         durations=durations_list,
                         time_signature=str(parsed_ts),
+                        metric_info=metric_info,
                     )
                 )
                 if len(solutions) >= 3:

@@ -15,16 +15,17 @@ def generate_candidate_voicings(
     chord: Any,
     key: Any = None,
     allow_extended_ranges: bool = False,
+    prev_chord: Any = None,
 ) -> list[Voicing]:
     """
     Generates all statically valid SATB voicings for a given soprano pitch and chord.
 
     Constraints enforced during generation:
     1. Pitch ranges:
-       - S: 60..81
-       - A: 55..74
-       - T: 48..67
-       - B: 40..60
+       - S: 60..81 (extended 59..83)
+       - A: 55..74 (extended 53..75)
+       - T: 48..67 (extended 46..69)
+       - B: 40..60 (extended 36..60)
     2. Voice ordering (no voice crossing):
        S >= A >= T >= B
     3. Textural spacing limits:
@@ -33,11 +34,12 @@ def generate_candidate_voicings(
        T - B <= 24
     4. Chord tone membership:
        Every voice pitch must be one of the permitted pitch classes for the chord.
-    5. Doubling rules:
+    5. Doubling and distribution rules:
        - Main triads (T, S, D in 5/3): root doubled, third doubling strictly forbidden.
        - K64: bass (fifth of chord) strictly doubled.
        - VI (in deceptive cadence): third strictly doubled.
        - Seventh chords: complete (1-3-5-7) or incomplete (doubled root, 3, 7).
+       - Inversions: bass note strictly matches required factor (5/3: root; 6: 3rd; 6/4: 5th; 6/5: 3rd; 4/3 & 2: 7th).
     """
     ranges = EXTENDED_VOICE_RANGES if allow_extended_ranges else STANDARD_VOICE_RANGES
     s_min, s_max = ranges[0]
@@ -54,23 +56,33 @@ def generate_candidate_voicings(
     root_pc, third_pc, fifth_pc = get_triad_tones(chord_sym, tonic_pc, mode)
     allowed_pcs = {root_pc, third_pc, fifth_pc}
 
-    is_seventh = hasattr(chord, "is_seventh") and chord.is_seventh
-    seventh_pc = None
-    if is_seventh or "7" in chord_sym or "65" in chord_sym or "43" in chord_sym or "2" in chord_sym:
-        sym_clean = chord_sym.strip().upper().replace("/", "")
-        if sym_clean.startswith("DD") or sym_clean.startswith("D7V") or sym_clean.startswith("DV"):
-            # For double dominant 7th, 7th is tonic (scale degree I)
+    sym_clean = chord_sym.strip().upper().replace("/", "")
+    is_seventh = (
+        (hasattr(chord, "is_seventh") and chord.is_seventh)
+        or any(k in sym_clean for k in ("7", "65", "43"))
+        or sym_clean.endswith("2")
+        or sym_clean in ("D2", "DD2", "II2", "VII2")
+    )
+    if is_seventh and not (sym_clean.startswith("K") or "64" in sym_clean):
+        if sym_clean.startswith("DD") or sym_clean.startswith("DV"):
             seventh_pc = tonic_pc % 12
-        elif "II" in sym_clean:
+            allowed_pcs.add(seventh_pc)
+        elif sym_clean.startswith("VII"):
+            # diminished 7th in minor/harmonic major (deg 6 = +8), or natural major (+9)
+            allowed_pcs.add((tonic_pc + 8) % 12)
+            allowed_pcs.add((tonic_pc + 9) % 12)
+        elif sym_clean.startswith("II"):
+            seventh_pc = tonic_pc % 12
+            allowed_pcs.add(seventh_pc)
+        elif sym_clean.startswith("VI"):
             seventh_pc = (tonic_pc + 7) % 12
-        elif "VI" in sym_clean:
-            seventh_pc = (tonic_pc + 2) % 12
-        elif "IV" in sym_clean:
-            seventh_pc = (tonic_pc + 10) % 12
+            allowed_pcs.add(seventh_pc)
+        elif sym_clean.startswith("IV") or sym_clean.startswith("S"):
+            seventh_pc = (tonic_pc + 3 if ("MINOR" in mode or sym_clean.islower()) else tonic_pc + 4) % 12
+            allowed_pcs.add(seventh_pc)
         else:
-            # For dominant 7th, 7th is IV degree (tonic + 5)
             seventh_pc = (tonic_pc + 5) % 12
-        allowed_pcs.add(seventh_pc)
+            allowed_pcs.add(seventh_pc)
 
     # Check that soprano belongs to chord
     if soprano_pitch % 12 not in allowed_pcs:
@@ -79,16 +91,23 @@ def generate_candidate_voicings(
     # Inversion bass pitch class requirement
     # 5/3: root; 6: third; 6/4: fifth; 7: root; 6/5: third; 4/3: fifth/seventh; 2: seventh
     required_bass_pc = None
-    if chord_sym in ("K64", "T64", "S64", "D64", "s64", "t64"):
+    if hasattr(chord, "bass_pitch_class") and chord.bass_pitch_class is not None:
+        b_val = chord.bass_pitch_class
+        required_bass_pc = int(b_val.value if hasattr(b_val, "value") else b_val) % 12
+    elif "64" in sym_clean or sym_clean.startswith("K"):
         required_bass_pc = fifth_pc
-    elif chord_sym in ("T6", "S6", "D6", "s6", "t6", "II6", "ii6"):
+    elif "65" in sym_clean:
         required_bass_pc = third_pc
-    elif chord_sym in ("D43",):
-        required_bass_pc = (tonic_pc + 5) % 12  # 7th in bass per Brigade D43 convention
-    elif chord_sym in ("D2",):
-        required_bass_pc = (tonic_pc + 5) % 12  # 7th in bass
-    elif chord_sym in ("D65",):
+    elif "43" in sym_clean:
+        # Per Brigade D43 convention in this engine, 7th in bass
+        required_bass_pc = (tonic_pc % 12) if sym_clean.startswith("DD") else (tonic_pc + 5) % 12
+    elif sym_clean.endswith("2") or sym_clean in ("D2", "DD2", "II2", "VII2"):
+        required_bass_pc = (tonic_pc % 12) if sym_clean.startswith("DD") else (tonic_pc + 5) % 12
+    elif "6" in sym_clean:
         required_bass_pc = third_pc
+    else:
+        # Root position (5/3, 7): bass MUST be the root of the chord
+        required_bass_pc = root_pc
 
     candidates: list[Voicing] = []
 
@@ -124,7 +143,7 @@ def generate_candidate_voicings(
                 v = Voicing(soprano=soprano_pitch, alto=a, tenor=t, bass=b)
 
                 # Check doublings via doubling validator
-                doubling_violations = check_doubling(v, chord=chord, key=key)
+                doubling_violations = check_doubling(v, chord=chord, key=key, prev_chord=prev_chord)
                 if any(viol.is_hard for viol in doubling_violations):
                     continue
 

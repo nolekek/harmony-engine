@@ -123,6 +123,9 @@ def _format_rule_message(
     if rule_id == "VOICE_OVERLAPPING":
         return (f"Такт {measure}: Перекрывание голосов: голос идет выше/ниже предыдущей ноты соседнего голоса", involved_voices, involved_notes)
 
+    if rule_id == "DIRECT_UNISON":
+        return (f"Такт {measure}: Взятие или оставление унисона прямым движением голосов воспрещается", involved_voices, involved_notes)
+
     if rule_id == "MELODIC_AUGMENTED_INTERVAL":
         return (f"Такт {measure}: Запрещенный мелодический ход на увеличенный интервал (ув.2 / ув.4)", involved_voices, involved_notes)
 
@@ -130,13 +133,24 @@ def _format_rule_message(
         return (f"Такт {measure}: Запрещенный мелодический скачок на септиму", involved_voices, involved_notes)
 
     if rule_id == "DOUBLING_MAIN_TRIAD_ROOT":
+        if desc and "root not doubled" in desc.lower():
+            return (f"Такт {measure}: Недопустимое удвоение в главном трезвучии (прима не удвоена)", involved_voices, involved_notes)
         return (f"Такт {measure}: Недопустимое удвоение в главном трезвучии (удвоена терция вместо примы)", involved_voices, involved_notes)
+
+    if rule_id == "DOUBLING_SEXTACCORD":
+        return (f"Такт {measure}: Недопустимое удвоение в секстаккорде (удваивается прима или квинта)", involved_voices, involved_notes)
+
+    if rule_id == "DOUBLING_D6_LEADING_TONE":
+        return (f"Такт {measure}: В секстаккорде D6 удвоение вводного тона категорически запрещено", involved_voices, involved_notes)
 
     if rule_id == "DOUBLING_K64_BASS_ONLY":
         return (f"Такт {measure}: Удвоена терция в квартсекстаккорде K64 (в K64 удваивается строго бас/квинта)", involved_voices, involved_notes)
 
     if rule_id == "DOUBLING_DECEPTIVE_VI_THIRD":
         return (f"Такт {measure}: В трезвучии VI ступени при прерванном обороте (D -> VI) обязана удваиваться терция", involved_voices, involved_notes)
+
+    if rule_id == "DOUBLING_SECONDARY_DOMINANT":
+        return (f"Такт {measure}: В побочной доминанте запрещено удваивать альтерированный вводный тон", involved_voices, involved_notes)
 
     if rule_id == "RESOLUTION_SEVENTH_DOWN":
         return (f"Такт {measure}: Септима септаккорда брошена без обязательного разрешения на ступень вниз", involved_voices, involved_notes)
@@ -146,6 +160,27 @@ def _format_rule_message(
 
     if rule_id == "RESOLUTION_D43_TO_T6":
         return (f"Такт {measure}: Терцквартаккорд D43 обязан разрешаться в T6", involved_voices, involved_notes)
+
+    if rule_id == "RESOLUTION_D2_TO_T6":
+        return (f"Такт {measure}: Секундаккорд D2 обязан разрешаться в T6", involved_voices, involved_notes)
+
+    if rule_id == "RESOLUTION_VII7_SEVENTH_DOWN":
+        return (f"Такт {measure}: Септима вводного септаккорда VII7 обязана разрешаться на ступень вниз", involved_voices, involved_notes)
+
+    if rule_id == "RESOLUTION_VII7_FIFTH_DOWN":
+        return (f"Такт {measure}: Квинта вводного септаккорда VII7 обязана разрешаться вниз в терцию тоники", involved_voices, involved_notes)
+
+    if rule_id == "RESOLUTION_VII7_LEADING_TONE_UP":
+        return (f"Такт {measure}: Вводный тон септаккорда VII7 обязан разрешаться вверх в тонику", involved_voices, involved_notes)
+
+    if rule_id == "RESOLUTION_DD_TARGET":
+        return (f"Такт {measure}: Двойная доминанта обязана разрешаться в K64, D или D7", involved_voices, involved_notes)
+
+    if rule_id == "RESOLUTION_SECONDARY_DOMINANT":
+        return (f"Такт {measure}: Альтерированный вводный тон побочной доминанты обязан разрешаться на полутон вверх", involved_voices, involved_notes)
+
+    if rule_id == "FALSE_RELATION_PERECHENIE":
+        return (f"Такт {measure}: Перечение: хроматический полутон между разными голосами без плавного хода", involved_voices, involved_notes)
 
     if rule_id == "CADENCE_K64_STRONG_BEAT":
         return (f"Такт {measure}: Каденционный K64 обязан стоять на сильной доле относительно последующей доминанты", involved_voices, involved_notes)
@@ -212,43 +247,51 @@ def grade_satb_solution(
     problem_measures_set: set[int] = set()
 
     chord_list = list(chords) if chords else []
+    seen_violations: set[tuple[int, int, str, tuple[str, ...]]] = set()
 
-    # 1. Validate each vertical slice
-    for i, v in enumerate(voicings):
-        measure_num = metric_info[i]["measure"]
-        is_downbeat = metric_info[i]["is_downbeat"]
-        curr_chord = chord_list[i] if i < len(chord_list) else None
-
-        res_static = engine.validate_voicing(
-            voicing=v,
-            chord=curr_chord,
-            key=parsed_key,
-            is_downbeat=is_downbeat,
+    def _record_violation(viol: Any, measure_num: int, chord_idx: int, v_prev: Any | None, v_curr: Any) -> None:
+        msg_ru, voices, notes = _format_rule_message(
+            rule_id=viol.rule_id,
+            desc=viol.description,
+            measure=measure_num,
+            chord_idx=chord_idx,
+            v_prev=v_prev,
+            v_curr=v_curr,
+            voices_tuple=viol.voices,
         )
+        dedup_key = (measure_num, chord_idx, viol.rule_id, tuple(voices))
+        if dedup_key in seen_violations:
+            return
+        seen_violations.add(dedup_key)
 
-        for viol in res_static.violations:
-            msg_ru, voices, notes = _format_rule_message(
-                rule_id=viol.rule_id,
-                desc=viol.description,
-                measure=measure_num,
-                chord_idx=i + 1,
-                v_prev=None,
-                v_curr=v,
-                voices_tuple=viol.voices,
-            )
-            violations_list.append(GraderViolation(
-                measure=measure_num,
-                chord_index=i + 1,
-                rule_id=viol.rule_id,
-                severity=viol.severity,
-                message_ru=msg_ru,
-                voices=voices,
-                notes=notes,
-            ))
-            if viol.is_hard:
-                problem_measures_set.add(measure_num)
+        violations_list.append(GraderViolation(
+            measure=measure_num,
+            chord_index=chord_idx,
+            rule_id=viol.rule_id,
+            severity=viol.severity,
+            message_ru=msg_ru,
+            voices=voices,
+            notes=notes,
+        ))
+        if viol.is_hard:
+            problem_measures_set.add(measure_num)
 
-    # 2. Validate each horizontal transition
+    # 1. Validate the initial vertical slice (chord 0)
+    m0 = metric_info[0]["measure"]
+    db0 = metric_info[0]["is_downbeat"]
+    c0 = chord_list[0] if chord_list else None
+    res_first = engine.validate_voicing(
+        voicing=voicings[0],
+        chord=c0,
+        key=parsed_key,
+        is_downbeat=db0,
+    )
+    for viol in res_first.violations:
+        _record_violation(viol, m0, 1, None, voicings[0])
+
+    # 2. Validate all transitions and subsequent slices (chords 1..N-1)
+    # Note: engine.validate() evaluates both slice i (spacing, doubling with prev_chord context,
+    # and metric syntax) as well as transition i-1 -> i (voice leading, resolutions, chromatic).
     for i in range(1, len(voicings)):
         measure_num = metric_info[i]["measure"]
         is_downbeat = metric_info[i]["is_downbeat"]
@@ -267,30 +310,10 @@ def grade_satb_solution(
         )
 
         for viol in res_trans.violations:
-            # We filter out pure soft penalties like shortest path law from the hard error report
-            if not viol.is_hard:
+            # Skip non-rule heuristic costs
+            if not getattr(viol, "rule_id", None):
                 continue
-
-            msg_ru, voices, notes = _format_rule_message(
-                rule_id=viol.rule_id,
-                desc=viol.description,
-                measure=measure_num,
-                chord_idx=i + 1,
-                v_prev=prev_v,
-                v_curr=curr_v,
-                voices_tuple=viol.voices,
-            )
-            violations_list.append(GraderViolation(
-                measure=measure_num,
-                chord_index=i + 1,
-                rule_id=viol.rule_id,
-                severity=viol.severity,
-                message_ru=msg_ru,
-                voices=voices,
-                notes=notes,
-            ))
-            if viol.is_hard:
-                problem_measures_set.add(measure_num)
+            _record_violation(viol, measure_num, i + 1, prev_v, curr_v)
 
     hard_count = sum(1 for v in violations_list if v.severity == "hard_gate")
     soft_count = sum(1 for v in violations_list if v.severity != "hard_gate")

@@ -122,6 +122,57 @@ def check_d43_resolution(
     return violations
 
 
+def check_d2_resolution(
+    prev_voicing: Any,
+    curr_voicing: Any,
+    prev_chord: Any,
+    curr_chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    D2 has the seventh in the bass (scale degree IV).
+    It MUST resolve strictly to T6 (or t6), with the bass stepping down
+    by 1 or 2 semitones into the third of the tonic.
+    """
+    if prev_chord is None or curr_chord is None:
+        return []
+
+    prev_sym = parse_chord_symbol(prev_chord).strip().upper().replace("/", "")
+    if prev_sym not in ("D2", "DD2"):
+        return []
+
+    curr_sym = parse_chord_symbol(curr_chord).strip().upper().replace("/", "")
+    violations: list[RuleViolation] = []
+
+    if curr_sym not in ("T6", "T-6", "T", "t6", "t"):
+        violations.append(
+            RuleViolation(
+                rule_id="RESOLUTION_D2_TO_T6",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=f"D2 must resolve strictly to T6, but got '{curr_sym}'",
+                voices=(3,),
+            )
+        )
+
+    prev_satb = to_satb(prev_voicing)
+    curr_satb = to_satb(curr_voicing)
+    delta_b = curr_satb[3] - prev_satb[3]
+
+    if delta_b not in (-1, -2):
+        violations.append(
+            RuleViolation(
+                rule_id="RESOLUTION_D2_TO_T6",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=f"Bass of D2 must step down by second into third of T6, moved {delta_b:+d}",
+                voices=(3,),
+            )
+        )
+
+    return violations
+
+
 def check_leading_tone_resolution(
     prev_voicing: Any,
     curr_voicing: Any,
@@ -241,6 +292,43 @@ def check_vii7_resolution(
                     )
                 )
 
+        # Leading tone of VII7 must resolve up by half-step (+1) into tonic
+        elif p == leading_pc:
+            if delta != 1:
+                violations.append(
+                    RuleViolation(
+                        rule_id="RESOLUTION_VII7_LEADING_TONE_UP",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Leading tone of {prev_sym} in {VOICE_NAMES[idx]} "
+                            f"must resolve up to tonic by half-step (+1), moved {delta:+d}"
+                        ),
+                        voices=(idx,),
+                    )
+                )
+
+    # Resulting tonic triad must strictly double the third to avoid parallel fifths
+    from collections import Counter
+    curr_satb = to_satb(curr_voicing)
+    curr_counts = Counter([p % 12 for p in curr_satb])
+    _, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    is_minor = "MINOR" in mode or curr_sym.islower()
+    tonic_third_pc = (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12
+    if curr_counts[tonic_third_pc] < 2:
+        violations.append(
+            RuleViolation(
+                rule_id="RESOLUTION_VII7_DOUBLED_THIRD",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In resolution of {prev_sym} to {curr_sym}, the third of the tonic triad "
+                    f"(PC {tonic_third_pc}) must strictly be doubled to avoid parallel fifths. "
+                    f"Found {curr_counts[tonic_third_pc]} times."
+                ),
+            )
+        )
+
     return violations
 
 
@@ -262,6 +350,7 @@ def check_secondary_dominant_resolution(
         return []
 
     prev_sym = parse_chord_symbol(prev_chord).strip().upper().replace("/", "")
+    curr_sym = parse_chord_symbol(curr_chord).strip().upper().replace("/", "")
     if not (
         prev_sym.startswith("DD")
         or prev_sym in ("D7V", "DV")
@@ -301,6 +390,19 @@ def check_secondary_dominant_resolution(
     curr_satb = to_satb(curr_voicing)
     violations: list[RuleViolation] = []
 
+    # Validate target chord for secondary dominant
+    if prev_sym.startswith("DD") or prev_sym in ("D7V", "DV"):
+        allowed_targets = {"D", "D7", "D6", "D65", "D43", "D2", "K64", "VII", "VII7", "VII65", "VII43", "VII2"}
+        if curr_sym not in allowed_targets:
+            violations.append(
+                RuleViolation(
+                    rule_id="RESOLUTION_DD_TARGET",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=f"Secondary dominant {prev_sym} must resolve to D or K64 group, not {curr_sym}",
+                )
+            )
+
     for idx in range(4):
         p = prev_satb[idx] % 12
         delta = curr_satb[idx] - prev_satb[idx]
@@ -324,8 +426,9 @@ def check_secondary_dominant_resolution(
 
         # Check secondary seventh resolution
         if sec_seventh_pc is not None and p == sec_seventh_pc:
-            # Must resolve down by step (-1 or -2)
-            if delta not in (-1, -2):
+            # Must resolve down by step (-1 or -2), or be held as common tone in K64 (delta == 0)
+            is_k64_held = (curr_sym == "K64" and delta == 0)
+            if not (delta in (-1, -2) or is_k64_held):
                 violations.append(
                     RuleViolation(
                         rule_id="RESOLUTION_SECONDARY_DOMINANT",
@@ -360,6 +463,11 @@ def validate_resolutions(
     )
     violations.extend(
         check_d43_resolution(
+            prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
+        )
+    )
+    violations.extend(
+        check_d2_resolution(
             prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
         )
     )

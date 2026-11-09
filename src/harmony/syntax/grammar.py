@@ -47,6 +47,19 @@ class HarmonicGrammar:
     def __init__(self, key: Key | None = None):
         self.key = key or Key(tonic="C", mode="Major")
 
+    def get_chord_pitch_classes(self, fn: str, key: Key | None = None) -> set[int]:
+        """Returns the set of pitch classes belonging to the chord function."""
+        k = key or self.key
+        tonic_pc, mode = parse_key(k)
+        root, third, fifth = get_triad_tones(fn, tonic_pc, mode)
+        pcs = {root, third, fifth}
+        fn_upper = fn.strip().upper()
+        if fn_upper in ("D7", "D65", "D43", "D2"):
+            pcs.add((tonic_pc + 5) % 12)
+        elif fn_upper in ("DD7", "DD65", "DD43", "DD2"):
+            pcs.add(tonic_pc % 12)
+        return pcs
+
     def get_compatible_chords_for_pitch(
         self,
         pitch: int,
@@ -66,6 +79,8 @@ class HarmonicGrammar:
         pc = pitch % 12
         compatible: list[str] = []
 
+        is_minor = "MINOR" in mode.upper()
+        tonic_tones = {tonic_pc, (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12, (tonic_pc + 7) % 12}
         can_step_down = (next_pitch is not None) and ((next_pitch - pitch) in (-1, -2))
 
         for fn in ALL_FUNCTIONS:
@@ -73,14 +88,23 @@ class HarmonicGrammar:
             if fn == "K64" and not is_downbeat:
                 continue
 
-            # Position rule: Final cadence ending chord must be T
-            if is_final_cadence and fn not in ("T", "t"):
-                continue
+            # Position rule: Final cadence ending chord
+            # If pitch matches tonic triad, authentic cadence ending must be T.
+            # If pitch does not match tonic (e.g. degrees 2, 7), half cadence ending must be D.
+            if is_final_cadence:
+                if pc in tonic_tones:
+                    if fn not in ("T", "t"):
+                        continue
+                else:
+                    if fn not in ("D", "d"):
+                        continue
 
             # Position rule: Penultimate chord in authentic cadence is typically D, D7, etc.
             # K64 CANNOT be penultimate immediately before final T, because K64 must resolve to D!
-            if is_penultimate and fn in ("K64", "T64", "S64"):
-                continue
+            if is_penultimate:
+                next_in_tonic = (next_pitch is None) or ((next_pitch % 12) in tonic_tones)
+                if next_in_tonic and fn in ("K64", "T64", "S64", "D2"):
+                    continue
 
             # Dissonance resolution rule: If a 7th chord is chosen and the soprano note IS the 7th,
             # the soprano MUST step down (-1 or -2) into the next note. Leaps from the 7th are forbidden!
@@ -128,14 +152,19 @@ class HarmonicGrammar:
         """
         Validates syntactic progression rules:
         - No D -> S or D -> II regression
-        - D43 must go to T6
+        - D43 must go to T6 or T
         - D2 must go to T6
         - K64 must be followed by D or D7
+        - Dominants cannot move to K64
+        - Dominants cannot move to secondary dominants (D -> DD)
+        - Secondary dominant (DD) must resolve to Dominant or K64, not S, II, T, or VI
+        - D6 and D65 have leading tone in bass; cannot leap to T6 or VI
+        - D7 cannot resolve to T6
         """
         prev_upper = prev_fn.strip().upper()
         curr_upper = curr_fn.strip().upper()
 
-        # D -> S regression forbidden
+        # D -> S and D -> II regression forbidden
         if prev_upper in DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP:
             return False
 
@@ -147,15 +176,16 @@ class HarmonicGrammar:
         if prev_upper in ("D7", "D65", "D43", "D2") and curr_upper in ("D", "D6"):
             return False
 
-        # Secondary dominant (DD) cannot resolve to subdominant or regress to tonic
-        if prev_upper in SECONDARY_DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP:
-            return False
+        # Secondary dominant (DD) cannot resolve to subdominant, tonic, or VI
+        if prev_upper in SECONDARY_DOMINANT_GROUP:
+            if curr_upper in SUBDOMINANT_GROUP or curr_upper in ("T", "T6", "VI"):
+                return False
 
         # Dominant cannot regress to secondary dominant (D -> DD)
         if prev_upper in DOMINANT_GROUP and curr_upper in SECONDARY_DOMINANT_GROUP:
             return False
 
-        # D43 must resolve to T6
+        # D43 must resolve to T6 or T
         if prev_upper == "D43" and curr_upper not in ("T6", "T"):
             return False
 
@@ -163,8 +193,16 @@ class HarmonicGrammar:
         if prev_upper == "D2" and curr_upper != "T6":
             return False
 
-        # K64 must resolve to dominant
+        # K64 must resolve to dominant triad or D7
         if prev_upper == "K64" and curr_upper not in ("D", "D7"):
+            return False
+
+        # Inversions with leading tone in bass (D6, D65) cannot leap to T6 or VI
+        if prev_upper in ("D6", "D65") and curr_upper in ("T6", "VI"):
+            return False
+
+        # Root position D7 cannot resolve to T6
+        if prev_upper == "D7" and curr_upper == "T6":
             return False
 
         return True
@@ -195,8 +233,10 @@ class HarmonicGrammar:
                 p = int(m)
                 db = (i % 2 == 0)
             is_final = (i == n - 1)
-            is_penult = (i == n - 2)
             notes.append(MelodyNote(pitch=p, is_downbeat=db, is_cadence_point=is_final))
+
+        is_minor = "MINOR" in mode.upper()
+        tonic_tones = {tonic_pc, (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12, (tonic_pc + 7) % 12}
 
         # Build candidate options per step
         step_candidates: list[list[str]] = []
@@ -213,8 +253,12 @@ class HarmonicGrammar:
                 next_pitch=next_p,
             )
             if not cands:
-                # Fallback to any triad containing note
-                cands = [fn for fn in ["T", "S", "D"] if self.get_compatible_chords_for_pitch(note.pitch, k)]
+                # Fallback to any functions in ALL_FUNCTIONS whose tones contain note pitch
+                cands = [
+                    fn for fn in ALL_FUNCTIONS
+                    if (note.pitch % 12) in self.get_chord_pitch_classes(fn, k)
+                    and (not is_final or (fn in ("T", "t") if (note.pitch % 12) in tonic_tones else fn in ("D", "d")))
+                ]
             step_candidates.append(cands)
 
         # Beam search for top functional progressions
@@ -256,6 +300,25 @@ class HarmonicGrammar:
                             if (notes[i].pitch - notes[i - 1].pitch) > 2 and (notes[i].pitch % 12) == (tonic_pc + 7) % 12:
                                 continue
 
+                        # Root-to-third outer voice octave law:
+                        # Moving between root position and sextachord of the same function (T->T6, T6->T, S->S6, S6->S, D->D6, D6->D):
+                        # Bass moves between root and third. If soprano also moves between root and third,
+                        # outer voices start and end in octaves/unisons, mathematically guaranteeing parallel or contrary octaves.
+                        same_triad_inversion = (
+                            (prev_fn in ("T", "t") and cand in ("T6", "t6"))
+                            or (prev_fn in ("T6", "t6") and cand in ("T", "t"))
+                            or (prev_fn in ("S", "s") and cand in ("S6", "s6"))
+                            or (prev_fn in ("S6", "s6") and cand in ("S", "s"))
+                            or (prev_fn in ("D", "d") and cand in ("D6", "d6"))
+                            or (prev_fn in ("D6", "d6") and cand in ("D", "d"))
+                        )
+                        if same_triad_inversion:
+                            p_root, p_third, _ = get_triad_tones(prev_fn, tonic_pc, mode)
+                            p_mel = notes[i - 1].pitch % 12
+                            c_mel = notes[i].pitch % 12
+                            if (p_mel in (p_root, p_third)) and (c_mel in (p_root, p_third)) and (p_mel != c_mel):
+                                continue
+
                         # Heuristic transitions
                         trans_score = 0.0
                         # Reward standard cycles: T -> S (+1), S -> D (+2), D -> T (+2), K64 -> D7 (+3)
@@ -295,19 +358,53 @@ class HarmonicGrammar:
 
                     new_beams.append((score + trans_score, path + [cand]))
 
+            # Fallback 1: Relax voice leading heuristics with penalty, but strictly enforce is_valid_syntax_transition
             if not new_beams:
-                # If beam collapsed, fallback to appending cands directly
                 for score, path in beams:
-                    for cand in cands[:2]:
-                        new_beams.append((score, path + [cand]))
+                    for cand in cands:
+                        if path:
+                            prev_fn = path[-1]
+                            if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat):
+                                continue
+                            new_beams.append((score - 10.0, path + [cand]))
+                        else:
+                            new_beams.append((score - 10.0, [cand]))
+
+            # Fallback 2: Check all functions containing the pitch that are valid transitions
+            if not new_beams:
+                for score, path in beams:
+                    if path:
+                        prev_fn = path[-1]
+                        for fn in ALL_FUNCTIONS:
+                            if (notes[i].pitch % 12) in self.get_chord_pitch_classes(fn, k):
+                                if self.is_valid_syntax_transition(prev_fn, fn, is_downbeat):
+                                    new_beams.append((score - 20.0, path + [fn]))
+                    else:
+                        for fn in ALL_FUNCTIONS:
+                            if (notes[i].pitch % 12) in self.get_chord_pitch_classes(fn, k):
+                                new_beams.append((score - 20.0, [fn]))
+
+            # Fallback 3: Sustain previous harmony across passing tone if valid
+            if not new_beams:
+                for score, path in beams:
+                    if path:
+                        prev_fn = path[-1]
+                        if self.is_valid_syntax_transition(prev_fn, prev_fn, is_downbeat):
+                            new_beams.append((score - 30.0, path + [prev_fn]))
 
             # Keep top beams
             new_beams.sort(key=lambda x: x[0], reverse=True)
             beams = new_beams[:max(max_plans * 4, 16)]
 
-        # Extract top plans
+        # Extract top plans with deduplication
         results: list[list[Chord]] = []
-        for _, path in beams[:max_plans]:
-            results.append([Chord(function=fn) for fn in path])
+        seen_paths: set[tuple[str, ...]] = set()
+        for _, path in beams:
+            t_path = tuple(path)
+            if t_path not in seen_paths:
+                seen_paths.add(t_path)
+                results.append([Chord(function=fn) for fn in path])
+            if len(results) >= max_plans:
+                break
 
         return results

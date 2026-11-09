@@ -101,7 +101,7 @@ class RuleEngine:
             )
 
         # Functional regression prohibition: D -> S
-        if prev_sym in DOMINANT_GROUP and curr_sym in SUBDOMINANT_GROUP:
+        if (prev_sym in DOMINANT_GROUP or prev_sym.startswith("DD")) and curr_sym in SUBDOMINANT_GROUP:
             violations.append(
                 RuleViolation(
                     rule_id="SYNTAX_NO_D_TO_S",

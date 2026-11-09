@@ -6,4 +6,7 @@ __pycache__/
 *.swo
 *.jsonl
 .DS_Store
-Thumbs.db
+*.egg-info/
+.venv/
+dist/
+uv.lock

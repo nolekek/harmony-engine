@@ -25,20 +25,26 @@ from src.harmony.rules.voice_leading import (
     check_contrary_fifths_and_octaves,
     check_hidden_fifths_and_octaves,
     check_voice_overlapping,
+    check_unisons,
     check_melodic_intervals,
     validate_voice_leading,
 )
 from src.harmony.rules.doubling import (
     check_main_triad_doubling,
+    check_sextaccord_doubling,
     check_k64_doubling,
     check_deceptive_vi_doubling,
+    check_secondary_dominant_doubling,
     check_doubling,
     get_triad_tones,
 )
 from src.harmony.rules.resolutions import (
     check_seventh_resolution,
     check_d43_resolution,
+    check_d2_resolution,
     check_leading_tone_resolution,
+    check_vii7_resolution,
+    check_secondary_dominant_resolution,
     validate_resolutions,
 )
 from src.harmony.rules.engine import (
@@ -72,18 +78,24 @@ __all__ = [
     "check_contrary_fifths_and_octaves",
     "check_hidden_fifths_and_octaves",
     "check_voice_overlapping",
+    "check_unisons",
     "check_melodic_intervals",
     "validate_voice_leading",
     # Doubling
     "check_main_triad_doubling",
+    "check_sextaccord_doubling",
     "check_k64_doubling",
     "check_deceptive_vi_doubling",
+    "check_secondary_dominant_doubling",
     "check_doubling",
     "get_triad_tones",
     # Resolutions
     "check_seventh_resolution",
     "check_d43_resolution",
+    "check_d2_resolution",
     "check_leading_tone_resolution",
+    "check_vii7_resolution",
+    "check_secondary_dominant_resolution",
     "validate_resolutions",
     # Engine
     "RuleEngine",

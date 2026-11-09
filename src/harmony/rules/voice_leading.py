@@ -5,6 +5,11 @@ Detects parallel/contrary 5ths and 8ves, hidden 5ths/8ves, overlapping, and forb
 
 from typing import Any
 from src.harmony.core.types import RuleViolation, to_satb, parse_key
+from src.harmony.rules.spacing import (
+    check_voice_crossing,
+    check_texture_spacing,
+    check_voice_ranges,
+)
 
 VOICE_NAMES = ("Soprano", "Alto", "Tenor", "Bass")
 VOICE_PAIRS = (
@@ -332,6 +337,61 @@ def check_melodic_intervals(
     return violations
 
 
+def check_unisons(
+    prev_voicing: Any,
+    curr_voicing: Any,
+) -> list[RuleViolation]:
+    """
+    Checks for illegal motion into or out of unisons:
+    In classical harmony, a unison between any pair of voices can only be approached
+    or left by contrary motion or oblique motion (one voice stationary).
+    Approaching or leaving a unison in direct (similar) motion is strictly forbidden.
+    """
+    prev_satb = to_satb(prev_voicing)
+    curr_satb = to_satb(curr_voicing)
+    violations: list[RuleViolation] = []
+
+    for v1, v2 in VOICE_PAIRS:
+        p1, p2 = prev_satb[v1], prev_satb[v2]
+        c1, c2 = curr_satb[v1], curr_satb[v2]
+
+        d1 = c1 - p1
+        d2 = c2 - p2
+
+        # Direct motion: both voices move in the same non-zero direction
+        if d1 * d2 > 0:
+            # 1. Direct motion INTO unison
+            if c1 == c2 and p1 != p2:
+                violations.append(
+                    RuleViolation(
+                        rule_id="DIRECT_UNISON",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Illegal direct motion into unison between {VOICE_NAMES[v1]} and {VOICE_NAMES[v2]}: "
+                            f"{p1}-{p2} -> {c1}-{c2}"
+                        ),
+                        voices=(v1, v2),
+                    )
+                )
+            # 2. Direct motion OUT OF unison
+            elif p1 == p2 and c1 != c2:
+                violations.append(
+                    RuleViolation(
+                        rule_id="DIRECT_UNISON",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Illegal direct motion out of unison between {VOICE_NAMES[v1]} and {VOICE_NAMES[v2]}: "
+                            f"{p1}-{p2} -> {c1}-{c2}"
+                        ),
+                        voices=(v1, v2),
+                    )
+                )
+
+    return violations
+
+
 def validate_voice_leading(
     prev_voicing: Any,
     curr_voicing: Any,
@@ -345,5 +405,6 @@ def validate_voice_leading(
     violations.extend(check_contrary_fifths_and_octaves(prev_voicing, curr_voicing))
     violations.extend(check_hidden_fifths_and_octaves(prev_voicing, curr_voicing))
     violations.extend(check_voice_overlapping(prev_voicing, curr_voicing))
+    violations.extend(check_unisons(prev_voicing, curr_voicing))
     violations.extend(check_melodic_intervals(prev_voicing, curr_voicing, key=key))
     return violations

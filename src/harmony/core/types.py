@@ -73,6 +73,44 @@ class Key:
     tonic: str = "C"
     mode: str = "Major"
 
+    @classmethod
+    def parse(cls, val: Any) -> "Key":
+        """
+        Parses Key from string, dict, or Key instance.
+        Supports 'C Major', 'A minor', 'c-moll', 'G-dur', 'F# minor', 'Bb Major', etc.
+        """
+        if isinstance(val, Key):
+            return val
+        if hasattr(val, "tonic") and hasattr(val, "mode"):
+            t = val.tonic
+            t_str = t.sharp_name if hasattr(t, "sharp_name") else str(t)
+            m = val.mode
+            m_str = m.value if hasattr(m, "value") else str(m)
+            return cls(tonic=t_str, mode=m_str)
+        if isinstance(val, Mapping):
+            return cls(tonic=str(val.get("tonic", "C")), mode=str(val.get("mode", "Major")))
+        if isinstance(val, str):
+            import re
+            cleaned = val.strip()
+            german_match = re.match(r"^([A-Ga-g][#bB♭♯]?)[-_](dur|moll)$", cleaned, re.IGNORECASE)
+            if german_match:
+                note_str, mode_str = german_match.groups()
+                is_min = mode_str.lower() == "moll"
+                return cls(tonic=note_str.capitalize(), mode="MinorHarmonic" if is_min else "Major")
+
+            parts = re.split(r"[\s:_]+", cleaned)
+            if len(parts) >= 2:
+                note_str = parts[0]
+                mode_str = "_".join(parts[1:]).lower()
+                is_min = "minor" in mode_str or "moll" in mode_str
+                return cls(tonic=note_str.capitalize(), mode="MinorHarmonic" if is_min else "Major")
+
+            raw = parts[0]
+            is_min = raw[0].islower() or (len(raw) > 1 and raw.endswith("m") and not raw.endswith("b"))
+            note_str = raw.rstrip("m").rstrip("M")
+            return cls(tonic=note_str.capitalize(), mode="MinorHarmonic" if is_min else "Major")
+        return cls("C", "Major")
+
     @property
     def tonic_pc(self) -> int:
         t = self.tonic.strip().upper()
@@ -217,16 +255,11 @@ def parse_key(key: Any) -> tuple[int, str]:
         return t_pc, norm_mode
 
     if isinstance(key, Mapping):
-        k = Key(tonic=str(key.get("tonic", "C")), mode=str(key.get("mode", "Major")))
+        k = Key.parse(key)
         return k.tonic_pc, k.normalized_mode
     if isinstance(key, str):
-        # E.g. "C", "Am", "c-moll", "G-dur"
-        s = key.strip()
-        is_minor = False
-        if "-moll" in s.lower() or "m" in s[1:] or s.islower():
-            is_minor = True
-        tonic_part = s.split("-")[0].replace("moll", "").replace("dur", "").strip().rstrip("m").rstrip("M")
-        k = Key(tonic=tonic_part or "C", mode="MinorHarmonic" if is_minor else "Major")
+        # E.g. "C", "Am", "c-moll", "G-dur", "C Major", "A Minor"
+        k = Key.parse(key)
         return k.tonic_pc, k.normalized_mode
     if isinstance(key, int):
         return key % 12, "MAJOR"
