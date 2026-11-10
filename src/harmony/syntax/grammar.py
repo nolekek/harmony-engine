@@ -275,11 +275,16 @@ class HarmonicGrammar:
                         prev_fn = path[-1]
                         if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat):
                             continue
-                        # Second-relationship voice leading law:
-                        # In root-position S, bass is scale degree 4. Moving to dominant with soprano rising from 1 to 2
-                        # mathematically guarantees either parallel fifths (bass to 5) or a tritone leap (bass to 7).
+                        # Second-relationship voice leading law (REPORT #54):
+                        # In root-position S, bass is scale degree 4. Moving to dominant with soprano rising from 4 to 5
+                        # (e.g. F4 -> G4 in C-dur) forces both outer voices to move in parallel into the octave/unison,
+                        # mathematically guaranteeing parallel octaves (or parallel unisons).
                         if prev_fn in ("S", "s") and cand in DOMINANT_GROUP:
-                            if (notes[i - 1].pitch % 12) == tonic_pc and (notes[i].pitch % 12) == (tonic_pc + 2) % 12:
+                            if (
+                                (notes[i - 1].pitch % 12) == (tonic_pc + 5) % 12
+                                and (notes[i].pitch % 12) == (tonic_pc + 7) % 12
+                                and notes[i].pitch > notes[i - 1].pitch
+                            ):
                                 continue
 
                         # Root-position fifth-to-fifth law:
@@ -321,6 +326,12 @@ class HarmonicGrammar:
 
                         # Heuristic transitions
                         trans_score = 0.0
+
+                        # Stepwise soprano motion: prioritize sextachords (S6, D6, II6) (T13, BK-02)
+                        soprano_step = abs(notes[i].pitch - notes[i - 1].pitch) in (1, 2)
+                        if soprano_step and cand in ("S6", "s6", "D6", "d6", "II6"):
+                            trans_score += 2.5
+
                         # Reward standard cycles: T -> S (+1), S -> D (+2), D -> T (+2), K64 -> D7 (+3)
                         is_chromatic_note = (notes[i].pitch % 12) == (tonic_pc + 6) % 12
                         if prev_fn == "K64" and cand in ("D", "D7"):

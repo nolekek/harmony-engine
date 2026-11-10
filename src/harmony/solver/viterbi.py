@@ -31,8 +31,9 @@ class SolverResult:
     is_success: bool
     voicings: list[Voicing] | None
     total_cost: float
-    diagnostics: list[SolverStepDiagnostic]
+    diagnostics: list[dict[str, Any]]
     message: str = ""
+    step_diagnostics: list[SolverStepDiagnostic] | None = None
 
 
 class ViterbiSolver:
@@ -57,12 +58,18 @@ class ViterbiSolver:
         """
         n = len(chords)
         if len(melody) != n or n == 0:
+            msg = f"Length mismatch: melody ({len(melody)}) vs chords ({n})"
             return SolverResult(
                 is_success=False,
                 voicings=None,
                 total_cost=float("inf"),
-                diagnostics=[],
-                message=f"Length mismatch: melody ({len(melody)}) vs chords ({n})",
+                diagnostics=[{
+                    "step": None,
+                    "chord": None,
+                    "blocked": 0,
+                    "message": msg,
+                }],
+                message=msg,
             )
 
         # Parse melody and chords
@@ -106,7 +113,7 @@ class ViterbiSolver:
         try:
             # 1. Generate state lattice V[t]
             lattice: list[list[Voicing]] = []
-            diagnostics: list[SolverStepDiagnostic] = []
+            step_diag: list[SolverStepDiagnostic] = []
 
             for t in range(n):
                 candidates = generate_candidate_voicings(
@@ -117,7 +124,7 @@ class ViterbiSolver:
                     prev_chord=parsed_chords[t - 1] if t > 0 else None,
                 )
                 lattice.append(candidates)
-                diagnostics.append(
+                step_diag.append(
                     SolverStepDiagnostic(
                         step_index=t,
                         chord=parsed_chords[t].function,
@@ -128,12 +135,19 @@ class ViterbiSolver:
                 )
 
                 if len(candidates) == 0:
+                    msg = f"Step {t} ({parsed_chords[t].function}): no candidate voicings found for soprano pitch {melody_pitches[t]}"
                     return SolverResult(
                         is_success=False,
                         voicings=None,
                         total_cost=float("inf"),
-                        diagnostics=diagnostics,
-                        message=f"Step {t} ({parsed_chords[t].function}): no candidate voicings found for soprano pitch {melody_pitches[t]}",
+                        diagnostics=[{
+                            "step": t,
+                            "chord": parsed_chords[t].function,
+                            "blocked": 0,
+                            "message": msg,
+                        }],
+                        message=msg,
+                        step_diagnostics=step_diag,
                     )
 
             # 2. Viterbi forward DP
@@ -160,15 +174,22 @@ class ViterbiSolver:
 
             delta.append(init_delta)
             psi.append([-1] * len(lattice[0]))
-            diagnostics[0].reachable_candidates_count = sum(1 for c in init_delta if c < float("inf"))
+            step_diag[0].reachable_candidates_count = sum(1 for c in init_delta if c < float("inf"))
 
-            if diagnostics[0].reachable_candidates_count == 0:
+            if step_diag[0].reachable_candidates_count == 0:
+                msg = "Initial step 0 has no valid voicings under rule engine constraints."
                 return SolverResult(
                     is_success=False,
                     voicings=None,
                     total_cost=float("inf"),
-                    diagnostics=diagnostics,
-                    message="Initial step 0 has no valid voicings under rule engine constraints.",
+                    diagnostics=[{
+                        "step": 0,
+                        "chord": parsed_chords[0].function,
+                        "blocked": len(lattice[0]),
+                        "message": msg,
+                    }],
+                    message=msg,
+                    step_diagnostics=step_diag,
                 )
 
             # Steps 1 to N-1
@@ -213,21 +234,44 @@ class ViterbiSolver:
                 delta.append(step_delta)
                 psi.append(step_psi)
                 reachable = sum(1 for c in step_delta if c < float("inf"))
-                diagnostics[t].reachable_candidates_count = reachable
+                step_diag[t].reachable_candidates_count = reachable
 
                 if reachable == 0:
+                    msg = f"Step {t} ({curr_chord.function}): all {len(curr_candidates)} candidates blocked by hard-rule violations from step {t-1}."
                     return SolverResult(
                         is_success=False,
                         voicings=None,
                         total_cost=float("inf"),
-                        diagnostics=diagnostics,
-                        message=f"Step {t} ({curr_chord.function}): all {len(curr_candidates)} candidates blocked by hard-rule violations from step {t-1}.",
+                        diagnostics=[{
+                            "step": t,
+                            "chord": curr_chord.function,
+                            "blocked": len(curr_candidates),
+                            "message": msg,
+                        }],
+                        message=msg,
+                        step_diagnostics=step_diag,
                     )
 
             # 3. Backtrack optimal trajectory
             last_step_costs = delta[n - 1]
             best_last_idx = min(range(len(last_step_costs)), key=lambda idx: last_step_costs[idx])
             optimal_cost = last_step_costs[best_last_idx]
+
+            if optimal_cost == float("inf"):
+                msg = f"Step {n - 1} ({parsed_chords[-1].function}): final cadence unreachable or no valid path across lattice."
+                return SolverResult(
+                    is_success=False,
+                    voicings=None,
+                    total_cost=float("inf"),
+                    diagnostics=[{
+                        "step": n - 1,
+                        "chord": parsed_chords[-1].function,
+                        "blocked": len(lattice[n - 1]),
+                        "message": msg,
+                    }],
+                    message=msg,
+                    step_diagnostics=step_diag,
+                )
 
             optimal_path: list[Voicing] = [lattice[n - 1][best_last_idx]]
             curr_idx = best_last_idx
@@ -243,8 +287,9 @@ class ViterbiSolver:
                 is_success=True,
                 voicings=optimal_path,
                 total_cost=optimal_cost,
-                diagnostics=diagnostics,
+                diagnostics=[],
                 message="Optimal SATB trajectory found successfully.",
+                step_diagnostics=step_diag,
             )
         finally:
             self.rule_engine.allow_extended_ranges = orig_extended

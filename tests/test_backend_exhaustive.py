@@ -580,6 +580,7 @@ def test_api_grade_endpoint_clean_and_violations():
             {"soprano": 67, "alto": 64, "tenor": 60, "bass": 48},
             {"soprano": 69, "alto": 65, "tenor": 62, "bass": 50},
         ],
+        "chords": ["T", "II"],
         "key": {"tonic": "C", "mode": "Major"},
     }
     res_bad = client.post("/api/grade", json=bad_payload)

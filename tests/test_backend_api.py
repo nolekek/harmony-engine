@@ -83,6 +83,7 @@ def test_api_grade():
             {"soprano": 67, "alto": 60, "tenor": 55, "bass": 48},
             {"soprano": 69, "alto": 60, "tenor": 57, "bass": 50},
         ],
+        "chords": ["T", "S"],
         "key": {"tonic": "C", "mode": "Major"},
     }
     res = client.post("/api/grade", json=payload)

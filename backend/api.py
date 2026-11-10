@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import io
 import time
-from typing import Any
+from typing import Any, Self
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.harmony.core.types import Key, Chord, Voicing, PITCH_CLASS_NAMES
 from src.harmony.pipeline import Harmonizer
@@ -38,6 +38,41 @@ VALID_MODES = {
     "minor_natural",
     "dur",
     "moll",
+}
+
+
+VALID_CHORD_FUNCTIONS = {
+    # Tonic
+    "T", "T6", "T64", "T53", "T-6",
+    "t", "t6", "t64", "t53", "t-6",
+    # Subdominant
+    "S", "S6", "S64", "S53", "S-6",
+    "s", "s6", "s64", "s53", "s-6",
+    # Dominant
+    "D", "D6", "D7", "D65", "D43", "D2", "D53", "D-6", "D-7", "D-65", "D-43", "D-2",
+    "D6/5", "D4/3",
+    "d", "d6", "d7", "d65", "d43", "d2", "d53", "d-6", "d-7", "d-65", "d-43", "d-2",
+    "d6/5", "d4/3",
+    # Cadential 6/4
+    "K64", "K6/4", "Cad64", "cad64", "CAD64", "k64",
+    # II degree
+    "II", "II6", "II7", "II65", "II43", "II2", "II53", "II-6", "II-7",
+    "ii", "ii6", "ii7", "ii65", "ii43", "ii2", "ii53", "ii-6", "ii-7",
+    # VI degree
+    "VI", "VI6", "VI53", "VI-6",
+    "vi", "vi6", "vi53", "vi-6",
+    # III degree
+    "III", "III6", "III53", "III-6",
+    "iii", "iii6", "iii53", "iii-6",
+    # VII degree
+    "VII", "VII6", "VII7", "VII65", "VII43", "VII2", "VII53", "VII-6", "VII-7",
+    "vii", "vii6", "vii7", "vii65", "vii43", "vii2", "vii53", "vii-6", "vii-7",
+    # Double Dominant
+    "DD", "DD7", "DD65", "DD43", "DD2", "DD6", "DD-7",
+    "dd", "dd7", "dd65", "dd43", "dd2", "dd6", "dd-7",
+    "D7V", "DV", "D7/V", "D/V", "d7v", "dv", "d7/v", "d/v",
+    # Secondary dominants
+    "D7II", "D/II", "D7/II", "D7VI", "D/VI", "D7/VI", "D7IV", "D/IV", "D7/IV",
 }
 
 
@@ -98,12 +133,28 @@ class VoicingItem(BaseModel):
 
 
 class GradeRequest(BaseModel):
-    voicings: list[VoicingItem]
+    voicings: list[VoicingItem] = Field(..., min_length=1)
+    chords: list[str] = Field(..., min_length=1)
     key: KeyRequest = Field(default_factory=KeyRequest)
-    chords: list[str] | None = None
     time_signature: str = "4/4"
     durations: list[str] | None = None
     allow_extended_ranges: bool = False
+
+    @field_validator("chords")
+    @classmethod
+    def validate_chords(cls, chords: list[str]) -> list[str]:
+        for c in chords:
+            if not isinstance(c, str) or c.strip() not in VALID_CHORD_FUNCTIONS:
+                raise ValueError(f"Неизвестная функция аккорда: '{c}'")
+        return chords
+
+    @model_validator(mode="after")
+    def validate_lengths(self) -> Self:
+        if len(self.voicings) != len(self.chords):
+            raise ValueError(
+                f"Несоответствие длины: voicings ({len(self.voicings)}) и chords ({len(self.chords)}) должны совпадать."
+            )
+        return self
 
 
 class ParseTextRequest(BaseModel):
@@ -204,7 +255,14 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
             return {
                 "is_success": False,
                 "candidates": [],
+                "best_candidate": None,
                 "message": "Без побочных доминант невозможно гармонизовать заданную мелодию.",
+                "error": {
+                    "code": "SECONDARY_DOMINANTS_DISABLED",
+                    "message": "Без побочных доминант невозможно гармонизовать заданную мелодию.",
+                    "diagnostics": [],
+                    "hint": "Включите опцию allow_secondary_dominants=true или скорректируйте мелодию.",
+                },
                 "latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
             }
     else:
@@ -214,13 +272,21 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
         return {
             "is_success": False,
             "candidates": [],
+            "best_candidate": None,
             "message": "Не удалось синтезировать функциональные планы для данной мелодии.",
+            "error": {
+                "code": "NO_PLANS",
+                "message": "Не удалось синтезировать функциональные планы для данной мелодии.",
+                "diagnostics": [],
+                "hint": "Проверьте тональность мелодии или диапазон нот.",
+            },
             "latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
         }
 
     # 2. Solve candidate plans
     solver = ViterbiSolver()
     solutions: list[dict[str, Any]] = []
+    collected_diagnostics: list[dict[str, Any]] = []
 
     for plan_idx, plan in enumerate(plans_to_try):
         res = solver.solve(
@@ -269,6 +335,11 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
                 "musicxml": colored_xml,
                 "ascii_score": ascii_text,
             })
+        else:
+            if getattr(res, "diagnostics", None):
+                for d in res.diagnostics:
+                    if isinstance(d, dict) and d not in collected_diagnostics:
+                        collected_diagnostics.append(d)
 
     # Stably select top-3 candidate solutions by ascending cost
     solutions = select_top_candidates(solutions, k=3)
@@ -277,12 +348,28 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
 
     latency = round((time.perf_counter() - t_start) * 1000, 2)
 
+    if not solutions:
+        return {
+            "is_success": False,
+            "candidates": [],
+            "best_candidate": None,
+            "message": "Все кандидаты отклонены жесткими правилами голосоведения.",
+            "error": {
+                "code": "NO_FEASIBLE_PLAN",
+                "message": "Все кандидаты отклонены жесткими правилами голосоведения.",
+                "diagnostics": collected_diagnostics,
+                "hint": "Проверьте мелодические ходы на запрещенные интервалы или включите расширенные диапазоны (allow_extended_ranges=true).",
+            },
+            "latency_ms": latency,
+        }
+
     return {
-        "is_success": len(solutions) > 0,
+        "is_success": True,
         "candidates": solutions,
-        "best_candidate": solutions[0] if solutions else None,
-        "message": f"Найдено {len(solutions)} математически оптимальных решений." if solutions else "Все кандидаты отклонены жесткими правилами голосоведения.",
+        "best_candidate": solutions[0],
+        "message": f"Найдено {len(solutions)} математически оптимальных решений.",
         "latency_ms": latency,
+        "error": None,
     }
 
 

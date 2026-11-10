@@ -126,6 +126,25 @@ def _format_rule_message(
     if rule_id == "DIRECT_UNISON":
         return (f"Такт {measure}: Взятие или оставление унисона прямым движением голосов воспрещается", involved_voices, involved_notes)
 
+    if rule_id == "VOICE_UNISON":
+        if voices_tuple and len(voices_tuple) == 2:
+            v1, v2 = voices_tuple
+            return (
+                f"Такт {measure}: Недопустимый унисон между соседними голосами ({VOICE_NAMES_RU[v1]} и {VOICE_NAMES_RU[v2]})",
+                involved_voices,
+                involved_notes,
+            )
+        return (f"Такт {measure}: Недопустимый унисон между соседними голосами", involved_voices, involved_notes)
+
+    if rule_id == "CHORD_THIRD_MISSING":
+        return (f"Такт {measure}: В аккорде отсутствует обязательный терцовый тон", involved_voices, involved_notes)
+
+    if rule_id == "CHORD_FIFTH_MISSING":
+        return (f"Такт {measure}: В аккорде отсутствует обязательный квинтовый тон", involved_voices, involved_notes)
+
+    if rule_id == "CADENCE_K64_INITIAL":
+        return (f"Такт {measure}: Кадансовый квартсекстаккорд K64 запрещен в качестве начального аккорда", involved_voices, involved_notes)
+
     if rule_id == "MELODIC_AUGMENTED_INTERVAL":
         return (f"Такт {measure}: Запрещенный мелодический ход на увеличенный интервал (ув.2 / ув.4)", involved_voices, involved_notes)
 
@@ -280,11 +299,13 @@ def grade_satb_solution(
     m0 = metric_info[0]["measure"]
     db0 = metric_info[0]["is_downbeat"]
     c0 = chord_list[0] if chord_list else None
+    is_single = (len(voicings) == 1)
     res_first = engine.validate_voicing(
         voicing=voicings[0],
         chord=c0,
         key=parsed_key,
         is_downbeat=db0,
+        is_final_chord=is_single,
     )
     for viol in res_first.violations:
         _record_violation(viol, m0, 1, None, voicings[0])
@@ -299,6 +320,7 @@ def grade_satb_solution(
         curr_v = voicings[i]
         prev_chord = chord_list[i - 1] if (i - 1) < len(chord_list) else None
         curr_chord = chord_list[i] if i < len(chord_list) else None
+        is_final = (i == len(voicings) - 1)
 
         res_trans = engine.validate(
             prev_voicing=prev_v,
@@ -307,6 +329,7 @@ def grade_satb_solution(
             curr_chord=curr_chord,
             key=parsed_key,
             is_downbeat=is_downbeat,
+            is_final_chord=is_final,
         )
 
         for viol in res_trans.violations:

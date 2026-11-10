@@ -88,7 +88,7 @@ class Harmonizer:
         key: Key | str,
         chords: Sequence[Chord | str] | None = None,
         time_signature: Any = "4/4",
-        max_plans: int = 30,
+        max_plans: int = 60,
         allow_extended_ranges: bool = False,
     ) -> HarmonizationResult:
         """

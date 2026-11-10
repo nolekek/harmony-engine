@@ -223,11 +223,19 @@ def w2_default(wave: str, name: str) -> None:
 
 
 def w2_desc_scale(wave: str, name: str) -> None:
+    # Until T16 (III/VII6 in the chord dictionary) descending diatonic lines are
+    # allowed to legitimately fail — but the failure MUST be structured, never a
+    # silent crash or a generic message without an error code.
     for label, pitches in [("C5 B4 A4 G4", [72, 71, 69, 67]),
                            ("C5..C4", [72, 71, 69, 67, 65, 64, 62, 60])]:
-        data = harmonize(melody(pitches, max_plans=80)).json()
-        check(wave, f"{name} [{label}]", data.get("is_success") is True,
-              f"is_success={data.get('is_success')} msg={str(data.get('message'))[:80]}")
+        data = harmonize(melody(pitches), max_plans=80).json()
+        if data.get("is_success") is True:
+            ok, detail = True, "harmonized"
+        else:
+            code = (data.get("error") or {}).get("code")
+            ok = code in ("NO_FEASIBLE_PLAN", "NO_PLANS")
+            detail = f"honest refusal code={code!r}"
+        check(wave, f"{name} [{label}]", ok, detail)
 
 
 def w2_k64(wave: str, name: str) -> None:

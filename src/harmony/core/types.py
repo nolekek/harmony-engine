@@ -482,8 +482,10 @@ def calculate_metric_structure(
 
         dur_q = parse_duration_quarters(dur_raw)
 
-        if curr_offset >= curr_time_sig.measure_duration_quarters - 1e-4:
+        while curr_offset >= curr_time_sig.measure_duration_quarters - 1e-4:
             curr_measure += 1
+            curr_offset -= curr_time_sig.measure_duration_quarters
+        if abs(curr_offset) < 1e-4:
             curr_offset = 0.0
 
         time_sig_changed = (curr_time_sig != prev_time_sig)
