@@ -1,0 +1,598 @@
+{
+  "summary": {
+    "major_scales_accuracy": "12/12 (100.0%)",
+    "harmonic_minor_scales_accuracy": "12/12 (100.0%)",
+    "natural_minor_accuracy": "12/12 (100.0%)",
+    "natural_minor_confusions_count": 0
+  },
+  "records": [
+    {
+      "type": "control_default_melody",
+      "expected": "C Major",
+      "detected": "C Major",
+      "is_correct": true,
+      "raw_response": {
+        "tonic": "C",
+        "mode": "Major",
+        "name": "C-dur (До мажор)",
+        "fifths": 0
+      }
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "C Major",
+      "detected": "C Major",
+      "is_correct": true,
+      "pitches": [
+        60,
+        62,
+        64,
+        65,
+        67,
+        69,
+        71,
+        72
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "G Major",
+      "detected": "G Major",
+      "is_correct": true,
+      "pitches": [
+        67,
+        69,
+        71,
+        72,
+        74,
+        76,
+        78,
+        79
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "D Major",
+      "detected": "D Major",
+      "is_correct": true,
+      "pitches": [
+        62,
+        64,
+        66,
+        67,
+        69,
+        71,
+        73,
+        74
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "A Major",
+      "detected": "A Major",
+      "is_correct": true,
+      "pitches": [
+        69,
+        71,
+        73,
+        74,
+        76,
+        78,
+        80,
+        81
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "E Major",
+      "detected": "E Major",
+      "is_correct": true,
+      "pitches": [
+        64,
+        66,
+        68,
+        69,
+        71,
+        73,
+        75,
+        76
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "B Major",
+      "detected": "B Major",
+      "is_correct": true,
+      "pitches": [
+        71,
+        73,
+        75,
+        76,
+        78,
+        80,
+        82,
+        83
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "F# Major",
+      "detected": "F# Major",
+      "is_correct": true,
+      "pitches": [
+        66,
+        68,
+        70,
+        71,
+        73,
+        75,
+        77,
+        78
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "Db Major",
+      "detected": "Db Major",
+      "is_correct": true,
+      "pitches": [
+        61,
+        63,
+        65,
+        66,
+        68,
+        70,
+        72,
+        73
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "Ab Major",
+      "detected": "Ab Major",
+      "is_correct": true,
+      "pitches": [
+        68,
+        70,
+        72,
+        73,
+        75,
+        77,
+        79,
+        80
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "Eb Major",
+      "detected": "Eb Major",
+      "is_correct": true,
+      "pitches": [
+        63,
+        65,
+        67,
+        68,
+        70,
+        72,
+        74,
+        75
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "Bb Major",
+      "detected": "Bb Major",
+      "is_correct": true,
+      "pitches": [
+        70,
+        72,
+        74,
+        75,
+        77,
+        79,
+        81,
+        82
+      ]
+    },
+    {
+      "type": "major_scale_ascending",
+      "expected": "F Major",
+      "detected": "F Major",
+      "is_correct": true,
+      "pitches": [
+        65,
+        67,
+        69,
+        70,
+        72,
+        74,
+        76,
+        77
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "A MinorHarmonic",
+      "detected": "A MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        69,
+        71,
+        72,
+        74,
+        76,
+        77,
+        80,
+        81
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "E MinorHarmonic",
+      "detected": "E MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        64,
+        66,
+        67,
+        69,
+        71,
+        72,
+        75,
+        76
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "B MinorHarmonic",
+      "detected": "B MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        71,
+        73,
+        74,
+        76,
+        78,
+        79,
+        82,
+        83
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "F# MinorHarmonic",
+      "detected": "F# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        66,
+        68,
+        69,
+        71,
+        73,
+        74,
+        77,
+        78
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "C# MinorHarmonic",
+      "detected": "C# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        61,
+        63,
+        64,
+        66,
+        68,
+        69,
+        72,
+        73
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "G# MinorHarmonic",
+      "detected": "G# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        68,
+        70,
+        71,
+        73,
+        75,
+        76,
+        79,
+        80
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "D# MinorHarmonic",
+      "detected": "D# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        63,
+        65,
+        66,
+        68,
+        70,
+        71,
+        74,
+        75
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "Bb MinorHarmonic",
+      "detected": "Bb MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        70,
+        72,
+        73,
+        75,
+        77,
+        78,
+        81,
+        82
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "F MinorHarmonic",
+      "detected": "F MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        65,
+        67,
+        68,
+        70,
+        72,
+        73,
+        76,
+        77
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "C MinorHarmonic",
+      "detected": "C MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        60,
+        62,
+        63,
+        65,
+        67,
+        68,
+        71,
+        72
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "G MinorHarmonic",
+      "detected": "G MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        67,
+        69,
+        70,
+        72,
+        74,
+        75,
+        78,
+        79
+      ]
+    },
+    {
+      "type": "harmonic_minor_scale",
+      "expected": "D MinorHarmonic",
+      "detected": "D MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        62,
+        64,
+        65,
+        67,
+        69,
+        70,
+        73,
+        74
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "A MinorHarmonic",
+      "detected": "A MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        69,
+        71,
+        72,
+        74,
+        76,
+        77,
+        79,
+        81
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "E MinorHarmonic",
+      "detected": "E MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        64,
+        66,
+        67,
+        69,
+        71,
+        72,
+        74,
+        76
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "B MinorHarmonic",
+      "detected": "B MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        71,
+        73,
+        74,
+        76,
+        78,
+        79,
+        81,
+        83
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "F# MinorHarmonic",
+      "detected": "F# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        66,
+        68,
+        69,
+        71,
+        73,
+        74,
+        76,
+        78
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "C# MinorHarmonic",
+      "detected": "C# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        61,
+        63,
+        64,
+        66,
+        68,
+        69,
+        71,
+        73
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "G# MinorHarmonic",
+      "detected": "G# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        68,
+        70,
+        71,
+        73,
+        75,
+        76,
+        78,
+        80
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "D# MinorHarmonic",
+      "detected": "D# MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        63,
+        65,
+        66,
+        68,
+        70,
+        71,
+        73,
+        75
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "Bb MinorHarmonic",
+      "detected": "Bb MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        70,
+        72,
+        73,
+        75,
+        77,
+        78,
+        80,
+        82
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "F MinorHarmonic",
+      "detected": "F MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        65,
+        67,
+        68,
+        70,
+        72,
+        73,
+        75,
+        77
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "C MinorHarmonic",
+      "detected": "C MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        60,
+        62,
+        63,
+        65,
+        67,
+        68,
+        70,
+        72
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "G MinorHarmonic",
+      "detected": "G MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        67,
+        69,
+        70,
+        72,
+        74,
+        75,
+        77,
+        79
+      ]
+    },
+    {
+      "type": "natural_minor_scale",
+      "expected": "D MinorHarmonic",
+      "detected": "D MinorHarmonic",
+      "is_correct": true,
+      "pitches": [
+        62,
+        64,
+        65,
+        67,
+        69,
+        70,
+        72,
+        74
+      ]
+    }
+  ]
+}

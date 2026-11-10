@@ -1,0 +1,97 @@
+[
+  {
+    "label": "2_bars_4_notes",
+    "num_notes": 4,
+    "lattice_k": {
+      "min": 5,
+      "max": 21,
+      "avg": 13
+    },
+    "theoretical_N_K2": 676,
+    "timing_ms": {
+      "grammar_plans_avg": 0.57,
+      "viterbi_single_plan_avg": 14.65,
+      "harmonizer_pipeline_avg": 170.33,
+      "api_http_roundtrip_avg": 176.57,
+      "api_server_latency_ms": 165.08
+    },
+    "pipeline_success": true,
+    "solutions_count": 3
+  },
+  {
+    "label": "4_bars_8_notes",
+    "num_notes": 8,
+    "lattice_k": {
+      "min": 5,
+      "max": 21,
+      "avg": 11.1
+    },
+    "theoretical_N_K2": 990,
+    "timing_ms": {
+      "grammar_plans_avg": 7.74,
+      "viterbi_single_plan_avg": 15.33,
+      "harmonizer_pipeline_avg": 543.62,
+      "api_http_roundtrip_avg": 482.62,
+      "api_server_latency_ms": 476.48
+    },
+    "pipeline_success": false,
+    "solutions_count": 0
+  },
+  {
+    "label": "8_bars_16_notes",
+    "num_notes": 16,
+    "lattice_k": {
+      "min": 5,
+      "max": 21,
+      "avg": 12.8
+    },
+    "theoretical_N_K2": 2601,
+    "timing_ms": {
+      "grammar_plans_avg": 24.46,
+      "viterbi_single_plan_avg": 17.24,
+      "harmonizer_pipeline_avg": 899.53,
+      "api_http_roundtrip_avg": 789.73,
+      "api_server_latency_ms": 782.76
+    },
+    "pipeline_success": false,
+    "solutions_count": 0
+  },
+  {
+    "label": "12_bars_24_notes",
+    "num_notes": 24,
+    "lattice_k": {
+      "min": 5,
+      "max": 21,
+      "avg": 12.2
+    },
+    "theoretical_N_K2": 3553,
+    "timing_ms": {
+      "grammar_plans_avg": 40.57,
+      "viterbi_single_plan_avg": 18.68,
+      "harmonizer_pipeline_avg": 986.52,
+      "api_http_roundtrip_avg": 892.88,
+      "api_server_latency_ms": 865.83
+    },
+    "pipeline_success": false,
+    "solutions_count": 0
+  },
+  {
+    "label": "16_bars_32_notes",
+    "num_notes": 32,
+    "lattice_k": {
+      "min": 5,
+      "max": 21,
+      "avg": 12.3
+    },
+    "theoretical_N_K2": 4827,
+    "timing_ms": {
+      "grammar_plans_avg": 56.12,
+      "viterbi_single_plan_avg": 20.08,
+      "harmonizer_pipeline_avg": 1077.65,
+      "api_http_roundtrip_avg": 970.0,
+      "api_server_latency_ms": 958.83
+    },
+    "pipeline_success": false,
+    "solutions_count": 0
+  }
+]

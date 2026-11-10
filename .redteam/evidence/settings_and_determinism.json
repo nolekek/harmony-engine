@@ -1,0 +1,173 @@
+{
+  "secondary_dominants_setting": {
+    "mel_with_chromatic": [
+      67,
+      69,
+      71,
+      73,
+      74
+    ],
+    "false_setting": {
+      "success": true,
+      "candidates_count": 3,
+      "leaked_DD_chords": true,
+      "sample_chords": [
+        "T",
+        "D",
+        "T6",
+        "DD",
+        "D6"
+      ]
+    },
+    "true_setting": {
+      "success": true,
+      "candidates_count": 3,
+      "contains_DD": true,
+      "sample_chords": [
+        "T",
+        "D",
+        "T6",
+        "DD",
+        "D6"
+      ]
+    }
+  },
+  "extended_ranges_setting": {
+    "false_setting": {
+      "success": false,
+      "message": "Все кандидаты отклонены жесткими правилами голосоведения."
+    },
+    "true_setting": {
+      "success": false,
+      "message": "Все кандидаты отклонены жесткими правилами голосоведения."
+    }
+  },
+  "max_plans_sweep": {
+    "1": {
+      "success": false,
+      "candidates_count": 0,
+      "best_cost": null,
+      "latency_ms": 14.7
+    },
+    "5": {
+      "success": false,
+      "candidates_count": 0,
+      "best_cost": null,
+      "latency_ms": 69.42
+    },
+    "10": {
+      "success": false,
+      "candidates_count": 0,
+      "best_cost": null,
+      "latency_ms": 140.0
+    },
+    "20": {
+      "success": false,
+      "candidates_count": 0,
+      "best_cost": null,
+      "latency_ms": 212.38
+    },
+    "30": {
+      "success": false,
+      "candidates_count": 0,
+      "best_cost": null,
+      "latency_ms": 276.01
+    },
+    "40": {
+      "success": false,
+      "candidates_count": 0,
+      "best_cost": null,
+      "latency_ms": 361.56
+    },
+    "50": {
+      "success": true,
+      "candidates_count": 3,
+      "best_cost": -7.0,
+      "latency_ms": 412.61
+    },
+    "100": {
+      "success": true,
+      "candidates_count": 3,
+      "best_cost": -7.0,
+      "latency_ms": 419.54
+    },
+    "200": {
+      "success": true,
+      "candidates_count": 3,
+      "best_cost": -7.0,
+      "latency_ms": 426.9
+    }
+  },
+  "time_signatures": {
+    "4/4": {
+      "downbeats": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "success": true,
+      "candidates_count": 3,
+      "message": "Найдено 3 математически оптимальных решений."
+    },
+    "3/4": {
+      "downbeats": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "success": true,
+      "candidates_count": 3,
+      "message": "Найдено 3 математически оптимальных решений."
+    },
+    "2/4": {
+      "downbeats": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "success": true,
+      "candidates_count": 3,
+      "message": "Найдено 3 математически оптимальных решений."
+    },
+    "6/8": {
+      "downbeats": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "success": true,
+      "candidates_count": 3,
+      "message": "Найдено 3 математически оптимальных решений."
+    },
+    "3/8": {
+      "downbeats": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "success": true,
+      "candidates_count": 3,
+      "message": "Найдено 3 математически оптимальных решений."
+    }
+  },
+  "determinism": {
+    "is_deterministic": true,
+    "runs_count": 10,
+    "unique_fingerprints_count": 1
+  }
+}

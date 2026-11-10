@@ -1,0 +1,127 @@
+{
+  "1_control": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failure_types": {
+      "LATTICE_BLOCKED_BY_HARD_RULES": 1
+    },
+    "reasons": {
+      "Step 2 (D): all 21 candidates blocked by hard-rule violations from step 1.": 1
+    }
+  },
+  "2_canonical_majors": {
+    "total": 42,
+    "passed": 22,
+    "failed": 20,
+    "failure_types": {
+      "LATTICE_BLOCKED_BY_HARD_RULES": 20
+    },
+    "reasons": {
+      "Step 4 (D): all 21 candidates blocked by hard-rule violations from step 3.": 2,
+      "Step 2 (VI): all 3 candidates blocked by hard-rule violations from step 1.": 5,
+      "Step 4 (D): all 11 candidates blocked by hard-rule violations from step 3.": 2,
+      "Step 4 (D): all 20 candidates blocked by hard-rule violations from step 3.": 4,
+      "Step 4 (D): all 16 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 2 (VI): all 2 candidates blocked by hard-rule violations from step 1.": 5,
+      "Step 4 (D): all 9 candidates blocked by hard-rule violations from step 3.": 1
+    }
+  },
+  "2_canonical_minors": {
+    "total": 42,
+    "passed": 22,
+    "failed": 20,
+    "failure_types": {
+      "LATTICE_BLOCKED_BY_HARD_RULES": 20
+    },
+    "reasons": {
+      "Step 4 (D): all 16 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 2 (VI): all 2 candidates blocked by hard-rule violations from step 1.": 5,
+      "Step 4 (D): all 20 candidates blocked by hard-rule violations from step 3.": 4,
+      "Step 2 (VI): all 3 candidates blocked by hard-rule violations from step 1.": 5,
+      "Step 4 (D): all 11 candidates blocked by hard-rule violations from step 3.": 2,
+      "Step 4 (D): all 9 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 4 (D): all 21 candidates blocked by hard-rule violations from step 3.": 2
+    }
+  },
+  "3_random_diatonic": {
+    "total": 120,
+    "passed": 70,
+    "failed": 50,
+    "failure_types": {
+      "LATTICE_BLOCKED_BY_HARD_RULES": 49,
+      "NO_CANDIDATES_AT_STEP": 1
+    },
+    "reasons": {
+      "Step 4 (VI): all 2 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 8 (D): all 16 candidates blocked by hard-rule violations from step 7.": 1,
+      "Step 3 (VI): all 2 candidates blocked by hard-rule violations from step 2.": 3,
+      "Step 6 (D): all 6 candidates blocked by hard-rule violations from step 5.": 1,
+      "Step 10 (VI): all 2 candidates blocked by hard-rule violations from step 9.": 1,
+      "Step 8 (VI): all 2 candidates blocked by hard-rule violations from step 7.": 2,
+      "Step 5 (T): all 4 candidates blocked by hard-rule violations from step 4.": 1,
+      "Step 8 (VI): all 1 candidates blocked by hard-rule violations from step 7.": 1,
+      "Step 4 (T6): all 17 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 5 (T): all 8 candidates blocked by hard-rule violations from step 4.": 1,
+      "Step 5 (D7): all 4 candidates blocked by hard-rule violations from step 4.": 1,
+      "Step 2 (T): all 14 candidates blocked by hard-rule violations from step 1.": 1,
+      "Step 8 (T6): all 18 candidates blocked by hard-rule violations from step 7.": 1,
+      "Step 2 (D): all 4 candidates blocked by hard-rule violations from step 1.": 1,
+      "Step 6 (D): all 16 candidates blocked by hard-rule violations from step 5.": 1,
+      "Step 4 (D): all 8 candidates blocked by hard-rule violations from step 3.": 2,
+      "Step 7 (D7): all 6 candidates blocked by hard-rule violations from step 6.": 1,
+      "Step 5 (D): all 16 candidates blocked by hard-rule violations from step 4.": 2,
+      "Step 4 (T): all 8 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 7 (T): all 8 candidates blocked by hard-rule violations from step 6.": 1,
+      "Step 9 (VI): all 3 candidates blocked by hard-rule violations from step 8.": 1,
+      "Step 11 (T): all 21 candidates blocked by hard-rule violations from step 10.": 1,
+      "Step 5 (VI): all 2 candidates blocked by hard-rule violations from step 4.": 1,
+      "Step 4 (D): all 11 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 4 (VI): all 3 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 5 (T): all 7 candidates blocked by hard-rule violations from step 4.": 1,
+      "Step 8 (D7): all 4 candidates blocked by hard-rule violations from step 7.": 1,
+      "Step 10 (D7): all 4 candidates blocked by hard-rule violations from step 9.": 1,
+      "Step 4 (T): all 2 candidates blocked by hard-rule violations from step 3.": 1,
+      "Step 3 (D): all 3 candidates blocked by hard-rule violations from step 2.": 1,
+      "Step 2 (D): all 8 candidates blocked by hard-rule violations from step 1.": 2,
+      "Step 2 (D): all 6 candidates blocked by hard-rule violations from step 1.": 1,
+      "Step 4 (VI): no candidate voicings found for soprano pitch 62": 1,
+      "Step 7 (T): all 18 candidates blocked by hard-rule violations from step 6.": 1,
+      "Step 2 (VI): all 3 candidates blocked by hard-rule violations from step 1.": 2,
+      "Step 6 (D65): all 3 candidates blocked by hard-rule violations from step 5.": 1,
+      "Step 3 (T): all 2 candidates blocked by hard-rule violations from step 2.": 1,
+      "Step 2 (VI): all 2 candidates blocked by hard-rule violations from step 1.": 1,
+      "Step 3 (T): all 8 candidates blocked by hard-rule violations from step 2.": 1,
+      "Step 3 (D): all 11 candidates blocked by hard-rule violations from step 2.": 1,
+      "Step 2 (T6): all 19 candidates blocked by hard-rule violations from step 1.": 1,
+      "Step 7 (T): all 16 candidates blocked by hard-rule violations from step 6.": 1,
+      "Step 4 (D): all 2 candidates blocked by hard-rule violations from step 3.": 1
+    }
+  },
+  "4_non_chord_tones": {
+    "total": 8,
+    "passed": 7,
+    "failed": 1,
+    "failure_types": {
+      "LATTICE_BLOCKED_BY_HARD_RULES": 1
+    },
+    "reasons": {
+      "Step 4 (D): all 21 candidates blocked by hard-rule violations from step 3.": 1
+    }
+  },
+  "5_chromatic_altered": {
+    "total": 5,
+    "passed": 1,
+    "failed": 4,
+    "failure_types": {
+      "LATTICE_BLOCKED_BY_HARD_RULES": 1,
+      "NO_CANDIDATES_AT_STEP": 3
+    },
+    "reasons": {
+      "Step 3 (DD): all 4 candidates blocked by hard-rule violations from step 2.": 1,
+      "Step 3 (D): no candidate voicings found for soprano pitch 70": 1,
+      "Step 2 (S): no candidate voicings found for soprano pitch 68": 1,
+      "Step 1 (T): no candidate voicings found for soprano pitch 63": 1
+    }
+  }
+}

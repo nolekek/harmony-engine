@@ -1,0 +1,360 @@
+[
+  {
+    "name": "diatonic_3_notes_descending_terz_C5_B4_A4",
+    "length": 3,
+    "pitches": [
+      72,
+      71,
+      69
+    ],
+    "note_names": [
+      "C5",
+      "B4",
+      "A4"
+    ],
+    "key": "C Major",
+    "api_success": false,
+    "api_message": "Все кандидаты отклонены жесткими правилами голосоведения.",
+    "plans_generated_count": 14,
+    "solvable_plans_count": 0,
+    "first_plan": [
+      "T",
+      "D",
+      "VI"
+    ],
+    "first_failure_message": "Step 2 (VI): all 3 candidates blocked by hard-rule violations from step 1.",
+    "req_data": {
+      "melody": [
+        {
+          "pitch": 72,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 71,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 69,
+          "duration": "whole",
+          "is_downbeat": true
+        }
+      ],
+      "key": {
+        "tonic": "C",
+        "mode": "Major"
+      },
+      "time_signature": "4/4",
+      "allow_extended_ranges": false,
+      "allow_secondary_dominants": true,
+      "max_plans": 50
+    },
+    "curl_repro": "curl -X POST http://127.0.0.1:8000/api/harmonize -H \"Content-Type: application/json\" -d '{\"melody\": [{\"pitch\": 72, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 71, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"whole\", \"is_downbeat\": true}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}'",
+    "powershell_repro": "Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/harmonize' -Method Post -ContentType 'application/json' -Body '{\"melody\": [{\"pitch\": 72, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 71, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"whole\", \"is_downbeat\": true}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}' | ConvertTo-Json -Depth 5"
+  },
+  {
+    "name": "diatonic_4_notes_descending_quart_C5_B4_A4_G4",
+    "length": 4,
+    "pitches": [
+      72,
+      71,
+      69,
+      67
+    ],
+    "note_names": [
+      "C5",
+      "B4",
+      "A4",
+      "G4"
+    ],
+    "key": "C Major",
+    "api_success": false,
+    "api_message": "Все кандидаты отклонены жесткими правилами голосоведения.",
+    "plans_generated_count": 14,
+    "solvable_plans_count": 0,
+    "first_plan": [
+      "T",
+      "D",
+      "VI",
+      "T"
+    ],
+    "first_failure_message": "Step 2 (VI): all 3 candidates blocked by hard-rule violations from step 1.",
+    "req_data": {
+      "melody": [
+        {
+          "pitch": 72,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 71,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 69,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 67,
+          "duration": "whole",
+          "is_downbeat": false
+        }
+      ],
+      "key": {
+        "tonic": "C",
+        "mode": "Major"
+      },
+      "time_signature": "4/4",
+      "allow_extended_ranges": false,
+      "allow_secondary_dominants": true,
+      "max_plans": 50
+    },
+    "curl_repro": "curl -X POST http://127.0.0.1:8000/api/harmonize -H \"Content-Type: application/json\" -d '{\"melody\": [{\"pitch\": 72, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 71, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 67, \"duration\": \"whole\", \"is_downbeat\": false}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}'",
+    "powershell_repro": "Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/harmonize' -Method Post -ContentType 'application/json' -Body '{\"melody\": [{\"pitch\": 72, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 71, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 67, \"duration\": \"whole\", \"is_downbeat\": false}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}' | ConvertTo-Json -Depth 5"
+  },
+  {
+    "name": "diatonic_6_notes_ascending_scale_prefix_C4_to_A4",
+    "length": 6,
+    "pitches": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69
+    ],
+    "note_names": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4"
+    ],
+    "key": "C Major",
+    "api_success": false,
+    "api_message": "Все кандидаты отклонены жесткими правилами голосоведения.",
+    "plans_generated_count": 50,
+    "solvable_plans_count": 0,
+    "first_plan": [
+      "T",
+      "D",
+      "T",
+      "S",
+      "D",
+      "VI"
+    ],
+    "first_failure_message": "Step 4 (D): all 21 candidates blocked by hard-rule violations from step 3.",
+    "req_data": {
+      "melody": [
+        {
+          "pitch": 60,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 62,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 64,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 65,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 67,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 69,
+          "duration": "whole",
+          "is_downbeat": false
+        }
+      ],
+      "key": {
+        "tonic": "C",
+        "mode": "Major"
+      },
+      "time_signature": "4/4",
+      "allow_extended_ranges": false,
+      "allow_secondary_dominants": true,
+      "max_plans": 50
+    },
+    "curl_repro": "curl -X POST http://127.0.0.1:8000/api/harmonize -H \"Content-Type: application/json\" -d '{\"melody\": [{\"pitch\": 60, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 62, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 64, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 65, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 67, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 69, \"duration\": \"whole\", \"is_downbeat\": false}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}'",
+    "powershell_repro": "Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/harmonize' -Method Post -ContentType 'application/json' -Body '{\"melody\": [{\"pitch\": 60, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 62, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 64, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 65, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 67, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 69, \"duration\": \"whole\", \"is_downbeat\": false}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}' | ConvertTo-Json -Depth 5"
+  },
+  {
+    "name": "diatonic_8_notes_natural_descending_C_major_scale",
+    "length": 8,
+    "pitches": [
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62,
+      60
+    ],
+    "note_names": [
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4",
+      "C4"
+    ],
+    "key": "C Major",
+    "api_success": false,
+    "api_message": "Все кандидаты отклонены жесткими правилами голосоведения.",
+    "plans_generated_count": 50,
+    "solvable_plans_count": 0,
+    "first_plan": [
+      "T",
+      "D",
+      "VI",
+      "T",
+      "D7",
+      "T",
+      "D",
+      "T"
+    ],
+    "first_failure_message": "Step 2 (VI): all 3 candidates blocked by hard-rule violations from step 1.",
+    "req_data": {
+      "melody": [
+        {
+          "pitch": 72,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 71,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 69,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 67,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 65,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 64,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 62,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 60,
+          "duration": "whole",
+          "is_downbeat": false
+        }
+      ],
+      "key": {
+        "tonic": "C",
+        "mode": "Major"
+      },
+      "time_signature": "4/4",
+      "allow_extended_ranges": false,
+      "allow_secondary_dominants": true,
+      "max_plans": 50
+    },
+    "curl_repro": "curl -X POST http://127.0.0.1:8000/api/harmonize -H \"Content-Type: application/json\" -d '{\"melody\": [{\"pitch\": 72, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 71, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 67, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 65, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 64, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 62, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 60, \"duration\": \"whole\", \"is_downbeat\": false}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}'",
+    "powershell_repro": "Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/harmonize' -Method Post -ContentType 'application/json' -Body '{\"melody\": [{\"pitch\": 72, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 71, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 67, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 65, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 64, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 62, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 60, \"duration\": \"whole\", \"is_downbeat\": false}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}' | ConvertTo-Json -Depth 5"
+  },
+  {
+    "name": "chromatic_altered_B_flat_in_C_major",
+    "length": 5,
+    "pitches": [
+      60,
+      64,
+      67,
+      70,
+      69
+    ],
+    "note_names": [
+      "C4",
+      "E4",
+      "G4",
+      "Bb4",
+      "A4"
+    ],
+    "key": "C Major",
+    "api_success": false,
+    "api_message": "Все кандидаты отклонены жесткими правилами голосоведения.",
+    "plans_generated_count": 50,
+    "solvable_plans_count": 0,
+    "first_plan": [
+      "T",
+      "T",
+      "D",
+      "D",
+      "VI"
+    ],
+    "first_failure_message": "Step 3 (D): no candidate voicings found for soprano pitch 70",
+    "req_data": {
+      "melody": [
+        {
+          "pitch": 60,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 64,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 67,
+          "duration": "half",
+          "is_downbeat": true
+        },
+        {
+          "pitch": 70,
+          "duration": "half",
+          "is_downbeat": false
+        },
+        {
+          "pitch": 69,
+          "duration": "whole",
+          "is_downbeat": true
+        }
+      ],
+      "key": {
+        "tonic": "C",
+        "mode": "Major"
+      },
+      "time_signature": "4/4",
+      "allow_extended_ranges": false,
+      "allow_secondary_dominants": true,
+      "max_plans": 50
+    },
+    "curl_repro": "curl -X POST http://127.0.0.1:8000/api/harmonize -H \"Content-Type: application/json\" -d '{\"melody\": [{\"pitch\": 60, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 64, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 67, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 70, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"whole\", \"is_downbeat\": true}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}'",
+    "powershell_repro": "Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/harmonize' -Method Post -ContentType 'application/json' -Body '{\"melody\": [{\"pitch\": 60, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 64, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 67, \"duration\": \"half\", \"is_downbeat\": true}, {\"pitch\": 70, \"duration\": \"half\", \"is_downbeat\": false}, {\"pitch\": 69, \"duration\": \"whole\", \"is_downbeat\": true}], \"key\": {\"tonic\": \"C\", \"mode\": \"Major\"}, \"time_signature\": \"4/4\", \"allow_extended_ranges\": false, \"allow_secondary_dominants\": true, \"max_plans\": 50}' | ConvertTo-Json -Depth 5"
+  }
+]
