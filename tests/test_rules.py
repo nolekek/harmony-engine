@@ -171,30 +171,40 @@ class TestResolutionRules:
         assert not res.is_valid
         assert any(v.rule_id == "RESOLUTION_SEVENTH_DOWN" for v in res.hard_violations)
 
-    def test_d43_must_resolve_to_t6(self, engine):
+    def test_d43_resolutions(self, engine):
         key = Key(tonic="F", mode="Major")
         chord_d43 = Chord(function="D43")
-
-        # Case 1: D43 resolving to II (the infamous bug!)
+        chord_t = Chord(function="T")
+        chord_t6 = Chord(function="T6")
         chord_ii = Chord(function="II")
-        v_d43 = Voicing(soprano=67, alto=60, tenor=52, bass=46)  # G4, C4, E3, Bb2 (Bb is 7th in bass)
-        v_ii = Voicing(soprano=69, alto=62, tenor=53, bass=50)   # jumping into II
+        chord_d2 = Chord(function="D2")
+
+        # In F major: C7 has root C, third E, fifth G, seventh Bb.
+        # D43 has fifth G in bass (scale degree II): G2 = 43.
+        # Seventh Bb is in soprano: Bb4 = 70.
+        v_d43 = Voicing(soprano=70, alto=60, tenor=52, bass=43)
+
+        # Case 1: D43 resolving to II is forbidden
+        v_ii = Voicing(soprano=69, alto=62, tenor=53, bass=50)
         res1 = engine.validate(v_d43, v_ii, prev_chord=chord_d43, curr_chord=chord_ii, key=key)
         assert not res1.is_valid
         assert any(v.rule_id == "RESOLUTION_D43_TO_T6" for v in res1.hard_violations)
 
-        # Case 2: D43 resolving to T (5/3) instead of T6
-        chord_t = Chord(function="T")
-        v_t53 = Voicing(soprano=69, alto=60, tenor=53, bass=41)  # Bass jumps Bb2 -> F2 (fourth down!)
+        # Case 2: D43 -> T (5/3) is valid (bass steps down G2(43) -> F2(41), 7th Bb4(70) -> A4(69))
+        v_t53 = Voicing(soprano=69, alto=60, tenor=53, bass=41)
         res2 = engine.validate(v_d43, v_t53, prev_chord=chord_d43, curr_chord=chord_t, key=key)
-        assert not res2.is_valid
-        assert any(v.rule_id == "RESOLUTION_D43_TO_T6" for v in res2.hard_violations)
+        assert res2.is_valid, f"D43 -> T53 must be valid, got: {[v.rule_id for v in res2.hard_violations]}"
 
-        # Case 3: Proper resolution: D43 -> T6 (bass steps down Bb2 -> A2)
-        chord_t6 = Chord(function="T6")
-        v_t6 = Voicing(soprano=69, alto=60, tenor=53, bass=45)   # Bb2 (46) -> A2 (45)
+        # Case 3: D43 -> T6 is valid (bass steps up G2(43) -> A2(45), 7th Bb4(70) -> A4(69))
+        v_t6 = Voicing(soprano=69, alto=60, tenor=53, bass=45)
         res3 = engine.validate(v_d43, v_t6, prev_chord=chord_d43, curr_chord=chord_t6, key=key)
-        assert not any(v.rule_id == "RESOLUTION_D43_TO_T6" for v in res3.hard_violations)
+        assert res3.is_valid, f"D43 -> T6 must be valid, got: {[v.rule_id for v in res3.hard_violations]}"
+
+        # Case 4: D2 -> T (5/3) is a violation (D2 must resolve strictly to T6)
+        v_d2 = Voicing(soprano=67, alto=60, tenor=52, bass=46)  # Bb2 (7th) in bass
+        res4 = engine.validate(v_d2, v_t53, prev_chord=chord_d2, curr_chord=chord_t, key=key)
+        assert not res4.is_valid
+        assert any(v.rule_id == "RESOLUTION_D2_TO_T6" for v in res4.hard_violations)
 
 
 class TestSyntaxRules:
@@ -277,6 +287,7 @@ class TestHumanBenchmarkCorpus:
                 curr_chord=curr_chord,
                 key=key,
                 is_downbeat=is_downbeat,
+                is_final_chord=(idx == len(satb_list) - 1),
             )
 
             # Human solution must NEVER have hard violations!

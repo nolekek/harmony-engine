@@ -464,7 +464,7 @@ class TestSecondaryDominantResolutionsAndRules:
             Voicing(72, 69, 64, 45),  # VI (C-dur) = II (G-dur)
             Voicing(71, 67, 62, 50),  # K64 (G-dur)
             Voicing(69, 66, 60, 50),  # D7 (G-dur) - F# in alto
-            Voicing(67, 67, 59, 43),  # T (G-dur)
+            Voicing(67, 62, 59, 43),  # T (G-dur), no unisons: S=G4 A=D4 T=B3 B=G2
         ]
         chords = [Chord("T"), Chord("VI"), Chord("K64"), Chord("D7"), Chord("T")]
         keys = [c_dur, c_dur, g_dur, g_dur, g_dur]

@@ -9,9 +9,9 @@ import io
 import time
 from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from src.harmony.core.types import Key, Chord, Voicing
+from src.harmony.core.types import Key, Chord, Voicing, PITCH_CLASS_NAMES
 from src.harmony.pipeline import Harmonizer
 from src.harmony.syntax.grammar import HarmonicGrammar
 from src.harmony.solver.viterbi import ViterbiSolver
@@ -28,26 +28,63 @@ from src.harmony.export.ascii import format_ascii_score
 
 router = APIRouter(prefix="/api")
 
+VALID_TONICS = set(PITCH_CLASS_NAMES.keys())
+VALID_MODES = {
+    "major",
+    "minor",
+    "minorharmonic",
+    "minornatural",
+    "minor_harmonic",
+    "minor_natural",
+    "dur",
+    "moll",
+}
+
+
+def select_top_candidates(solutions: list[dict[str, Any]], k: int = 3) -> list[dict[str, Any]]:
+    """
+    Stably selects the top-k candidate solutions with the lowest total cost.
+    Updates the 1-based rank on each selected candidate.
+    """
+    sorted_solutions = sorted(solutions, key=lambda s: s.get("cost", 0.0))[:k]
+    for idx, s in enumerate(sorted_solutions, start=1):
+        s["rank"] = idx
+    return sorted_solutions
+
 
 class KeyRequest(BaseModel):
     tonic: str = "C"
     mode: str = "Major"
 
+    @field_validator("tonic")
+    @classmethod
+    def validate_tonic(cls, v: str) -> str:
+        if not isinstance(v, str) or v.strip().upper() not in VALID_TONICS:
+            raise ValueError(f"Неизвестная тоника: '{v}'. Допустимые: {sorted(VALID_TONICS)}")
+        return v
+
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, v: str) -> str:
+        if not isinstance(v, str) or v.strip().lower() not in VALID_MODES:
+            raise ValueError(f"Неизвестный лад: '{v}'. Допустимые: Major, Minor, MinorHarmonic, MinorNatural")
+        return v
+
 
 class MelodyNoteItem(BaseModel):
-    pitch: int
-    is_downbeat: bool = False
+    pitch: int = Field(..., ge=0, le=127)
+    is_downbeat: bool | None = None
     duration: str = "half"
     name: str | None = None
 
 
 class HarmonizeRequest(BaseModel):
-    melody: list[MelodyNoteItem]
+    melody: list[MelodyNoteItem] = Field(..., min_length=1, max_length=128)
     key: KeyRequest = Field(default_factory=KeyRequest)
     time_signature: str = "4/4"
     allow_extended_ranges: bool = False
     allow_secondary_dominants: bool = True
-    max_plans: int = 50
+    max_plans: int = Field(default=50, ge=1, le=100)
 
 
 class VoicingItem(BaseModel):
@@ -139,7 +176,7 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
             {
                 "pitch": m.pitch,
                 "duration": m.duration,
-                "is_downbeat": m.is_downbeat if m.is_downbeat else None,
+                "is_downbeat": m.is_downbeat,
             }
             for m in req.melody
         ],
@@ -162,7 +199,14 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
             fns = [c.function for c in plan]
             if not any(f.startswith("DD") for f in fns):
                 filtered_plans.append(plan)
-        plans_to_try = filtered_plans or all_plans
+        plans_to_try = filtered_plans
+        if not plans_to_try:
+            return {
+                "is_success": False,
+                "candidates": [],
+                "message": "Без побочных доминант невозможно гармонизовать заданную мелодию.",
+                "latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
+            }
     else:
         plans_to_try = all_plans
 
@@ -226,13 +270,10 @@ def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
                 "ascii_score": ascii_text,
             })
 
-            if len(solutions) >= 3:
-                break
-
-    # Sort solutions by ascending cost
-    solutions.sort(key=lambda s: s["cost"])
+    # Stably select top-3 candidate solutions by ascending cost
+    solutions = select_top_candidates(solutions, k=3)
     for idx, s in enumerate(solutions, start=1):
-        s["rank"] = idx
+        s["id"] = f"cand_{idx}"
 
     latency = round((time.perf_counter() - t_start) * 1000, 2)
 

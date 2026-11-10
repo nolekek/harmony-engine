@@ -185,12 +185,12 @@ class HarmonicGrammar:
         if prev_upper in DOMINANT_GROUP and curr_upper in SECONDARY_DOMINANT_GROUP:
             return False
 
-        # D43 must resolve to T6 or T
-        if prev_upper == "D43" and curr_upper not in ("T6", "T"):
+        # D43 must resolve to T6 or T (and T53)
+        if prev_upper == "D43" and curr_upper not in ("T6", "T", "T53"):
             return False
 
-        # D2 must resolve to T6
-        if prev_upper == "D2" and curr_upper != "T6":
+        # D2 must resolve strictly to T6
+        if prev_upper == "D2" and curr_upper not in ("T6", "T-6"):
             return False
 
         # K64 must resolve to dominant triad or D7

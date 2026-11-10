@@ -16,6 +16,7 @@ def generate_candidate_voicings(
     key: Any = None,
     allow_extended_ranges: bool = False,
     prev_chord: Any = None,
+    is_final_chord: bool = False,
 ) -> list[Voicing]:
     """
     Generates all statically valid SATB voicings for a given soprano pitch and chord.
@@ -99,10 +100,9 @@ def generate_candidate_voicings(
     elif "65" in sym_clean:
         required_bass_pc = third_pc
     elif "43" in sym_clean:
-        # Per Brigade D43 convention in this engine, 7th in bass
-        required_bass_pc = (tonic_pc % 12) if sym_clean.startswith("DD") else (tonic_pc + 5) % 12
+        required_bass_pc = fifth_pc
     elif sym_clean.endswith("2") or sym_clean in ("D2", "DD2", "II2", "VII2"):
-        required_bass_pc = (tonic_pc % 12) if sym_clean.startswith("DD") else (tonic_pc + 5) % 12
+        required_bass_pc = seventh_pc
     elif "6" in sym_clean:
         required_bass_pc = third_pc
     else:
@@ -111,28 +111,25 @@ def generate_candidate_voicings(
 
     candidates: list[Voicing] = []
 
-    # Find valid Alto pitches:
-    # A in [max(a_min, soprano_pitch - 12), min(a_max, soprano_pitch)]
+    # Find valid Alto pitches (strict order S > A):
     alto_low = max(a_min, soprano_pitch - 12)
-    alto_high = min(a_max, soprano_pitch)
+    alto_high = min(a_max, soprano_pitch - 1)
 
     for a in range(alto_low, alto_high + 1):
         if a % 12 not in allowed_pcs:
             continue
 
-        # Find valid Tenor pitches:
-        # T in [max(t_min, a - 12), min(t_max, a)]
+        # Find valid Tenor pitches (strict order A > T):
         tenor_low = max(t_min, a - 12)
-        tenor_high = min(t_max, a)
+        tenor_high = min(t_max, a - 1)
 
         for t in range(tenor_low, tenor_high + 1):
             if t % 12 not in allowed_pcs:
                 continue
 
-            # Find valid Bass pitches:
-            # B in [max(b_min, t - 24), min(b_max, t)]
+            # Find valid Bass pitches (strict order T > B):
             bass_low = max(b_min, t - 24)
-            bass_high = min(b_max, t)
+            bass_high = min(b_max, t - 1)
 
             for b in range(bass_low, bass_high + 1):
                 if required_bass_pc is not None and (b % 12 != required_bass_pc):
@@ -143,7 +140,13 @@ def generate_candidate_voicings(
                 v = Voicing(soprano=soprano_pitch, alto=a, tenor=t, bass=b)
 
                 # Check doublings via doubling validator
-                doubling_violations = check_doubling(v, chord=chord, key=key, prev_chord=prev_chord)
+                doubling_violations = check_doubling(
+                    v,
+                    chord=chord,
+                    key=key,
+                    prev_chord=prev_chord,
+                    is_final_chord=is_final_chord,
+                )
                 if any(viol.is_hard for viol in doubling_violations):
                     continue
 

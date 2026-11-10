@@ -157,8 +157,6 @@ class Harmonizer:
                         metric_info=metric_info,
                     )
                 )
-                if len(solutions) >= 3:
-                    break
 
         if not solutions:
             return HarmonizationResult(
@@ -168,12 +166,13 @@ class Harmonizer:
                 message="All candidate plans were rejected by hard voice-leading constraints.",
             )
 
-        # Sort solutions by ascending cost
+        # Sort solutions by ascending cost and take top-3
         solutions.sort(key=lambda s: s.cost)
+        top_solutions = solutions[:3]
 
         return HarmonizationResult(
             is_success=True,
-            solutions=solutions,
-            best_solution=solutions[0],
-            message=f"Found {len(solutions)} mathematically optimal solutions.",
+            solutions=top_solutions,
+            best_solution=top_solutions[0],
+            message=f"Found {len(top_solutions)} mathematically optimal solutions.",
         )

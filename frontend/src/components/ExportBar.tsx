@@ -8,6 +8,7 @@ interface ExportBarProps {
   keyObj: { tonic: string; mode: string };
   timeSignature?: string;
   asciiScore?: string;
+  durations?: string[];
 }
 
 export const ExportBar: React.FC<ExportBarProps> = ({
@@ -16,6 +17,7 @@ export const ExportBar: React.FC<ExportBarProps> = ({
   keyObj,
   timeSignature = "4/4",
   asciiScore = "",
+  durations,
 }) => {
   const [copied, setCopied] = useState(false);
   const [downloadingMidi, setDownloadingMidi] = useState(false);
@@ -28,7 +30,12 @@ export const ExportBar: React.FC<ExportBarProps> = ({
       const resp = await fetch("/api/export/midi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voicings, bpm: 80, time_signature: timeSignature }),
+        body: JSON.stringify({
+          voicings,
+          bpm: 80,
+          time_signature: timeSignature,
+          ...(durations && durations.length > 0 ? { durations } : {}),
+        }),
       });
       if (!resp.ok) throw new Error("Failed to export MIDI");
 
@@ -40,7 +47,7 @@ export const ExportBar: React.FC<ExportBarProps> = ({
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (e) {
       console.error("MIDI download error:", e);
     } finally {
@@ -61,6 +68,7 @@ export const ExportBar: React.FC<ExportBarProps> = ({
           key: keyObj,
           title: `Гармонизация в ${keyObj.tonic} ${keyObj.mode}`,
           time_signature: timeSignature,
+          ...(durations && durations.length > 0 ? { durations } : {}),
         }),
       });
       if (!resp.ok) throw new Error("Failed to export MusicXML");
@@ -73,7 +81,7 @@ export const ExportBar: React.FC<ExportBarProps> = ({
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (e) {
       console.error("MusicXML download error:", e);
     } finally {

@@ -231,7 +231,7 @@ FUZZ_MELODIES = [
         "id": "f_major_44_d43_t6_inversion",
         "key": "F Major",
         "meter": "4/4",
-        "melody": [65, 67, 69, 67, 65],
+        "melody": [65, 70, 69, 67, 65],
         "chords": ["T", "D43", "T6", "D7", "T"],
     },
     # 24. A minor, 4/4, deceptive cadence D7 -> VI with doubled third in VI
@@ -369,11 +369,11 @@ def test_state_generator_bass_inversion_rules():
     for v in voicings_d65:
         assert v.bass % 12 == 11, f"D65 must have third B in bass, got {v.bass % 12}"
 
-    # D43 (7th in bass = F = 5 per convention)
+    # D43 (fifth in bass = D = 2 per Brigade canon)
     voicings_d43 = generate_candidate_voicings(67, Chord("D43"), key=k)
     assert len(voicings_d43) > 0
     for v in voicings_d43:
-        assert v.bass % 12 == 5, f"D43 must have 7th F in bass, got {v.bass % 12}"
+        assert v.bass % 12 == 2, f"D43 must have fifth D in bass, got {v.bass % 12}"
 
     # D2 (7th in bass = F = 5)
     voicings_d2 = generate_candidate_voicings(67, Chord("D2"), key=k)

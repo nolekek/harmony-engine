@@ -98,6 +98,68 @@ def get_triad_tones(symbol: str, tonic_pc: int, mode: str) -> tuple[int, int, in
     return tonic_pc, (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12, (tonic_pc + 7) % 12
 
 
+TRIAD_SYMBOLS = {
+    "T", "S", "D", "VI", "II", "III",
+    "t", "s", "d", "vi", "ii", "iii",
+    "T53", "S53", "D53", "VI53", "II53", "III53",
+    "t53", "s53", "d53", "vi53", "ii53", "iii53",
+}
+
+
+def check_triad_completeness(
+    voicing: Any,
+    chord: Any,
+    key: Any = None,
+    is_final_chord: bool = False,
+) -> list[RuleViolation]:
+    """
+    Checks triad completeness for root-position triads (T/S/D/VI/II/III and minor variants):
+    - Third is strictly required in ALL positions, including final chord (CHORD_THIRD_MISSING).
+    - Fifth is required in non-final chords (CHORD_FIFTH_MISSING).
+    - Incomplete triad (tripled root with third, omitting fifth) is permissible ONLY if is_final_chord=True.
+    """
+    sym = parse_chord_symbol(chord).strip().replace("/", "")
+    if sym not in TRIAD_SYMBOLS:
+        return []
+
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    root, third, fifth = get_triad_tones(sym, tonic_pc, mode)
+
+    satb = to_satb(voicing)
+    pcs = [p % 12 for p in satb]
+    counts = Counter(pcs)
+
+    violations: list[RuleViolation] = []
+
+    # 1. Third is mandatory in ALL triads (including final chord!)
+    if counts[third] == 0:
+        violations.append(
+            RuleViolation(
+                rule_id="CHORD_THIRD_MISSING",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=f"Triad '{sym}' is missing mandatory third (PC {third})",
+            )
+        )
+
+    # 2. Fifth requirement
+    if counts[fifth] == 0:
+        # Incomplete triad allowed ONLY on final chord with tripled root and present third
+        if is_final_chord and counts[root] == 3 and counts[third] == 1 and sym in ("T", "t", "T53", "t53"):
+            pass  # Allowed canonical incomplete final tonic triad
+        else:
+            violations.append(
+                RuleViolation(
+                    rule_id="CHORD_FIFTH_MISSING",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=f"Triad '{sym}' is missing fifth (PC {fifth})",
+                )
+            )
+
+    return violations
+
+
 def check_main_triad_doubling(
     voicing: Any,
     chord: Any,
@@ -180,8 +242,10 @@ def check_k64_doubling(
     key: Any = None,
 ) -> list[RuleViolation]:
     """
-    In cadential six-four chord (K64), the bass note (scale degree 5 / fifth of triad)
-    must strictly be doubled.
+    In cadential six-four chord (K64):
+    - The bass must strictly be scale degree V (fifth of the key / dominant pitch class).
+    - The bass note (scale degree V) must strictly be doubled.
+    - Other tones (root I, third III) may not be doubled.
     """
     sym = parse_chord_symbol(chord)
     if sym != "K64":
@@ -192,19 +256,55 @@ def check_k64_doubling(
     pcs = [p % 12 for p in satb]
     counts = Counter(pcs)
 
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    degree_v_pc = (tonic_pc + 7) % 12
+
     violations: list[RuleViolation] = []
-    if counts[bass_pc] < 2:
-        v_idx = tuple(i for i, p in enumerate(satb) if p % 12 == bass_pc)
+
+    # 1. Bass MUST be scale degree V (PC 7 in C-dur)
+    if bass_pc != degree_v_pc:
         violations.append(
             RuleViolation(
                 rule_id="DOUBLING_K64_BASS_ONLY",
                 severity="hard_gate",
                 penalty=100000.0,
                 description=(
-                    f"In cadential six-four chord (K64), bass note (PC {bass_pc}) "
-                    f"must be strictly doubled (found {counts[bass_pc]} times)"
+                    f"In cadential six-four chord (K64), bass must be scale degree V "
+                    f"(PC {degree_v_pc}), got PC {bass_pc}"
+                ),
+                voices=(3,),
+            )
+        )
+
+    # 2. Bass (scale degree V) MUST be doubled
+    if counts[degree_v_pc] < 2:
+        v_idx = tuple(i for i, p in enumerate(satb) if p % 12 == degree_v_pc)
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_K64_BASS_ONLY",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In cadential six-four chord (K64), bass note (scale degree V, PC {degree_v_pc}) "
+                    f"must be strictly doubled (found {counts[degree_v_pc]} times)"
                 ),
                 voices=v_idx,
+            )
+        )
+
+    # 3. Third of tonic (scale degree III) must NOT be doubled
+    is_minor = "MINOR" in mode
+    third_pc = (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12
+    if counts[third_pc] > 1:
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_K64_BASS_ONLY",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In cadential six-four chord (K64), third (scale degree III, PC {third_pc}) "
+                    f"cannot be doubled (found {counts[third_pc]} times)"
+                ),
             )
         )
 
@@ -483,12 +583,14 @@ def check_doubling(
     chord: Any,
     key: Any = None,
     prev_chord: Any = None,
+    is_final_chord: bool = False,
 ) -> list[RuleViolation]:
     """
     Runs all doubling validation checks relevant to the given chord and context.
     """
     violations = []
     violations.extend(check_main_triad_doubling(voicing, chord, key=key, prev_chord=prev_chord))
+    violations.extend(check_triad_completeness(voicing, chord, key=key, is_final_chord=is_final_chord))
     violations.extend(check_sextaccord_doubling(voicing, chord, key=key, prev_chord=prev_chord))
     violations.extend(check_k64_doubling(voicing, chord, key=key))
     violations.extend(check_secondary_dominant_doubling(voicing, chord, key=key))

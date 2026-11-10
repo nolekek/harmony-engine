@@ -10,15 +10,13 @@ from src.harmony.rules.engine import RuleEngine
 
 
 def test_vii7_to_t_valid_resolution_with_doubled_third():
-    # C major:
-    # VII7 (diminished 7th in C): B3 (59), D4 (62), F4 (65), Ab4 (68)
-    # Voice leading to T:
-    # Soprano: Ab4 (68) -> G4 (67) (7th resolves down by half-step)
-    # Alto:    F4 (65)  -> E4 (64) (5th resolves down into 3rd of T)
-    # Tenor:   D4 (62)  -> E4 (64) (3rd resolves up into 3rd of T -> doubled third!)
-    # Bass:    B2 (47)  -> C3 (48) (leading tone resolves up to tonic)
-    v_vii7 = Voicing(soprano=68, alto=65, tenor=62, bass=47)
-    v_t = Voicing(soprano=67, alto=64, tenor=64, bass=48)
+    # C major VII7 (B D F Ab) voiced with the leading tone in the bass and the
+    # 7th in the alto; the doubled third E lands in two octaves (E4/E3) so no
+    # adjacent-voice unison appears.
+    # VII7: S=D4 (62), A=Ab3 (56), T=F3 (53), B=B2 (47)
+    # T:    S=E4 (64) (3rd up), A=G3 (55) (7th down), T=E3 (52) (5th down), B=C3 (48) (lt up)
+    v_vii7 = Voicing(soprano=62, alto=56, tenor=53, bass=47)
+    v_t = Voicing(soprano=64, alto=55, tenor=52, bass=48)
     k = Key(tonic="C", mode="Major")
     c_vii7 = Chord(function="VII7")
     c_t = Chord(function="T")

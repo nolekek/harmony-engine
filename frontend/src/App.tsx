@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Music,
   Award,
   FileMusic,
+  AlertCircle,
 } from "lucide-react";
 
 import { MelodyInput } from "./components/MelodyInput";
@@ -51,6 +52,13 @@ export function App() {
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateSolution | null>(
     null
   );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDiagnostics, setErrorDiagnostics] = useState<string[]>([]);
+  const [activeDurations, setActiveDurations] = useState<string[]>(
+    INITIAL_MELODY.map((m) => m.duration)
+  );
+
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Score & Playback state
   const [activeMusicXml, setActiveMusicXml] = useState<string>("");
@@ -74,13 +82,23 @@ export function App() {
   // Harmonize function
   const handleHarmonize = async () => {
     if (!melody || melody.length === 0) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsHarmonizing(true);
+    setErrorMessage(null);
+    setErrorDiagnostics([]);
     setProblemMeasures([]);
 
     try {
       const resp = await fetch("/api/harmonize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           melody: melody.map((m) => ({
             pitch: m.pitch,
@@ -96,10 +114,47 @@ export function App() {
         }),
       });
 
+      if (!resp.ok) {
+        let detailMsg = `Ошибка сервера (${resp.status})`;
+        try {
+          const errData = await resp.json();
+          if (errData.detail) {
+            if (typeof errData.detail === "string") {
+              detailMsg = errData.detail;
+            } else if (Array.isArray(errData.detail)) {
+              detailMsg = errData.detail
+                .map((d: any) => {
+                  const loc = Array.isArray(d.loc)
+                    ? d.loc.filter((l: any) => l !== "body").join(".")
+                    : "";
+                  return loc ? `${loc}: ${d.msg}` : d.msg;
+                })
+                .join("; ");
+            } else if (typeof errData.detail === "object") {
+              detailMsg = JSON.stringify(errData.detail);
+            }
+          } else if (errData.message) {
+            detailMsg = errData.message;
+          }
+        } catch {
+          // ignore json parse error
+        }
+
+        setCandidates([]);
+        setSelectedCandidate(null);
+        setActiveMusicXml("");
+        setLatencyMs(null);
+        setErrorMessage(detailMsg);
+        setErrorDiagnostics([]);
+        return;
+      }
+
       const data = await resp.json();
-      setLatencyMs(data.latency_ms);
+      setLatencyMs(data.latency_ms ?? null);
 
       if (data.is_success && data.candidates && data.candidates.length > 0) {
+        setErrorMessage(null);
+        setErrorDiagnostics([]);
         setCandidates(data.candidates);
         const best = data.best_candidate || data.candidates[0];
         setSelectedCandidate(best);
@@ -107,22 +162,71 @@ export function App() {
         setActiveVoicings(best.voicings);
         setActiveChords(best.chords);
         setAsciiScore(best.ascii_score);
+        setActiveDurations(
+          best.durations || melody.map((m) => m.duration)
+        );
         setScoreTitle(
           `Решение #${best.rank} · ${best.description} (Стоимость: ${best.cost})`
         );
       } else {
-        alert(data.message || "Не удалось найти решений для данной мелодии.");
+        setCandidates([]);
+        setSelectedCandidate(null);
+        setActiveMusicXml("");
+        setLatencyMs(null);
+        const msg =
+          data.error?.message ??
+          data.message ??
+          "Не удалось построить гармонизацию";
+        setErrorMessage(msg);
+
+        if (data.error?.diagnostics && Array.isArray(data.error.diagnostics)) {
+          setErrorDiagnostics(
+            data.error.diagnostics.map((d: any) => {
+              if (typeof d === "string") return d;
+              if (typeof d === "object" && d !== null) {
+                const parts: string[] = [];
+                if (d.step !== undefined) parts.push(`Шаг ${d.step}`);
+                if (d.chord) parts.push(`аккорд ${d.chord}`);
+                if (d.blocked !== undefined) parts.push(`заблокировано: ${d.blocked}`);
+                if (d.blocked_by && Array.isArray(d.blocked_by))
+                  parts.push(`правила: ${d.blocked_by.join(", ")}`);
+                return parts.length > 0 ? parts.join(" | ") : JSON.stringify(d);
+              }
+              return String(d);
+            })
+          );
+        } else {
+          setErrorDiagnostics([]);
+        }
       }
-    } catch (e) {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") {
+        return;
+      }
       console.error("Harmonize request error:", e);
+      setCandidates([]);
+      setSelectedCandidate(null);
+      setActiveMusicXml("");
+      setLatencyMs(null);
+      setErrorMessage(
+        e instanceof Error ? e.message : "Не удалось построить гармонизацию"
+      );
+      setErrorDiagnostics([]);
     } finally {
-      setIsHarmonizing(false);
+      if (abortControllerRef.current === controller) {
+        setIsHarmonizing(false);
+      }
     }
   };
 
-  // Run initial harmonization automatically on first render
+  // Run initial harmonization automatically on first render, abort on unmount
   useEffect(() => {
     handleHarmonize();
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   // Key Auto-detection
@@ -152,9 +256,19 @@ export function App() {
     setActiveVoicings(cand.voicings);
     setActiveChords(cand.chords);
     setAsciiScore(cand.ascii_score);
+    setActiveDurations(
+      (cand as unknown as { durations?: string[] }).durations ||
+        melody.map((m) => m.duration)
+    );
     setScoreTitle(
       `Решение #${cand.rank} · ${cand.description} (Стоимость: ${cand.cost})`
     );
+  };
+
+  // Melody change handler
+  const handleMelodyChange = (newMelody: MelodyNote[]) => {
+    setMelody(newMelody);
+    setActiveDurations(newMelody.map((m) => m.duration));
   };
 
   // Grader complete handler
@@ -226,14 +340,56 @@ export function App() {
       </header>
 
       {/* Main Workspace Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 space-y-4">
+        {/* Inline Error Banner */}
+        {errorMessage && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-500/50 bg-rose-950/40 p-4 text-rose-200 shadow-lg backdrop-blur"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-rose-300">
+                    Ошибка гармонизации
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrorMessage(null);
+                      setErrorDiagnostics([]);
+                    }}
+                    className="text-xs text-rose-400 hover:text-rose-200 transition-colors"
+                  >
+                    ✕ Закрыть
+                  </button>
+                </div>
+                <p className="mt-1 text-sm text-rose-200 break-words">{errorMessage}</p>
+                {errorDiagnostics.length > 0 && (
+                  <div className="mt-3 border-t border-rose-900/60 pt-2.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-rose-400">
+                      Диагностика голосоведения:
+                    </span>
+                    <ul className="mt-1.5 space-y-1 list-disc list-inside text-xs text-rose-300/90 font-mono">
+                      {errorDiagnostics.map((diag, idx) => (
+                        <li key={idx}>{diag}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === "harmonizer" ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Column (Input & Controls) */}
             <div className="lg:col-span-5 space-y-6">
               <MelodyInput
                 melody={melody}
-                onChange={setMelody}
+                onChange={handleMelodyChange}
                 selectedKey={selectedKey}
                 onAutoDetectKey={handleAutoDetectKey}
               />
@@ -282,6 +438,7 @@ export function App() {
                 keyObj={selectedKey}
                 timeSignature={timeSignature}
                 asciiScore={asciiScore}
+                durations={activeDurations}
               />
             </div>
           </div>
@@ -317,7 +474,9 @@ export function App() {
                 voicings={activeVoicings}
                 chords={activeChords}
                 keyObj={selectedKey}
+                timeSignature={timeSignature}
                 asciiScore={asciiScore}
+                durations={activeDurations}
               />
             </div>
           </div>

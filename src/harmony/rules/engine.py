@@ -86,6 +86,20 @@ class RuleEngine:
         curr_sym = parse_chord_symbol(curr_chord) if curr_chord is not None else ""
         prev_sym = parse_chord_symbol(prev_chord) if prev_chord is not None else ""
 
+        # K64 is strictly forbidden as initial chord of a progression (must appear in cadential context)
+        if curr_sym == "K64" and (prev_chord is None or prev_sym == ""):
+            violations.append(
+                RuleViolation(
+                    rule_id="CADENCE_K64_INITIAL",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=(
+                        "K64 is forbidden as the initial chord of a piece; "
+                        "it must appear only in a cadential progression"
+                    ),
+                )
+            )
+
         # K64 must be on a downbeat
         if curr_sym == "K64" and not is_downbeat:
             violations.append(
@@ -190,6 +204,7 @@ class RuleEngine:
         curr_chord: Any | None = None,
         key: Any = None,
         is_downbeat: bool = False,
+        is_final_chord: bool = False,
     ) -> ValidationResult:
         """
         Validates transition from prev_voicing to curr_voicing or evaluates
@@ -207,6 +222,7 @@ class RuleEngine:
                 curr_chord,
                 key=key,
                 prev_chord=prev_chord,
+                is_final_chord=is_final_chord,
             )
         )
 
@@ -256,6 +272,7 @@ class RuleEngine:
         chord: Any | None = None,
         key: Any = None,
         is_downbeat: bool = False,
+        is_final_chord: bool = False,
     ) -> ValidationResult:
         """
         Convenience method to validate a single isolated vertical slice.
@@ -267,4 +284,5 @@ class RuleEngine:
             curr_chord=chord,
             key=key,
             is_downbeat=is_downbeat,
+            is_final_chord=is_final_chord,
         )

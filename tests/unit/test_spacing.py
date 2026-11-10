@@ -6,6 +6,7 @@ import pytest
 from src.harmony.rules.spacing import (
     check_voice_ranges,
     check_voice_crossing,
+    check_voice_unison,
     check_texture_spacing,
     validate_spacing,
 )
@@ -58,9 +59,11 @@ def test_voice_crossing():
     valid = (65, 60, 53, 45)
     assert len(check_voice_crossing(valid)) == 0
 
-    # Unisons are allowed
+    # Unisons are prohibited (strict descending order S > A > T > B)
     unison = (60, 60, 48, 48)
-    assert len(check_voice_crossing(unison)) == 0
+    u_viol = check_voice_unison(unison)
+    assert len(u_viol) >= 1
+    assert any(violation.rule_id == "VOICE_UNISON" for violation in u_viol)
 
     # S < A
     crossing_sa = (59, 60, 52, 48)

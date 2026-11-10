@@ -7,8 +7,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.api import router as api_router
@@ -19,10 +21,26 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    for err in exc.errors():
+        if err.get("type") == "too_short" and err.get("loc") == ("body", "melody"):
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Мелодия не может быть пустой."},
+            )
+    return await request_validation_exception_handler(request, exc)
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

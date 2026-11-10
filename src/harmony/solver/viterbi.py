@@ -6,7 +6,13 @@ minimizing total voice leading cost subject to zero Brigade hard rule violations
 
 from typing import Any, Sequence, NamedTuple
 from dataclasses import dataclass
-from src.harmony.core.types import Voicing, Key, Chord, ValidationResult
+from src.harmony.core.types import (
+    Voicing,
+    Key,
+    Chord,
+    ValidationResult,
+    calculate_metric_structure,
+)
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.solver.state_generator import generate_candidate_voicings
 
@@ -62,13 +68,26 @@ class ViterbiSolver:
         # Parse melody and chords
         melody_pitches: list[int] = []
         downbeats: list[bool] = []
-        for i, m in enumerate(melody):
-            if isinstance(m, dict):
-                melody_pitches.append(int(m["pitch"]))
-                downbeats.append(bool(m.get("is_downbeat", i % 2 == 0)))
-            else:
-                melody_pitches.append(int(m))
-                downbeats.append(i % 2 == 0)
+
+        has_explicit_downbeats = any(
+            isinstance(m, dict) and "is_downbeat" in m for m in melody
+        )
+        if has_explicit_downbeats:
+            for i, m in enumerate(melody):
+                if isinstance(m, dict):
+                    melody_pitches.append(int(m["pitch"]))
+                    downbeats.append(bool(m.get("is_downbeat", False)))
+                else:
+                    melody_pitches.append(int(m))
+                    downbeats.append(False)
+        else:
+            metric_structure = calculate_metric_structure(melody)
+            for m, metric in zip(melody, metric_structure):
+                if isinstance(m, dict):
+                    melody_pitches.append(int(m["pitch"]))
+                else:
+                    melody_pitches.append(int(m))
+                downbeats.append(bool(metric.get("is_downbeat", False)))
 
         parsed_chords: list[Chord] = []
         for c in chords:

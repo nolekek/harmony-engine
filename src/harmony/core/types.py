@@ -272,22 +272,36 @@ def parse_chord_symbol(chord: Any) -> str:
     """
     if chord is None:
         return ""
-    if isinstance(chord, Chord):
+    if isinstance(chord, str):
+        sym = chord
+    elif isinstance(chord, Chord):
         sym = chord.function
     elif hasattr(chord, "function"):
-        sym = str(chord.function)
+        fn = chord.function
+        fn_val = fn.value if hasattr(fn, "value") else str(fn)
+        if hasattr(chord, "inversion") and chord.inversion is not None:
+            inv = chord.inversion
+            inv_val = inv.value if hasattr(inv, "value") else str(inv)
+            if fn_val.upper().startswith("K"):
+                sym = "K64"
+            elif inv_val in ("53", "0", 0, "ROOT", "root", "", None):
+                sym = fn_val
+            else:
+                sym = f"{fn_val}{inv_val}"
+        else:
+            sym = fn_val
+    elif hasattr(chord, "value"):
+        sym = str(chord.value)
     elif hasattr(chord, "symbol"):
         sym = str(chord.symbol)
-    elif isinstance(chord, str):
-        sym = chord
     else:
         sym = str(chord)
 
     # Normalize accents / slashes / spaces
     cleaned = sym.strip().replace("^", "").replace("/", "")
-    # Check common synonyms
+    # Check common synonyms (T64 is deliberately excluded from K64 per Brigade rules)
     upper_c = cleaned.upper()
-    if upper_c in ("K64", "K6/4", "CAD64", "I64", "T64"):
+    if upper_c in ("K64", "K6/4", "CAD64", "I64"):
         return "K64"
     if upper_c in ("D65", "D6/5"):
         return "D65"

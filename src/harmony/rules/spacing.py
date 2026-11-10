@@ -94,6 +94,47 @@ def check_voice_crossing(voicing: Any) -> list[RuleViolation]:
     return violations
 
 
+def check_voice_unison(voicing: Any) -> list[RuleViolation]:
+    """
+    Checks for adjacent voice unisons: strict descending order Soprano > Alto > Tenor > Bass.
+    Equality between adjacent voices is strictly prohibited in 4-part classical harmony.
+    """
+    s, a, t, b = to_satb(voicing)
+    violations: list[RuleViolation] = []
+
+    if s == a:
+        violations.append(
+            RuleViolation(
+                rule_id="VOICE_UNISON",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=f"Voice unison: Soprano ({s}) == Alto ({a})",
+                voices=(0, 1),
+            )
+        )
+    if a == t:
+        violations.append(
+            RuleViolation(
+                rule_id="VOICE_UNISON",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=f"Voice unison: Alto ({a}) == Tenor ({t})",
+                voices=(1, 2),
+            )
+        )
+    if t == b:
+        violations.append(
+            RuleViolation(
+                rule_id="VOICE_UNISON",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=f"Voice unison: Tenor ({t}) == Bass ({b})",
+                voices=(2, 3),
+            )
+        )
+    return violations
+
+
 def check_texture_spacing(voicing: Any) -> list[RuleViolation]:
     """
     Checks for acoustic texture gaps (spacing limits):
@@ -157,5 +198,6 @@ def validate_spacing(
     violations = []
     violations.extend(check_voice_ranges(voicing, ranges=ranges, allow_extended=allow_extended))
     violations.extend(check_voice_crossing(voicing))
+    violations.extend(check_voice_unison(voicing))
     violations.extend(check_texture_spacing(voicing))
     return violations

@@ -72,52 +72,90 @@ def check_d43_resolution(
     key: Any = None,
 ) -> list[RuleViolation]:
     """
-    D43 has the seventh in the bass (scale degree IV).
-    It MUST resolve strictly to T6 (or t6), with the bass stepping down
-    by 1 or 2 semitones into the third of the tonic.
+    D43 has the fifth of dominant in the bass (scale degree II).
+    It resolves canonically to T/T53 (bass steps down II -> I by 1 or 2 semitones)
+    or to T6 (bass steps up II -> III by 1 or 2 semitones).
+    The seventh (scale degree IV) in upper voices must resolve down by step.
     """
     if prev_chord is None or curr_chord is None:
         return []
 
-    prev_sym = parse_chord_symbol(prev_chord)
+    prev_sym = parse_chord_symbol(prev_chord).strip().upper().replace("/", "")
     if prev_sym != "D43":
         return []
 
-    curr_sym = parse_chord_symbol(curr_chord)
+    curr_sym = parse_chord_symbol(curr_chord).strip().upper().replace("/", "")
     violations: list[RuleViolation] = []
 
-    # Target chord must be T6 or t6
-    if curr_sym not in ("T6", "t6"):
+    # Target chord must be T, T53, T6 (or minor t, t53, t6)
+    if curr_sym not in ("T", "T53", "T6", "T-6", "t", "t53", "t6", "t-6"):
         violations.append(
             RuleViolation(
                 rule_id="RESOLUTION_D43_TO_T6",
                 severity="hard_gate",
                 penalty=100000.0,
                 description=(
-                    f"D43 must resolve strictly to T6 (or t6), but got '{curr_sym}'"
+                    f"D43 must resolve to T, T53, or T6 (or minor t/t6), but got '{curr_sym}'"
                 ),
                 voices=(3,),
             )
         )
 
-    # Bass motion check: must step down 1 or 2 semitones into degree III
+    # Bass motion check:
+    # If resolving to T / T53: bass must step down 1 or 2 semitones (II -> I)
+    # If resolving to T6: bass must step up 1 or 2 semitones (II -> III)
     prev_satb = to_satb(prev_voicing)
     curr_satb = to_satb(curr_voicing)
     delta_b = curr_satb[3] - prev_satb[3]
 
-    if delta_b not in (-1, -2):
-        violations.append(
-            RuleViolation(
-                rule_id="RESOLUTION_D43_TO_T6",
-                severity="hard_gate",
-                penalty=100000.0,
-                description=(
-                    f"Bass of D43 must step down by second into third of T6, "
-                    f"moved {delta_b:+d}"
-                ),
-                voices=(3,),
+    if curr_sym in ("T", "T53", "t", "t53"):
+        if delta_b not in (-1, -2):
+            violations.append(
+                RuleViolation(
+                    rule_id="RESOLUTION_D43_TO_T6",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=(
+                        f"Bass of D43 resolving to {curr_sym} must step down by second into root (degree I), "
+                        f"moved {delta_b:+d}"
+                    ),
+                    voices=(3,),
+                )
             )
-        )
+    elif curr_sym in ("T6", "T-6", "t6", "t-6"):
+        if delta_b not in (1, 2):
+            violations.append(
+                RuleViolation(
+                    rule_id="RESOLUTION_D43_TO_T6",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=(
+                        f"Bass of D43 resolving to {curr_sym} must step up by second into third (degree III), "
+                        f"moved {delta_b:+d}"
+                    ),
+                    voices=(3,),
+                )
+            )
+
+    # Seventh resolution in upper voices (scale degree IV)
+    tonic_pc, _ = parse_key(key) if key is not None else (0, "MAJOR")
+    seventh_pc = (tonic_pc + 5) % 12  # Scale degree IV
+    for idx in range(3):  # S, A, T
+        if prev_satb[idx] % 12 == seventh_pc:
+            delta = curr_satb[idx] - prev_satb[idx]
+            if delta not in (-1, -2):
+                violations.append(
+                    RuleViolation(
+                        rule_id="RESOLUTION_SEVENTH_DOWN",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Seventh (degree IV, PC {seventh_pc}) of D43 in {VOICE_NAMES[idx]} "
+                            f"must resolve down by step, moved {delta:+d}"
+                        ),
+                        voices=(idx,),
+                    )
+                )
 
     return violations
 
@@ -144,13 +182,13 @@ def check_d2_resolution(
     curr_sym = parse_chord_symbol(curr_chord).strip().upper().replace("/", "")
     violations: list[RuleViolation] = []
 
-    if curr_sym not in ("T6", "T-6", "T", "t6", "t"):
+    if curr_sym not in ("T6", "T-6", "t6", "t-6"):
         violations.append(
             RuleViolation(
                 rule_id="RESOLUTION_D2_TO_T6",
                 severity="hard_gate",
                 penalty=100000.0,
-                description=f"D2 must resolve strictly to T6, but got '{curr_sym}'",
+                description=f"D2 must resolve strictly to T6 (or t6), but got '{curr_sym}'",
                 voices=(3,),
             )
         )

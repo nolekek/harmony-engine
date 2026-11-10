@@ -386,27 +386,29 @@ class TestResolutionsExhaustive:
         viol = check_leading_tone_resolution(v_d, v_t_bad, c_d, c_t, key=key)
         assert any(v.rule_id == "RESOLUTION_LEADING_TONE_UP" for v in viol)
 
-    def test_d43_must_resolve_to_t6(self):
+    def test_d43_resolves_to_t_or_t6(self):
         key = Key(tonic="F", mode="Major")
         c_d43 = Chord(function="D43")
         c_t6 = Chord(function="T6")
         c_ii = Chord(function="II")
         c_t = Chord(function="T")
 
-        # Proper D43 -> T6 (bass steps down Bb2(46) -> A2(45))
-        v_d43 = Voicing(soprano=67, alto=60, tenor=52, bass=46)
-        v_t6 = Voicing(soprano=69, alto=60, tenor=53, bass=45)
+        # Canonical D43 in F-dur: V7 = C-E-G-Bb, 4/3 bass = FIFTH of chord = G.
+        # S=G4(67), A=Bb3(58, 7th), T=E3(52, 3rd), B=G2(43).
+        v_d43 = Voicing(soprano=67, alto=58, tenor=52, bass=43)
+
+        # Canonical resolution to T53: bass G->F (-2), 7th Bb->A (-1), 3rd E->F (+1).
+        v_t = Voicing(soprano=69, alto=57, tenor=53, bass=41)
+        assert len(check_d43_resolution(v_d43, v_t, c_d43, c_t, key=key)) == 0
+
+        # Canonical resolution to T6: bass G->A (+2).
+        v_t6 = Voicing(soprano=65, alto=57, tenor=53, bass=45)
         assert len(check_d43_resolution(v_d43, v_t6, c_d43, c_t6, key=key)) == 0
 
         # Forbidden target: D43 -> II
-        v_ii = Voicing(soprano=69, alto=62, tenor=53, bass=50)
+        v_ii = Voicing(soprano=69, alto=62, tenor=55, bass=43)
         viol_ii = check_d43_resolution(v_d43, v_ii, c_d43, c_ii, key=key)
         assert any(v.rule_id == "RESOLUTION_D43_TO_T6" for v in viol_ii)
-
-        # Forbidden target: D43 -> T (5/3)
-        v_t = Voicing(soprano=69, alto=60, tenor=53, bass=41)
-        viol_t = check_d43_resolution(v_d43, v_t, c_d43, c_t, key=key)
-        assert any(v.rule_id == "RESOLUTION_D43_TO_T6" for v in viol_t)
 
     def test_d2_must_resolve_to_t6(self):
         key = Key(tonic="C", mode="Major")
@@ -573,25 +575,25 @@ class TestCornerCasesAndBenchmarks:
 
     def test_deceptive_cadence_in_major_and_minor(self, engine):
         """Verifies clean deceptive cadence transitions in both major and minor."""
-        # C major: D7 -> VI
+        # C major: D7 -> VI. Leading tone B in SOPRANO so the doubled tonic
+        # lands in different octaves (C5 and C4) instead of an A=T unison.
         key_c = Key(tonic="C", mode="Major")
         c_d7 = Chord(function="D7")
         c_vi = Chord(function="VI")
-        # D7: S=F4(65, 7th), A=D4(62), T=B3(59, lt), B=G2(43)
-        # VI: S=E4(64, step down), A=C4(60, 3rd!), T=C4(60, lt resolves up to C), B=A2(45)
-        v_d7 = Voicing(soprano=65, alto=62, tenor=59, bass=43)
-        v_vi = Voicing(soprano=64, alto=60, tenor=60, bass=45)
+        # D7: S=B4(71, leading tone), A=F4(65, 7th), T=D4(62, 5th), B=G2(43)
+        # VI: S=C5(72, lt up), A=E4(64, 7th down), T=C4(60, 5th down), B=A2(45)
+        v_d7 = Voicing(soprano=71, alto=65, tenor=62, bass=43)
+        v_vi = Voicing(soprano=72, alto=64, tenor=60, bass=45)
 
         res_c = engine.validate(v_d7, v_vi, prev_chord=c_d7, curr_chord=c_vi, key=key_c)
         assert res_c.is_valid
         assert not res_c.has_hard_violations
 
-        # A minor: D7 -> VI
+        # A minor: D7 -> VI. D7 (E-G#-B-D): S=B4(71), A=D4(62), T=G#3(56, lt), B=E2(40)
+        # VI (F-A-C): S=A4(69, lt up), A=C4(60, 7th down), T=A3(57, 5th), B=F2(41)
         key_a = Key(tonic="A", mode="MinorHarmonic")
-        # D7 in a-moll: S=D4(62, 7th), A=B3(59), T=G#3(56, lt), B=E2(40)
-        # VI (F-A-C): S=C4(60, 7th down), A=A3(57, 3rd!), T=A3(57, lt up to tonic), B=F2(41)
-        v_d7_m = Voicing(soprano=62, alto=59, tenor=56, bass=40)
-        v_vi_m = Voicing(soprano=60, alto=57, tenor=57, bass=41)
+        v_d7_m = Voicing(soprano=71, alto=62, tenor=56, bass=40)
+        v_vi_m = Voicing(soprano=69, alto=60, tenor=57, bass=41)
 
         res_a = engine.validate(v_d7_m, v_vi_m, prev_chord=c_d7, curr_chord=c_vi, key=key_a)
         assert res_a.is_valid
@@ -620,6 +622,7 @@ class TestCornerCasesAndBenchmarks:
                 curr_chord=curr_chord,
                 key=key,
                 is_downbeat=is_downbeat,
+                is_final_chord=(idx == len(satb_list) - 1),
             )
 
             hard_errors = [f"{v.rule_id}: {v.description}" for v in res.hard_violations]

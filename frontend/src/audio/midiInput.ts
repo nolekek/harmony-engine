@@ -35,6 +35,7 @@ export class WebMidiManager {
   private metronomeTimer: number | null = null;
   private beatCounter: number = 0;
   private onNoteCallback: MidiNoteCallback | null = null;
+  private audioCtx: AudioContext | null = null;
 
   public async requestAccess(): Promise<MidiDevice[]> {
     const nav = navigator as unknown as {
@@ -62,9 +63,28 @@ export class WebMidiManager {
 
   public connectDevice(deviceId: string) {
     if (!this.midiAccess) return;
+    if (this.currentInput) {
+      this.currentInput.onmidimessage = null;
+    }
     this.currentInput = this.midiAccess.inputs.get(deviceId) || null;
     if (this.currentInput) {
       this.currentInput.onmidimessage = this.handleMidiMessage.bind(this);
+    }
+  }
+
+  public disconnectDevice() {
+    if (this.currentInput) {
+      this.currentInput.onmidimessage = null;
+      this.currentInput = null;
+    }
+  }
+
+  public cleanup() {
+    this.stopRecording();
+    this.disconnectDevice();
+    if (this.audioCtx) {
+      this.audioCtx.close().catch(() => {});
+      this.audioCtx = null;
     }
   }
 
@@ -83,6 +103,7 @@ export class WebMidiManager {
     const playTick = () => {
       if (!this.isRecording) return;
       this.beatCounter++;
+      // TODO(T14): хардкод 4/4
       const measureBeat = ((this.beatCounter - 1) % 4) + 1;
       this.playClick(measureBeat === 1);
       if (onMetronomeTick) onMetronomeTick(measureBeat);
@@ -112,18 +133,32 @@ export class WebMidiManager {
     // Note On with velocity > 0
     if (command === 9 && velocity > 0) {
       // Metric check: if current beat in 4/4 is 1 or 3 -> downbeat
+      // TODO(T14): хардкод 4/4
       const beatInMeasure = ((this.beatCounter - 1) % 4) + 1;
       const isDownbeat = beatInMeasure === 1 || beatInMeasure === 3;
       this.onNoteCallback(note, isDownbeat);
     }
   }
 
-  private playClick(isDownbeat: boolean) {
-    try {
+  private getAudioContext(): AudioContext | null {
+    if (!this.audioCtx) {
       const AudioCtxClass =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new AudioCtxClass();
+      if (AudioCtxClass) {
+        this.audioCtx = new AudioCtxClass();
+      }
+    }
+    if (this.audioCtx && this.audioCtx.state === "suspended") {
+      this.audioCtx.resume().catch(() => {});
+    }
+    return this.audioCtx;
+  }
+
+  private playClick(isDownbeat: boolean) {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 

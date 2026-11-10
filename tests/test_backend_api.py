@@ -92,3 +92,62 @@ def test_api_grade():
     assert rep["is_valid"] is False
     assert rep["hard_violations_count"] > 0
     assert any("Параллельные квинты" in v["message_ru"] for v in rep["violations"])
+
+
+def test_api_downbeat_false_preservation():
+    # Melody [60, 64, 67, 72] C4 E4 G4 C5, 4/4
+    # Note 1 has explicit is_downbeat: False
+    melody = [
+        {"pitch": 60, "duration": "half", "is_downbeat": True},
+        {"pitch": 64, "duration": "half", "is_downbeat": False},
+        {"pitch": 67, "duration": "half", "is_downbeat": True},
+        {"pitch": 72, "duration": "half", "is_downbeat": True},
+    ]
+    from src.harmony.pipeline import Harmonizer
+    h = Harmonizer()
+    core_res = h.harmonize(melody, key="C Major", time_signature="4/4", max_plans=50)
+    assert core_res.is_success is True
+
+    res = client.post("/api/harmonize", json={
+        "melody": melody,
+        "key": {"tonic": "C", "mode": "Major"},
+        "time_signature": "4/4",
+        "max_plans": 50,
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["is_success"] is True
+    # Compare chords and voicings between API and Harmonizer
+    expected_chords = [c.function for c in core_res.solutions[0].chords]
+    assert data["candidates"][0]["chords"] == expected_chords
+    expected_voicings = [
+        {"soprano": v.s, "alto": v.a, "tenor": v.t, "bass": v.b}
+        for v in core_res.solutions[0].voicings
+    ]
+    assert data["candidates"][0]["voicings"] == expected_voicings
+
+
+def test_api_secondary_dominants_disallowed():
+    # Melody [64,66,67,64,62,60] (E F# G E D C), C-dur
+    # Without secondary dominants, this melody cannot be harmonized
+    # (F# requires DD). When allow_secondary_dominants=False, API must return is_success=False
+    # with empty candidates and honest message.
+    payload = {
+        "melody": [
+            {"pitch": 64, "duration": "half"},
+            {"pitch": 66, "duration": "half"},
+            {"pitch": 67, "duration": "half"},
+            {"pitch": 64, "duration": "half"},
+            {"pitch": 62, "duration": "half"},
+            {"pitch": 60, "duration": "half"},
+        ],
+        "key": {"tonic": "C", "mode": "Major"},
+        "allow_secondary_dominants": False,
+    }
+    res = client.post("/api/harmonize", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["is_success"] is False
+    assert data["candidates"] == []
+    assert data["message"] == "Без побочных доминант невозможно гармонизовать заданную мелодию."
+
