@@ -16,3 +16,4 @@ uv.lock
 htmlcov/
 frontend/dist/
 frontend/node_modules/
+.agent-teams/

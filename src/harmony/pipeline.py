@@ -48,6 +48,8 @@ class HarmonizationSolution:
     durations: list[str] = field(default_factory=list)
     time_signature: str = "4/4"
     metric_info: list[dict[str, Any]] = field(default_factory=list)
+    had_relaxed_violations: bool = False
+    relaxed_rule_ids: list[str] = field(default_factory=list)
 
     def to_musicxml(self, title: str = "Harmonization Exercise") -> str:
         return export_to_musicxml(
@@ -80,6 +82,8 @@ class HarmonizationResult:
     solutions: list[HarmonizationSolution]
     best_solution: HarmonizationSolution | None
     message: str = ""
+    had_relaxed_violations: bool = False
+    relaxed_rule_ids: list[str] = field(default_factory=list)
 
 
 class Harmonizer:
@@ -107,13 +111,35 @@ class Harmonizer:
         max_plans: int = 60,
         allow_extended_ranges: bool = False,
         allow_replanning: bool = True,
+        allow_adjacent_unisons: bool = False,
+        relax_hard_gates: bool = False,
     ) -> HarmonizationResult:
         """
         Harmonizes a soprano melody.
         If 'chords' is provided, uses that functional plan directly.
         Otherwise, uses the HarmonicGrammar to synthesize valid plans.
         Supports custom time signatures (3/4, 2/4, 6/8, 4/4) and dotted durations.
+
+        ``relax_hard_gates`` is a last-resort escape hatch: a strictly legal plan is
+        always preferred, and relaxation is attempted only when the strict pass (or
+        its bounded replanning) produced nothing at all. Accepting a 10000-point
+        penalty while a clean plan exists is never the desirable outcome.
         """
+        if relax_hard_gates:
+            strict = self.harmonize(
+                melody=melody,
+                key=key,
+                chords=chords,
+                time_signature=time_signature,
+                max_plans=max_plans,
+                allow_extended_ranges=allow_extended_ranges,
+                allow_replanning=allow_replanning,
+                allow_adjacent_unisons=allow_adjacent_unisons,
+                relax_hard_gates=False,
+            )
+            if strict.is_success and strict.best_solution is not None:
+                return strict
+
         parsed_key = Key.parse(key)
         parsed_ts = TimeSignature.parse(time_signature)
 
@@ -146,7 +172,8 @@ class Harmonizer:
             parsed_chords = [c if isinstance(c, Chord) else Chord(function=str(c)) for c in chords]
             plans_to_try.append(parsed_chords)
         else:
-            grammar = HarmonicGrammar(key=parsed_key)
+            grammar = self.grammar or HarmonicGrammar(key=parsed_key)
+            grammar.key = parsed_key
             plans_to_try = grammar.generate_plans(melody=processed_melody, key=parsed_key, max_plans=max_plans)
 
         if not plans_to_try:
@@ -170,6 +197,8 @@ class Harmonizer:
                 chords=plan,
                 key=parsed_key,
                 allow_extended_ranges=effective_extended,
+                allow_adjacent_unisons=allow_adjacent_unisons,
+                relax_hard_gates=relax_hard_gates,
             )
 
             if res.is_success and res.voicings:
@@ -187,6 +216,8 @@ class Harmonizer:
                         durations=durations_list,
                         time_signature=str(parsed_ts),
                         metric_info=metric_info,
+                        had_relaxed_violations=res.had_relaxed_violations,
+                        relaxed_rule_ids=list(res.relaxed_rule_ids),
                     )
                 )
             else:
@@ -202,6 +233,8 @@ class Harmonizer:
                 durations_list=durations_list,
                 time_signature=str(parsed_ts),
                 metric_info=metric_info,
+                allow_adjacent_unisons=allow_adjacent_unisons,
+                relax_hard_gates=relax_hard_gates,
             )
             if replan_res is not None:
                 return replan_res
@@ -223,6 +256,8 @@ class Harmonizer:
             solutions=top_solutions,
             best_solution=top_solutions[0],
             message=f"Found {len(top_solutions)} mathematically optimal solutions.",
+            had_relaxed_violations=top_solutions[0].had_relaxed_violations if top_solutions else False,
+            relaxed_rule_ids=top_solutions[0].relaxed_rule_ids if top_solutions else [],
         )
 
     def _replan(
@@ -236,6 +271,8 @@ class Harmonizer:
         metric_info: list[dict[str, Any]] | None = None,
         max_attempts: int = 200,
         timeout_sec: float = 2.0,
+        allow_adjacent_unisons: bool = False,
+        relax_hard_gates: bool = False,
     ) -> HarmonizationResult | None:
         """
         Bounded replanning engine: analyzes diagnostic failures from Viterbi,
@@ -248,7 +285,8 @@ class Harmonizer:
             return None
 
         effective_extended = allow_extended_ranges
-        grammar = HarmonicGrammar(key=key)
+        grammar = self.grammar or HarmonicGrammar(key=key)
+        grammar.key = key
         seen_plans: set[tuple[str, ...]] = {tuple(c.function for c in p) for p, _ in failed_plans}
         solutions: list[HarmonizationSolution] = []
         attempts = 0
@@ -466,6 +504,8 @@ class Harmonizer:
                             key=key,
                             allow_extended_ranges=effective_extended,
                             relax_soprano_intervals=True,
+                            allow_adjacent_unisons=allow_adjacent_unisons,
+                            relax_hard_gates=relax_hard_gates,
                         )
                         if sol_res.is_success and sol_res.voicings:
                             ascii_view = format_ascii_score(
@@ -482,6 +522,8 @@ class Harmonizer:
                                     durations=durations_list or [],
                                     time_signature=time_signature,
                                     metric_info=metric_info or [],
+                                    had_relaxed_violations=sol_res.had_relaxed_violations,
+                                    relaxed_rule_ids=list(sol_res.relaxed_rule_ids),
                                 )
                             )
                             if len(solutions) >= 3:
@@ -507,6 +549,8 @@ class Harmonizer:
                     key=key,
                     allow_extended_ranges=effective_extended,
                     relax_soprano_intervals=True,
+                    allow_adjacent_unisons=allow_adjacent_unisons,
+                    relax_hard_gates=relax_hard_gates,
                 )
                 if sol_res.is_success and sol_res.voicings:
                     ascii_view = format_ascii_score(
@@ -523,6 +567,8 @@ class Harmonizer:
                             durations=durations_list or [],
                             time_signature=time_signature,
                             metric_info=metric_info or [],
+                            had_relaxed_violations=sol_res.had_relaxed_violations,
+                            relaxed_rule_ids=list(sol_res.relaxed_rule_ids),
                         )
                     )
                     if len(solutions) >= 3:
@@ -536,6 +582,8 @@ class Harmonizer:
                 solutions=top_solutions,
                 best_solution=top_solutions[0],
                 message=f"Found {len(top_solutions)} mathematically optimal solutions (resolved via replanning).",
+                had_relaxed_violations=top_solutions[0].had_relaxed_violations if top_solutions else False,
+                relaxed_rule_ids=top_solutions[0].relaxed_rule_ids if top_solutions else [],
             )
 
         return None

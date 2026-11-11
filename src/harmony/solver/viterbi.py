@@ -5,7 +5,7 @@ minimizing total voice leading cost subject to zero Brigade hard rule violations
 """
 
 from typing import Any, Sequence, NamedTuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from src.harmony.core.types import (
     Voicing,
     Key,
@@ -14,10 +14,11 @@ from src.harmony.core.types import (
     calculate_metric_structure,
 )
 from src.harmony.rules.engine import RuleEngine
+from src.harmony.rules.spacing import set_unisons_allowed
 from src.harmony.solver.state_generator import generate_candidate_voicings
 
 # Thread-safe global cache for static slice validations (no transition context)
-_STATIC_STEP0_CACHE: dict[tuple, tuple[bool, bool, float]] = {}
+_STATIC_STEP0_CACHE: dict[tuple, tuple[float, list[str]]] = {}
 
 
 def clear_solver_cache() -> None:
@@ -42,6 +43,8 @@ class SolverResult:
     diagnostics: list[dict[str, Any]]
     message: str = ""
     step_diagnostics: list[SolverStepDiagnostic] | None = None
+    had_relaxed_violations: bool = False
+    relaxed_rule_ids: list[str] = field(default_factory=list)
 
 
 class ViterbiSolver:
@@ -66,6 +69,8 @@ class ViterbiSolver:
         key: Any = None,
         allow_extended_ranges: bool = False,
         relax_soprano_intervals: bool = False,
+        allow_adjacent_unisons: bool = False,
+        relax_hard_gates: bool = False,
     ) -> SolverResult:
         """
         Finds the globally optimal sequence of Voicings for the given melody and chord progression.
@@ -127,7 +132,16 @@ class ViterbiSolver:
         parsed_key = Key.parse(key) if key is not None else Key("C", "Major")
 
         # Session tracking for early stopping on long melodies with multiple candidate plans
-        session_key = (n, tuple(melody_pitches), parsed_key.tonic, parsed_key.mode)
+        session_key = (
+            n,
+            tuple(melody_pitches),
+            parsed_key.tonic,
+            parsed_key.mode,
+            bool(allow_extended_ranges),
+            bool(relax_soprano_intervals),
+            bool(allow_adjacent_unisons),
+            bool(relax_hard_gates),
+        )
         if session_key != self._current_session_key:
             self._current_session_key = session_key
             self._session_best_cost = float("inf")
@@ -144,9 +158,12 @@ class ViterbiSolver:
                     step_diagnostics=None,
                 )
 
-        # Configure rule engine extended ranges
+        # Configure rule engine extended ranges and unisons
         orig_extended = getattr(self.rule_engine, "allow_extended_ranges", False)
+        orig_unisons = getattr(self.rule_engine, "allow_unisons", False)
         self.rule_engine.allow_extended_ranges = allow_extended_ranges
+        self.rule_engine.allow_unisons = allow_adjacent_unisons
+        set_unisons_allowed(allow_adjacent_unisons)
 
         try:
             # 1. Generate state lattice V[t]
@@ -166,6 +183,7 @@ class ViterbiSolver:
                     prev_soprano=prev_s,
                     next_soprano=next_s,
                     is_downbeat=is_db,
+                    allow_adjacent_unisons=allow_adjacent_unisons,
                 )
                 lattice.append(candidates)
                 step_diag.append(
@@ -202,6 +220,7 @@ class ViterbiSolver:
 
             # Step 0: Initial cost based on static spacing (cached without context)
             init_delta: list[float] = []
+            step0_violations: list[list[str]] = []
             chord_sym_0 = parsed_chords[0].function if hasattr(parsed_chords[0], "function") else str(parsed_chords[0])
             for v in lattice[0]:
                 cache_key_0 = (
@@ -213,9 +232,11 @@ class ViterbiSolver:
                     (n == 1),
                     phrase_boundaries[0],
                     self.rule_engine.allow_extended_ranges,
+                    bool(allow_adjacent_unisons),
+                    bool(relax_hard_gates),
                 )
                 if cache_key_0 in _STATIC_STEP0_CACHE:
-                    is_valid, has_hard, cost = _STATIC_STEP0_CACHE[cache_key_0]
+                    cost, viol_ids = _STATIC_STEP0_CACHE[cache_key_0]
                 else:
                     res = self.rule_engine.validate(
                         prev_voicing=None,
@@ -227,15 +248,28 @@ class ViterbiSolver:
                         is_final_chord=(n == 1),
                         phrase_boundary=phrase_boundaries[0],
                     )
-                    is_valid = res.is_valid
-                    has_hard = res.has_hard_violations
-                    cost = res.cost
-                    _STATIC_STEP0_CACHE[cache_key_0] = (is_valid, has_hard, cost)
+                    hard_viols = [
+                        viol for viol in res.violations
+                        if viol.is_hard and not (allow_adjacent_unisons and viol.rule_id == "VOICE_UNISON")
+                    ]
+                    n_hard = len(hard_viols)
 
-                if is_valid and not has_hard:
-                    init_delta.append(cost)
-                else:
-                    init_delta.append(float("inf"))
+                    if n_hard == 0:
+                        cost = res.cost if res.cost < float("inf") else self.rule_engine.compute_initial_cost(v, chord=parsed_chords[0], key=parsed_key)
+                        viol_ids = []
+                    else:
+                        if not relax_hard_gates:
+                            cost = float("inf")
+                            viol_ids = []
+                        else:
+                            base_cost = self.rule_engine.compute_initial_cost(v, chord=parsed_chords[0], key=parsed_key)
+                            cost = base_cost + 10000.0 * n_hard
+                            viol_ids = [viol.rule_id for viol in hard_viols]
+
+                    _STATIC_STEP0_CACHE[cache_key_0] = (cost, viol_ids)
+
+                init_delta.append(cost)
+                step0_violations.append(viol_ids)
 
             delta.append(init_delta)
             psi.append([-1] * len(lattice[0]))
@@ -258,6 +292,8 @@ class ViterbiSolver:
                 )
 
             # Steps 1 to N-1
+            trans_violations: list[list[list[str]]] = [[]]
+
             for t in range(1, n):
                 curr_candidates = lattice[t]
                 prev_candidates = lattice[t - 1]
@@ -267,6 +303,7 @@ class ViterbiSolver:
 
                 step_delta: list[float] = [float("inf")] * len(curr_candidates)
                 step_psi: list[int] = [-1] * len(curr_candidates)
+                step_trans_violations: list[list[str]] = [[] for _ in range(len(curr_candidates))]
 
                 # Pre-filter reachable predecessors and sort by accumulated cost for branch pruning
                 reachable_prev = [
@@ -277,6 +314,7 @@ class ViterbiSolver:
                 if not reachable_prev:
                     delta.append(step_delta)
                     psi.append(step_psi)
+                    trans_violations.append(step_trans_violations)
                     step_diag[t].reachable_candidates_count = 0
                     msg = f"Step {t} ({curr_chord.function}): all {len(curr_candidates)} candidates blocked by hard-rule violations from step {t-1}."
                     return SolverResult(
@@ -298,6 +336,7 @@ class ViterbiSolver:
                 for j, curr_v in enumerate(curr_candidates):
                     best_cost = float("inf")
                     best_prev_idx = -1
+                    best_viols: list[str] = []
 
                     for prev_cost, i, prev_v in reachable_prev:
                         # Non-negative transition cost guarantee: if prev_cost >= best_cost,
@@ -331,20 +370,34 @@ class ViterbiSolver:
                             v for v in res.violations
                             if v.is_hard and not (relax_soprano_intervals and v.voices == (0,) and v.rule_id in ("MELODIC_AUGMENTED_INTERVAL", "MELODIC_DIMINISHED_SEVENTH"))
                         ]
-                        if hard_violations:
-                            continue
+                        if allow_adjacent_unisons:
+                            hard_violations = [v for v in hard_violations if v.rule_id != "VOICE_UNISON"]
 
-                        trans_cost = res.cost if res.cost < float("inf") else self.rule_engine.compute_soft_cost(prev_v, curr_v)
+                        if hard_violations:
+                            if not relax_hard_gates:
+                                continue
+                            n_hard = len(hard_violations)
+                            base_cost = res.cost if res.cost < float("inf") else self.rule_engine.compute_soft_cost(prev_v, curr_v)
+                            base_cost += self.rule_engine.compute_functional_cost(prev_chord, curr_chord, is_final_chord=(t == n - 1), key=parsed_key)
+                            trans_cost = base_cost + 10000.0 * n_hard
+                            cur_viols = [v.rule_id for v in hard_violations]
+                        else:
+                            trans_cost = res.cost if res.cost < float("inf") else self.rule_engine.compute_soft_cost(prev_v, curr_v)
+                            cur_viols = []
+
                         total_cost = prev_cost + trans_cost
                         if total_cost < best_cost:
                             best_cost = total_cost
                             best_prev_idx = i
+                            best_viols = cur_viols
 
                     step_delta[j] = best_cost
                     step_psi[j] = best_prev_idx
+                    step_trans_violations[j] = best_viols
 
                 delta.append(step_delta)
                 psi.append(step_psi)
+                trans_violations.append(step_trans_violations)
                 reachable = sum(1 for c in step_delta if c < float("inf"))
                 step_diag[t].reachable_candidates_count = reachable
 
@@ -387,13 +440,21 @@ class ViterbiSolver:
 
             optimal_path: list[Voicing] = [lattice[n - 1][best_last_idx]]
             curr_idx = best_last_idx
+            all_relaxed_ids: list[str] = []
 
             for t in range(n - 1, 0, -1):
                 prev_idx = psi[t][curr_idx]
                 optimal_path.append(lattice[t - 1][prev_idx])
+                if trans_violations[t][curr_idx]:
+                    all_relaxed_ids.extend(trans_violations[t][curr_idx])
                 curr_idx = prev_idx
 
+            if step0_violations[curr_idx]:
+                all_relaxed_ids.extend(step0_violations[curr_idx])
+
             optimal_path.reverse()
+            unique_relaxed_ids = list(dict.fromkeys(all_relaxed_ids))
+            had_relaxed = len(unique_relaxed_ids) > 0
 
             if self.early_stopping_k > 0:
                 self._session_solutions_count += 1
@@ -408,8 +469,12 @@ class ViterbiSolver:
                 voicings=optimal_path,
                 total_cost=optimal_cost,
                 diagnostics=[],
-                message="Optimal SATB trajectory found successfully.",
+                message="Optimal SATB trajectory found successfully." if not had_relaxed else "Optimal SATB trajectory found with relaxed hard gates.",
                 step_diagnostics=step_diag,
+                had_relaxed_violations=had_relaxed,
+                relaxed_rule_ids=unique_relaxed_ids,
             )
         finally:
             self.rule_engine.allow_extended_ranges = orig_extended
+            self.rule_engine.allow_unisons = orig_unisons
+            set_unisons_allowed(False)

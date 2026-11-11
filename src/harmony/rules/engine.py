@@ -515,11 +515,7 @@ class RuleEngine:
                     "S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65"
                 )
                 allowed_deceptive_preds = ("D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "VII7", "vii7")
-                if prev_sym in ("bVI", "bVI6", "BVI", "BVI6", "bvi", "bvi6"):
-                    # Chromatic deceptive cadence: musically weak, but a legitimate
-                    # exit for a melody that ends on the bVI/VI scale degree.
-                    soft_cost += 12.0
-                elif prev_sym in forbidden_subdom or prev_sym.upper().startswith("BVI") or prev_sym in SUBDOMINANT_GROUP:
+                if prev_sym in forbidden_subdom or prev_sym.upper().startswith("BVI") or prev_sym in SUBDOMINANT_GROUP:
                     violations.append(
                         RuleViolation(
                             rule_id="CADENCE_FINAL_VI_REQUIRES_DOMINANT",

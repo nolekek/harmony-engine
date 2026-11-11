@@ -2,8 +2,21 @@
 Voice ranges, crossing, and texture spacing rules according to Brigade Harmony textbook.
 """
 
+import threading
 from typing import Any, Mapping
 from src.harmony.core.types import RuleViolation, to_satb
+
+_UNISONS_CONTEXT = threading.local()
+
+
+def set_unisons_allowed(allowed: bool) -> None:
+    """Thread-local context setter for allowing voice unisons."""
+    _UNISONS_CONTEXT.allowed = allowed
+
+
+def is_unisons_allowed() -> bool:
+    """Thread-local context getter for allowing voice unisons."""
+    return getattr(_UNISONS_CONTEXT, "allowed", False)
 
 VOICE_NAMES = ("Soprano", "Alto", "Tenor", "Bass")
 
@@ -191,13 +204,17 @@ def validate_spacing(
     voicing: Any,
     ranges: Mapping[int, tuple[int, int]] | None = None,
     allow_extended: bool = False,
+    allow_unisons: bool = False,
 ) -> list[RuleViolation]:
     """
     Runs full static texture checks on a single voicing vertical slice.
     """
+    effective_allow_unisons = allow_unisons or is_unisons_allowed()
+
     violations = []
     violations.extend(check_voice_ranges(voicing, ranges=ranges, allow_extended=allow_extended))
     violations.extend(check_voice_crossing(voicing))
-    violations.extend(check_voice_unison(voicing))
+    if not effective_allow_unisons:
+        violations.extend(check_voice_unison(voicing))
     violations.extend(check_texture_spacing(voicing))
     return violations

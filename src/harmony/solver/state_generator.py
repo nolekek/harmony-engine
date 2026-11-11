@@ -31,6 +31,7 @@ def generate_candidate_voicings(
     prev_soprano: int | None = None,
     next_soprano: int | None = None,
     is_downbeat: bool = False,
+    allow_adjacent_unisons: bool = False,
 ) -> list[Voicing]:
     """
     Generates all statically valid SATB voicings for a given soprano pitch and chord.
@@ -76,6 +77,7 @@ def generate_candidate_voicings(
         prev_soprano,
         next_soprano,
         bool(is_downbeat),
+        bool(allow_adjacent_unisons),
     )
 
     if cache_key in _CANDIDATE_VOICINGS_CACHE:
@@ -163,25 +165,25 @@ def generate_candidate_voicings(
 
     candidates: list[Voicing] = []
 
-    # Find valid Alto pitches (strict order S > A):
+    # Find valid Alto pitches:
     alto_low = max(a_min, soprano_pitch - 12)
-    alto_high = min(a_max, soprano_pitch - 1)
+    alto_high = min(a_max, soprano_pitch if allow_adjacent_unisons else (soprano_pitch - 1))
 
     for a in range(alto_low, alto_high + 1):
         if a % 12 not in allowed_pcs:
             continue
 
-        # Find valid Tenor pitches (strict order A > T):
+        # Find valid Tenor pitches:
         tenor_low = max(t_min, a - 12)
-        tenor_high = min(t_max, a - 1)
+        tenor_high = min(t_max, a if allow_adjacent_unisons else (a - 1))
 
         for t in range(tenor_low, tenor_high + 1):
             if t % 12 not in allowed_pcs:
                 continue
 
-            # Find valid Bass pitches (strict order T > B):
+            # Find valid Bass pitches:
             bass_low = max(b_min, t - 24)
-            bass_high = min(b_max, t - 1)
+            bass_high = min(b_max, t if allow_adjacent_unisons else (t - 1))
 
             for b in range(bass_low, bass_high + 1):
                 if required_bass_pc is not None and (b % 12 != required_bass_pc):
@@ -222,7 +224,7 @@ def generate_candidate_voicings(
                         is_final_chord=is_final_chord,
                     )
 
-                if any(viol.is_hard for viol in doubling_violations):
+                if any(viol.is_hard and not (allow_adjacent_unisons and viol.rule_id == "VOICE_UNISON") for viol in doubling_violations):
                     continue
 
                 candidates.append(v)

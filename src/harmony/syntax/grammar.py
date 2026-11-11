@@ -57,6 +57,15 @@ class HarmonicGrammar:
 
     def __init__(self, key: Key | None = None):
         self.key = key or Key(tonic="C", mode="Major")
+        self.beam_starvations: int = 0
+
+    @property
+    def beam_starvation_count(self) -> int:
+        return self.beam_starvations
+
+    @beam_starvation_count.setter
+    def beam_starvation_count(self, value: int) -> None:
+        self.beam_starvations = value
 
     def get_chord_pitch_classes(self, fn: str, key: Key | None = None) -> set[int]:
         """Returns the set of pitch classes belonging to the chord function."""
@@ -330,7 +339,7 @@ class HarmonicGrammar:
                 return False
             if curr_upper not in (
                 "K64", "D", "D7", "D6", "T", "T6", "N", "N6",
-                "BVI", "BVI6", "D53", "T53", "T-6",
+                "BVI", "BVI6", "D53", "T53", "T-6", "VII", "VII6", "VII7",
             ):
                 return False
 
@@ -414,6 +423,7 @@ class HarmonicGrammar:
             notes.append(MelodyNote(pitch=p, is_downbeat=db, is_cadence_point=is_final, phrase_boundary=pb))
 
         # Adaptive strategy: retry with widened beam if beam starves or yields zero plans
+        self.beam_starvations = 0
         results: list[list[Chord]] = []
         for multiplier in (1, 2, 4):
             results = self._generate_plans_pass(notes=notes, key=k, max_plans=max_plans, multiplier=multiplier)
@@ -521,9 +531,9 @@ class HarmonicGrammar:
                         if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat, phrase_boundary=is_pb):
                             continue
                         if i == n - 1 and cand in ("VI", "vi"):
-                            if prev_fn in ("S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65"):
+                            if prev_fn in ("bVI", "bVI6", "BVI", "BVI6", "bvi", "bvi6", "S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65") or prev_fn.upper().startswith("BVI"):
                                 continue
-                            if prev_fn not in ("D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "VII7", "vii7", "III", "iii", "bVI", "bVI6", "BVI", "BVI6"):
+                            if prev_fn not in ("D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "VII7", "vii7", "III", "iii"):
                                 continue
                         if i == n - 1 and cand in ("T", "t"):
                             if prev_fn in ("T6", "t6"):
@@ -534,20 +544,23 @@ class HarmonicGrammar:
                             vi_root_pc = (tonic_pc + (8 if is_minor else 9)) % 12
                             if (notes[i].pitch % 12) == vi_root_pc:
                                 continue
+
+                        trans_score = 0.0
+
                         if prev_fn in ("S", "s") and cand in DOMINANT_GROUP:
                             if (
                                 (notes[i - 1].pitch % 12) == (tonic_pc + 5) % 12
                                 and (notes[i].pitch % 12) == (tonic_pc + 7) % 12
                                 and notes[i].pitch > notes[i - 1].pitch
                             ):
-                                continue
+                                trans_score -= 6.0
 
                         root_triads = {"T", "S", "D", "II", "VI", "III", "t", "s", "d"}
                         if prev_fn in root_triads and cand in root_triads:
                             _, _, p_fifth = get_triad_tones(prev_fn, tonic_pc, mode)
                             _, _, c_fifth = get_triad_tones(cand, tonic_pc, mode)
                             if (notes[i - 1].pitch % 12) == p_fifth and (notes[i].pitch % 12) == c_fifth:
-                                continue
+                                trans_score -= 6.0
 
                         if prev_fn in ("D6", "D65") and cand in ("T", "t"):
                             if (notes[i].pitch - notes[i - 1].pitch) > 2 and (notes[i].pitch % 12) == (tonic_pc + 7) % 12:
@@ -568,7 +581,7 @@ class HarmonicGrammar:
                             p_mel = notes[i - 1].pitch % 12
                             c_mel = notes[i].pitch % 12
                             if (p_mel in (p_root, p_third)) and (c_mel in (p_root, p_third)) and (p_mel != c_mel):
-                                continue
+                                trans_score -= 6.0
 
                         if prev_fn in DOMINANT_GROUP and cand in ("T", "t"):
                             if (
@@ -576,9 +589,7 @@ class HarmonicGrammar:
                                 and (notes[i].pitch % 12) == tonic_pc
                                 and notes[i].pitch > notes[i - 1].pitch
                             ):
-                                continue
-
-                        trans_score = 0.0
+                                trans_score -= 6.0
 
                         if i == 1 and cand in DOMINANT_GROUP:
                             trans_score -= 2.0
@@ -776,6 +787,9 @@ class HarmonicGrammar:
                                 trans_score = 0.0
 
                     new_beams.append((score + trans_score, path + [cand]))
+
+            if not new_beams and i < n - 1:
+                self.beam_starvations += 1
 
             # Fallback 1: Relax voice leading heuristics with penalty, but strictly enforce is_valid_syntax_transition
             if not new_beams:

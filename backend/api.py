@@ -175,6 +175,8 @@ class HarmonizeRequest(BaseModel):
     allow_extended_ranges: bool = False
     allow_secondary_dominants: bool = True
     max_plans: int = Field(default=50, ge=1, le=100)
+    allow_adjacent_unisons: bool = False
+    relax_hard_gates: bool = False
 
 
 class VoicingItem(BaseModel):
