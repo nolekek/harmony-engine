@@ -314,8 +314,10 @@ class RuleEngine:
 
         if is_final_chord:
             if curr_sym in ("T", "t", "T6", "t6"):
-                if prev_sym in self._DOMINANT_FAMILY:
+                if prev_sym in ("D7", "d7", "D65", "d65", "D", "d", "K64", "k64"):
                     cost += 0.0
+                elif prev_sym in ("D6", "d6", "D43", "d43", "D2", "d2"):
+                    cost += 0.8  # weaker inversions of the dominant
                 elif prev_sym in ("VI", "vi"):
                     cost += 1.5  # deceptive cadence as the final is weak
                 else:
@@ -325,7 +327,7 @@ class RuleEngine:
             return cost
 
         if curr_sym in ("III", "iii", "III6", "iii6"):
-            cost += 2.5
+            cost += 4.0
         if curr_sym in ("VI", "vi") and prev_sym not in self._DOMINANT_FAMILY:
             cost += 2.0
         if prev_sym in self._DOMINANT_FAMILY and curr_sym in ("VI", "vi"):

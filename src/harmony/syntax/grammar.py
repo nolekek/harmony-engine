@@ -165,6 +165,16 @@ class HarmonicGrammar:
             if pc in allowed_pcs:
                 compatible.append(fn)
 
+        # Cadential preference: before the final tonic the textbook wants a
+        # dominant preparation (D/D7/D65/D43/D2/D6), not a plagal S/II.
+        if is_penultimate and next_pitch is not None and (next_pitch % 12) in tonic_tones:
+            cadential = [
+                fn for fn in compatible
+                if fn in ("D", "d", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2", "D6", "d6")
+            ]
+            if cadential:
+                compatible = cadential
+
         return compatible
 
     def is_valid_syntax_transition(
@@ -430,6 +440,11 @@ class HarmonicGrammar:
 
                         # Heuristic transitions
                         trans_score = 0.0
+
+                        # Opening wobble: a dominant chord in the second slot
+                        # (T -> D6 -> T) reads as a functional hiccup, not an opening.
+                        if i == 1 and cand in DOMINANT_GROUP:
+                            trans_score -= 2.0
 
                         # Stepwise soprano motion: prioritize sextachords (S6, D6, II6, VII6, III6) (T13, BK-02)
                         soprano_step = abs(notes[i].pitch - notes[i - 1].pitch) in (1, 2)
