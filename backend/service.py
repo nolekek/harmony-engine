@@ -15,22 +15,9 @@ from src.harmony.core.metric import MetricGrid
 from src.harmony.syntax.grammar import HarmonicGrammar
 from src.harmony.solver.viterbi import ViterbiSolver
 from src.harmony.rules.engine import RuleEngine
+from src.harmony.pipeline import Harmonizer
 from src.harmony.export.ascii import format_ascii_score
 from backend.exporters import build_colored_musicxml
-
-# Runtime compatibility guard while concurrent agent updates src/harmony/rules/voice_leading.py
-import inspect
-from src.harmony.rules import engine, voice_leading
-_orig_vvl = engine.validate_voice_leading
-if "prev_chord" not in inspect.signature(_orig_vvl).parameters:
-    def _compat_validate_voice_leading(prev_voicing, curr_voicing, key=None, **kwargs):
-        sig = inspect.signature(_orig_vvl)
-        call_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
-        if "key" in sig.parameters:
-            call_kwargs["key"] = key
-        return _orig_vvl(prev_voicing, curr_voicing, **call_kwargs)
-    engine.validate_voice_leading = _compat_validate_voice_leading
-    voice_leading.validate_voice_leading = _compat_validate_voice_leading
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +46,78 @@ class HarmonizationService:
     ) -> None:
         self.rule_engine = rule_engine or RuleEngine()
         self.solver = solver or ViterbiSolver(rule_engine=self.rule_engine)
+        self.harmonizer = Harmonizer(rule_engine=self.rule_engine, solver=self.solver)
+
+    def _replanning_candidates(
+        self,
+        parsed_key: Key,
+        melody_raw: list[dict[str, Any]],
+        time_sig: TimeSignature,
+        durations_list: list[str],
+        max_plans: int,
+        allow_extended_ranges: bool,
+    ) -> list[dict[str, Any]]:
+        """Bounded-replanning fallback.
+
+        The fast path walks pre-generated plans one by one; the core engine owns
+        macro/micro replanning and can synthesize plans itself when the grammar
+        produced none (chromatic NCT lines, minor-key S6 dead ends, ...).
+
+        Note: the raw melody is forwarded unchanged (is_downbeat=None when the
+        client omitted the flag) so the core can decide metric placement itself.
+        """
+        try:
+            fallback = self.harmonizer.harmonize(
+                melody=melody_raw,
+                key=parsed_key,
+                time_signature=str(time_sig),
+                max_plans=max_plans,
+                allow_extended_ranges=allow_extended_ranges,
+                allow_replanning=True,
+            )
+        except TypeError:
+            return []
+        if fallback is None or not fallback.is_success:
+            return []
+
+        candidates: list[dict[str, Any]] = []
+        for sol in fallback.solutions:
+            chords_list = [c.function for c in sol.chords]
+            voicings_list = [
+                {"soprano": v.s, "alto": v.a, "tenor": v.t, "bass": v.b}
+                for v in sol.voicings
+            ]
+            ascii_text = format_ascii_score(
+                voicings=sol.voicings,
+                chords=sol.chords,
+                key=f"{parsed_key.tonic} {parsed_key.mode}",
+            )
+            colored_xml = build_colored_musicxml(
+                voicings=sol.voicings,
+                chords=sol.chords,
+                key=parsed_key,
+                title=f"Гармонизация в {parsed_key.tonic} {parsed_key.mode}",
+                durations=durations_list,
+                time_signature=str(time_sig),
+            )
+            candidates.append({
+                "id": f"cand_{len(candidates) + 1}",
+                "rank": len(candidates) + 1,
+                "cost": round(sol.cost, 2),
+                "chords": chords_list,
+                "progression_preview": " → ".join(chords_list),
+                "description": (
+                    "Полная каденция (replanning)"
+                    if "K64" in chords_list
+                    else "Автентический оборот (replanning)"
+                ),
+                "time_signature": str(time_sig),
+                "durations": durations_list,
+                "voicings": voicings_list,
+                "musicxml": colored_xml,
+                "ascii_score": ascii_text,
+            })
+        return candidates
 
     def harmonize(self, req: dict[str, Any] | Any) -> dict[str, Any]:
         """
@@ -176,6 +235,36 @@ class HarmonizationService:
             plans_to_try = all_plans
 
         if not plans_to_try:
+            # The grammar may legitimately produce no plans (e.g. a chromatic NCT
+            # line with an awkward cadence); the replanning engine can still
+            # synthesize a functional plan from scratch.
+            if allow_secondary_dominants:
+                replanned = self._replanning_candidates(
+                    parsed_key=parsed_key,
+                    melody_raw=norm_melody_input,
+                    time_sig=time_sig,
+                    durations_list=durations_list,
+                    max_plans=max_plans,
+                    allow_extended_ranges=allow_extended_ranges,
+                )
+                if replanned:
+                    replanned = select_top_candidates(replanned, k=3)
+                    for idx, s in enumerate(replanned, start=1):
+                        s["id"] = f"cand_{idx}"
+                    latency = round((time.perf_counter() - t_start) * 1000, 2)
+                    logger.info(
+                        "Harmonization rescued by replanning in %.2f ms: %d candidates",
+                        latency,
+                        len(replanned),
+                    )
+                    return {
+                        "is_success": True,
+                        "candidates": replanned,
+                        "best_candidate": replanned[0],
+                        "message": f"Найдено {len(replanned)} математически оптимальных решений.",
+                        "latency_ms": latency,
+                        "error": None,
+                    }
             latency = round((time.perf_counter() - t_start) * 1000, 2)
             logger.warning("Harmonization aborted in %.2f ms: NO_PLANS generated by grammar", latency)
             return {
@@ -247,6 +336,21 @@ class HarmonizationService:
                     for d in res.diagnostics:
                         if isinstance(d, dict) and d not in collected_diagnostics:
                             collected_diagnostics.append(d)
+
+        # 2b. Bounded replanning fallback: the fast path above walks plans one by
+        # one; the core engine owns macro/micro replanning for melodies whose
+        # plans are all micro-infeasible (e.g. minor-key scales with S6 dead ends).
+        if not solutions and allow_secondary_dominants:
+            solutions.extend(
+                self._replanning_candidates(
+                    parsed_key=parsed_key,
+                    melody_raw=norm_melody_input,
+                    time_sig=time_sig,
+                    durations_list=durations_list,
+                    max_plans=max_plans,
+                    allow_extended_ranges=allow_extended_ranges,
+                )
+            )
 
         solutions = select_top_candidates(solutions, k=3)
         for idx, s in enumerate(solutions, start=1):

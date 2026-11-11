@@ -121,15 +121,17 @@ class Harmonizer:
         processed_melody = []
         for i, info in enumerate(metric_info):
             raw_item = melody[i]
-            if isinstance(raw_item, dict) and "is_downbeat" in raw_item and raw_item["is_downbeat"] is not None:
-                db = bool(raw_item["is_downbeat"])
-            elif isinstance(raw_item, int) or (isinstance(raw_item, dict) and "is_downbeat" not in raw_item):
-                # When downbeats are not explicitly declared, measure start (offset 0.0)
-                # defines the primary downbeat; secondary accents (offset > 0.0) are
-                # unaccented for NCT melodic classifications.
-                db = (info["offset_in_measure"] == 0.0)
+            explicit_db = None
+            if isinstance(raw_item, dict):
+                explicit_db = raw_item.get("is_downbeat")
+            if explicit_db is not None:
+                # The client declared the metric flag explicitly: respect it.
+                db = bool(explicit_db)
             else:
-                db = bool(info["is_downbeat"])
+                # Auto mode (int notes, missing flag or explicit None): measure
+                # start (offset 0.0) defines the primary downbeat; secondary
+                # accents (offset > 0.0) are unaccented for NCT classification.
+                db = (info["offset_in_measure"] == 0.0)
             processed_melody.append({
                 "pitch": info["pitch"],
                 "duration": info["duration"],

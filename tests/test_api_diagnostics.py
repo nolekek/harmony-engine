@@ -11,12 +11,13 @@ client = TestClient(app)
 
 
 def test_diagnostics_no_feasible_plan():
-    """Melody [72, 71, 69] (C5-B4-A4) has candidate plans, but all are blocked by Viterbi."""
+    """Soprano pitch 84 (C6) is diatonic, so plans exist, but it lies above the
+    SATB soprano range: every voicing is blocked -> NO_FEASIBLE_PLAN diagnostics."""
     payload = {
         "melody": [
             {"pitch": 72, "duration": "half"},
-            {"pitch": 71, "duration": "half"},
-            {"pitch": 69, "duration": "half"},
+            {"pitch": 84, "duration": "half"},
+            {"pitch": 72, "duration": "half"},
         ],
         "key": {"tonic": "C", "mode": "Major"},
     }
@@ -35,6 +36,24 @@ def test_diagnostics_no_feasible_plan():
     assert "chord" in first_diag
     assert "blocked" in first_diag
     assert "message" in first_diag
+
+
+def test_replanning_rescues_c5_b4_a4():
+    """C5-B4-A4 used to be rejected; bounded replanning must find a valid plan."""
+    payload = {
+        "melody": [
+            {"pitch": 72, "duration": "half"},
+            {"pitch": 71, "duration": "half"},
+            {"pitch": 69, "duration": "half"},
+        ],
+        "key": {"tonic": "C", "mode": "Major"},
+    }
+    res = client.post("/api/harmonize", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["is_success"] is True
+    assert len(data["candidates"]) >= 1
+    assert data.get("error") is None
 
 
 def test_diagnostics_secondary_dominants_disabled():

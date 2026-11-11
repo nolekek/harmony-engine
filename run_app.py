@@ -19,6 +19,16 @@ import uvicorn
 DEFAULT_PORT = 8000
 DEFAULT_HOST = "127.0.0.1"
 
+# Windows consoles and redirected pipes default to cp1251/cp866, which cannot
+# encode the banner emoji and crashes the launcher before uvicorn starts.
+for _stream in (sys.stdout, sys.stderr):
+    if _stream is not None and hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001 - never fail the launcher over a console tweak
+            pass
+
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parses command-line arguments and environment variables for server startup."""

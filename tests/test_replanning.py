@@ -88,3 +88,12 @@ class TestReplanning:
         assert res_g.is_success
         assert res_g.best_solution is not None
         assert len(res_g.best_solution.voicings) == len(mel_g)
+
+    def test_is_downbeat_none_matches_absent(self, harmonizer):
+        """Explicit is_downbeat=None must behave exactly like an omitted flag."""
+        absent = [{"pitch": p, "duration": "half"} for p in [60, 62, 64, 66, 67]]
+        explicit_none = [{"pitch": p, "duration": "half", "is_downbeat": None} for p in [60, 62, 64, 66, 67]]
+        a = harmonizer.harmonize(absent, key="C Major")
+        b = harmonizer.harmonize(explicit_none, key="C Major")
+        assert a.is_success == b.is_success
+        assert [c.function for c in a.best_solution.chords] == [c.function for c in b.best_solution.chords]
