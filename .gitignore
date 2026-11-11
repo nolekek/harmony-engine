@@ -17,3 +17,5 @@ htmlcov/
 frontend/dist/
 frontend/node_modules/
 .agent-teams/
+.redteam/scratch/lead/server.out.log
+.redteam/scratch/lead/server.err.log

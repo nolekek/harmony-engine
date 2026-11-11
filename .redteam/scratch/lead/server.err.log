@@ -1,8 +1,0 @@
-INFO:     Started server process [4656]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-2026-11-12 01:42:01,271 [INFO] backend.service: Harmonization request started: 6 notes, key=C Major, meter=4/4, secondary_dominants=True, max_plans=50, allow_unisons=False, relax_hard_gates=False
-2026-11-12 01:42:01,462 [INFO] backend.service: Harmonization completed successfully in 190.89 ms: evaluated 51 plans, found 3 solutions (best cost: 23.40)
-2026-11-12 01:42:01,515 [INFO] backend.service: Harmonization request started: 6 notes, key=C Major, meter=4/4, secondary_dominants=True, max_plans=50, allow_unisons=True, relax_hard_gates=True
-2026-11-12 01:42:02,198 [INFO] backend.service: Harmonization completed successfully in 682.52 ms: evaluated 51 plans, found 3 solutions (best cost: 21.20)
