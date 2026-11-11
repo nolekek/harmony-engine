@@ -301,6 +301,7 @@ class HarmonicGrammar:
 
         is_minor = "MINOR" in mode.upper()
         tonic_tones = {tonic_pc, (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12, (tonic_pc + 7) % 12}
+        scale_pcs = set(k.scale_pcs)
 
         # Build candidate options per step
         step_candidates: list[list[str]] = []
@@ -324,6 +325,12 @@ class HarmonicGrammar:
                     and (fn != "K64" or note.is_downbeat)
                     and (not is_final or (fn in ("T", "t") if (note.pitch % 12) in tonic_tones else fn in ("D", "d")))
                 ]
+            # VII7 root position forces the bass onto the root (the leading tone);
+            # a soprano sitting on the same leading tone would duplicate it, which
+            # the canon forbids. VII6 stays available instead.
+            lead_pc = (tonic_pc + 11) % 12
+            if (note.pitch % 12) == lead_pc:
+                cands = [fn for fn in cands if fn != "VII7"]
             step_candidates.append(cands)
 
         # Beam search for top functional progressions
@@ -336,11 +343,27 @@ class HarmonicGrammar:
             is_pb = bool(notes[i].phrase_boundary)
 
             for score, path in beams:
-                for cand in cands:
+                local_cands = cands
+                if path and (notes[i].pitch % 12) not in scale_pcs and not is_downbeat:
+                    prev_fn_nct = path[-1]
+                    if prev_fn_nct not in cands:
+                        # Chromatic passing tone on a weak beat: keeping the current
+                        # harmony turns it into an NCT instead of a bogus altered chord.
+                        local_cands = cands + [prev_fn_nct]
+                for cand in local_cands:
                     if path:
                         prev_fn = path[-1]
                         if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat, phrase_boundary=is_pb):
                             continue
+                        # Deceptive VI after a dominant must double the tonic third;
+                        # that is impossible when the soprano already sits on the
+                        # root of VI, so such a plan is a dead end.
+                        if cand in ("VI", "vi") and prev_fn in (
+                            "D", "d", "D7", "D65", "D43", "D2", "D6"
+                        ):
+                            vi_root_pc = (tonic_pc + (8 if is_minor else 9)) % 12
+                            if (notes[i].pitch % 12) == vi_root_pc:
+                                continue
                         # Second-relationship voice leading law (REPORT #54):
                         # In root-position S, bass is scale degree 4. Moving to dominant with soprano rising from 4 to 5
                         # (e.g. F4 -> G4 in C-dur) forces both outer voices to move in parallel into the octave/unison,
@@ -466,6 +489,11 @@ class HarmonicGrammar:
                                 trans_score += 1.0  # Harmonic sustenance on repeated melody note
                             else:
                                 trans_score -= 1.0
+                        # Chromatic passing tone on a weak beat: sustaining the
+                        # previous harmony turns the foreign note into an NCT
+                        # instead of forcing a bogus altered chord.
+                        if (notes[i].pitch % 12) not in scale_pcs and not is_downbeat and cand == prev_fn:
+                            trans_score += 4.0
                     else:
                         # Initial chord rule: Classical exercises cannot start on unstable/transitional chords
                         if cand in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7"):
@@ -484,8 +512,22 @@ class HarmonicGrammar:
 
             # Fallback 1: Relax voice leading heuristics with penalty, but strictly enforce is_valid_syntax_transition
             if not new_beams:
+                is_final_step = (i == n - 1)
                 for score, path in beams:
                     for cand in cands:
+                        if is_final_step:
+                            # The final cadence may only land on T/T6 (tonic pitch)
+                            # or on D/VI (half/deceptive cadence).
+                            if (notes[i].pitch % 12) in tonic_tones:
+                                if cand not in ("T", "t", "T6", "t6"):
+                                    continue
+                            elif cand in ("VI", "vi"):
+                                if not path or path[-1] not in ("D", "d", "D7"):
+                                    continue
+                            elif cand in ("D", "d", "D7"):
+                                pass
+                            else:
+                                continue
                         if path:
                             prev_fn = path[-1]
                             if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat, phrase_boundary=is_pb):
@@ -528,9 +570,21 @@ class HarmonicGrammar:
 
             # Fallback 3: Sustain previous harmony across passing tone if valid
             if not new_beams:
+                is_final_step = (i == n - 1)
                 for score, path in beams:
                     if path:
                         prev_fn = path[-1]
+                        if is_final_step:
+                            # Final cadence must never be bypassed by sustaining a
+                            # passing harmony (e.g. DD -> DD on the last note).
+                            if (notes[i].pitch % 12) in tonic_tones:
+                                if prev_fn not in ("T", "t", "T6", "t6"):
+                                    continue
+                            elif prev_fn in ("VI", "vi"):
+                                if len(path) < 2 or path[-2] not in ("D", "d", "D7"):
+                                    continue
+                            elif prev_fn not in ("D", "d", "D7"):
+                                continue
                         if prev_fn == "K64" and (not is_downbeat or (i == n - 1)):
                             continue
                         if self.is_valid_syntax_transition(prev_fn, prev_fn, is_downbeat, phrase_boundary=is_pb):
