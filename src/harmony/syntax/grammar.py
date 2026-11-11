@@ -620,4 +620,130 @@ class HarmonicGrammar:
             if len(results) >= max_plans:
                 break
 
+        # Inject textbook cadence templates (K64 -> D7 -> T, II6 -> D7 -> T, ...)
+        # so the solver can actually choose a proper dominant cadence instead of
+        # whatever the heuristic beam happened to leave behind.
+        for path in self._cadence_template_plans(notes, k, max_plans):
+            t_path = tuple(path)
+            if t_path in seen_paths:
+                continue
+            seen_paths.add(t_path)
+            results.append([Chord(function=fn) for fn in path])
+            if len(results) >= max_plans:
+                break
+
         return results
+
+    _CADENCE_TEMPLATES: tuple[tuple[str, ...], ...] = (
+        ("K64", "D7"),
+        ("II6", "D7"),
+        ("II65", "D7"),
+        ("S6", "D7"),
+        ("K64", "D"),
+        ("II6", "K64", "D7"),
+        ("D7",),
+        ("D",),
+    )
+
+    def _cadence_template_plans(
+        self,
+        notes: list[MelodyNote],
+        key: Key,
+        max_plans: int,
+    ) -> list[list[str]]:
+        """Builds plans whose final cadence follows a textbook template.
+
+        Template chords occupy positions n-1-Len .. n-2, the final tonic stays at
+        n-1. The prefix is beam-searched with the regular compatibility rules, so
+        the resulting plan is always syntactically valid end to end.
+        """
+        n = len(notes)
+        if n < 3:
+            return []
+        tonic_pc, mode = parse_key(key)
+        is_minor = "MINOR" in mode.upper()
+        tonic_tones = {
+            tonic_pc,
+            (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12,
+            (tonic_pc + 7) % 12,
+        }
+        if (notes[-1].pitch % 12) not in tonic_tones:
+            return []
+
+        plans: list[list[str]] = []
+        seen: set[tuple[str, ...]] = set()
+
+        for template in self._CADENCE_TEMPLATES:
+            length = len(template)
+            if length >= n:
+                continue
+            prefix_len = n - 1 - length
+
+            compatible = True
+            for j, fn in enumerate(template):
+                idx = prefix_len + j
+                pc = notes[idx].pitch % 12
+                if pc not in self.get_chord_pitch_classes(fn, key):
+                    compatible = False
+                    break
+                if fn == "K64" and not notes[idx].is_downbeat:
+                    compatible = False
+                    break
+            if not compatible:
+                continue
+
+            beams: list[tuple[float, list[str]]] = [(0.0, [])]
+            for i in range(prefix_len):
+                nxt = notes[i + 1].pitch if i + 1 < n else None
+                cands = self.get_compatible_chords_for_pitch(
+                    pitch=notes[i].pitch,
+                    key=key,
+                    is_downbeat=notes[i].is_downbeat,
+                    is_final_cadence=False,
+                    is_penultimate=False,
+                    next_pitch=nxt,
+                )
+                step: list[tuple[float, list[str]]] = []
+                for score, path in beams:
+                    for cand in cands:
+                        if not path:
+                            if cand in (
+                                "III", "III6", "VII", "VII6", "VII7", "II7", "II65",
+                                "K64", "D2", "DD", "DD7",
+                            ):
+                                continue
+                        elif not self.is_valid_syntax_transition(
+                            path[-1], cand, notes[i].is_downbeat
+                        ):
+                            continue
+                        bonus = 1.0 if cand in ("S", "S6", "II", "II6") else 0.0
+                        step.append((score + bonus, path + [cand]))
+                if not step:
+                    beams = []
+                    break
+                step.sort(key=lambda item: item[0], reverse=True)
+                beams = step[:64]
+            if not beams:
+                continue
+
+            for _, path in beams:
+                full = path + list(template) + ["T"]
+                if len(full) != n:
+                    continue
+                valid = True
+                for i in range(1, n):
+                    if not self.is_valid_syntax_transition(
+                        full[i - 1], full[i], notes[i].is_downbeat
+                    ):
+                        valid = False
+                        break
+                if not valid:
+                    continue
+                signature = tuple(full)
+                if signature in seen:
+                    continue
+                seen.add(signature)
+                plans.append(full)
+                if len(plans) >= max_plans:
+                    return plans
+        return plans
