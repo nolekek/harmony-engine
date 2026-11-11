@@ -497,21 +497,45 @@ class HarmonicGrammar:
                         if soprano_step and cand in ("S6", "s6", "D6", "d6", "II6", "VII6"):
                             trans_score += 2.0
 
+                        # Штраф за осцилляцию T, S6, T, S6 (только при линейном движении мелодии)
+                        if len(path) >= 3:
+                            is_t_s6_abab = (
+                                (path[-3] in ("T", "t") and path[-2] in ("S6", "s6") and path[-1] in ("T", "t") and cand in ("S6", "s6"))
+                                or (path[-3] in ("S6", "s6") and path[-2] in ("T", "t") and path[-1] in ("S6", "s6") and cand in ("T", "t"))
+                            )
+                            if is_t_s6_abab:
+                                melody_oscillating = (
+                                    i >= 3
+                                    and notes[i].pitch == notes[i - 2].pitch
+                                    and notes[i - 1].pitch == notes[i - 3].pitch
+                                )
+                                if not melody_oscillating:
+                                    trans_score -= 8.0
+
                         is_descending_leading = (
                             (notes[i - 1].pitch % 12 == tonic_pc)
                             and (notes[i].pitch % 12 in ((tonic_pc + 11) % 12, (tonic_pc + 10) % 12))
                             and (notes[i].pitch < notes[i - 1].pitch)
                         )
-                        if is_descending_leading and cand in ("III", "III6", "VII6"):
-                            trans_score += 4.0
+                        if is_descending_leading:
+                            if is_minor and (notes[i].pitch % 12 == (tonic_pc + 10) % 12) and cand in ("III", "III6"):
+                                trans_score += 3.0
+                            elif cand == "VII6":
+                                trans_score += 4.0
+                            elif cand in ("D6", "d6"):
+                                trans_score += 3.0
 
-                        if (prev_fn in ("III", "iii", "III6", "iii6") and cand in ("VI", "vi")) or \
-                           (prev_fn in ("VI", "vi") and cand in ("III", "iii", "III6", "iii6")):
-                            trans_score -= 8.0
-                        elif cand in ("III", "iii", "III6", "iii6") and not is_descending_leading:
-                            trans_score -= 4.0
-                        elif prev_fn in ("III", "iii", "III6", "iii6") and cand in ("S", "S6", "s", "s6", "II", "II6", "II65"):
-                            trans_score += 1.0
+                        if not is_minor:
+                            if cand in ("III", "iii", "III6", "iii6"):
+                                trans_score -= 25.0
+                        else:
+                            if (prev_fn in ("III", "iii", "III6", "iii6") and cand in ("VI", "vi")) or \
+                               (prev_fn in ("VI", "vi") and cand in ("III", "iii", "III6", "iii6")):
+                                trans_score -= 8.0
+                            elif cand in ("III", "iii", "III6", "iii6") and not (is_descending_leading and (notes[i].pitch % 12 == (tonic_pc + 10) % 12)):
+                                trans_score -= 4.0
+                            elif prev_fn in ("III", "iii", "III6", "iii6") and cand in ("S", "S6", "s", "s6", "II", "II6", "II65"):
+                                trans_score += 1.0
 
                         is_chromatic_note = (notes[i].pitch % 12) == (tonic_pc + 6) % 12
                         if prev_fn == "K64" and cand in ("D", "D7"):
@@ -557,6 +581,13 @@ class HarmonicGrammar:
                                     trans_score += 4.0
                                 elif cand in SUBDOMINANT_GROUP:
                                     trans_score -= 4.0
+                                elif cand in ("VI", "vi"):
+                                    trans_score -= 8.0
+                            elif (notes[i].pitch % 12) in tonic_tones:
+                                if cand in ("T", "t", "T6", "t6"):
+                                    trans_score += 3.0
+                                elif cand in SUBDOMINANT_GROUP:
+                                    trans_score -= 3.0
 
                         if (notes[i].pitch % 12) not in scale_pcs and not is_downbeat and cand == prev_fn:
                             trans_score += 4.0

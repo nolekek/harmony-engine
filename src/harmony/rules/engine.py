@@ -325,6 +325,7 @@ class RuleEngine:
         prev_chord: Any | None,
         curr_chord: Any | None,
         is_final_chord: bool = False,
+        key: Any = None,
     ) -> float:
         """Non-negative harmonic-quality cost.
 
@@ -344,7 +345,7 @@ class RuleEngine:
                 elif prev_sym in ("D6", "d6", "D43", "d43", "D2", "d2"):
                     cost += 0.8  # weaker inversions of the dominant
                 elif prev_sym in ("VI", "vi"):
-                    cost += 1.5  # deceptive cadence as the final is weak
+                    cost += 8.0  # deceptive cadence as the final is weak
                 elif prev_sym in ("K64", "k64"):
                     cost += 10.0  # K64 directly to T without D resolution
                 else:
@@ -360,7 +361,17 @@ class RuleEngine:
             return cost
 
         if curr_sym in ("III", "iii", "III6", "iii6"):
-            cost += 4.0
+            is_minor = False
+            if key is not None:
+                try:
+                    _, mode = parse_key(key)
+                    is_minor = "MINOR" in str(mode).upper()
+                except Exception:
+                    pass
+            if not is_minor:
+                cost += 20.0
+            else:
+                cost += 3.0
         # Chains of III6/VI as patches
         if (prev_sym in ("III", "iii", "III6", "iii6") and curr_sym in ("VI", "vi")) or \
            (prev_sym in ("VI", "vi") and curr_sym in ("III", "iii", "III6", "iii6")):
@@ -440,7 +451,7 @@ class RuleEngine:
             )
             soft_cost = self.compute_soft_cost(prev_voicing, curr_voicing)
             soft_cost += self.compute_functional_cost(
-                prev_chord, curr_chord, is_final_chord=is_final_chord
+                prev_chord, curr_chord, is_final_chord=is_final_chord, key=key
             )
             # Penalize repeating identical chord on moving soprano note
             if prev_chord is not None and curr_chord is not None:
