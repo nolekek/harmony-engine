@@ -8,6 +8,7 @@ from src.harmony.rules.voice_leading import (
     check_parallel_fifths_and_octaves,
     check_contrary_fifths_and_octaves,
     check_melodic_intervals,
+    validate_voice_leading,
 )
 from src.harmony.rules.resolutions import check_seventh_resolution
 from src.harmony.rules.doubling import (
@@ -116,7 +117,7 @@ def test_melodic_intervals_augmented_and_diminished():
     v3 = Voicing(soprano=68, alto=64, tenor=59, bass=40)
     v4 = Voicing(soprano=77, alto=64, tenor=57, bass=41)
     viols_dim7 = check_melodic_intervals(v3, v4, key=key_a)
-    assert any(v.rule_id == "MELODIC_AUGMENTED_INTERVAL" for v in viols_dim7)
+    assert any(v.rule_id in ("MELODIC_AUGMENTED_INTERVAL", "MELODIC_DIMINISHED_SEVENTH") for v in viols_dim7)
 
     # 3. Aug 5th leap (8 semitones, C4=60 -> G#4=68): forbidden!
     v5 = Voicing(soprano=60, alto=57, tenor=52, bass=45)
@@ -124,11 +125,11 @@ def test_melodic_intervals_augmented_and_diminished():
     viols_aug5 = check_melodic_intervals(v5, v6, key=key_a)
     assert any(v.rule_id == "MELODIC_AUGMENTED_INTERVAL" for v in viols_aug5)
 
-    # 4. Dim 4th leap upwards (4 semitones, G#4=68 -> C5=72): forbidden!
+    # 4. Dim 4th leap upwards (4 semitones, G#4=68 -> C5=72): soft violation!
     v_dim4_1 = Voicing(soprano=68, alto=64, tenor=59, bass=40)
     v_dim4_2 = Voicing(soprano=72, alto=64, tenor=57, bass=41)
     viols_dim4 = check_melodic_intervals(v_dim4_1, v_dim4_2, key=key_a)
-    assert any(v.rule_id == "MELODIC_AUGMENTED_INTERVAL" for v in viols_dim4)
+    assert any(v.rule_id == "MELODIC_DIMINISHED_FOURTH_SOFT" for v in viols_dim4)
 
     # 5. Two leaps in same direction: forbidden when prev2_voicing provided
     v0 = Voicing(soprano=60, alto=57, tenor=52, bass=45)
@@ -136,6 +137,19 @@ def test_melodic_intervals_augmented_and_diminished():
     v_step2 = Voicing(soprano=72, alto=57, tenor=52, bass=45)  # Soprano leaped +7 in same direction
     viols_leaps = check_melodic_intervals(v_step1, v_step2, key=key_a, prev2_voicing=v0)
     assert any("LEAP" in v.rule_id for v in viols_leaps)
+
+
+def test_parallel_octaves_no_duplicate_hidden_violation():
+    """Parallel octaves between outer voices with soprano leap must NOT trigger duplicate HIDDEN_FIFTHS_OCTAVES."""
+    # S moves 72 -> 76 (+4), B moves 60 -> 64 (+4). Both move up by major third.
+    # Prev S-B = 12, Curr S-B = 12 (parallel octaves).
+    # dS = +4 > 2 (soprano leap).
+    v_prev = Voicing(soprano=72, alto=67, tenor=64, bass=60)
+    v_curr = Voicing(soprano=76, alto=71, tenor=67, bass=64)
+    all_res = validate_voice_leading(v_prev, v_curr)
+    sb_rules = [r.rule_id for r in all_res if r.voices == (0, 3)]
+    assert "PARALLEL_OCTAVES" in sb_rules
+    assert "HIDDEN_FIFTHS_OCTAVES" not in sb_rules
 
 
 def test_default_melody_harmonization_nonnegative_cost():

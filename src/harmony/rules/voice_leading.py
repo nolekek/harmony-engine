@@ -142,8 +142,8 @@ def check_contrary_fifths_and_octaves(
             raw_prev = abs(p1 - p2)
             raw_curr = abs(c1 - c2)
 
-            # Pure fifths: 7 or 19 semitones
-            if raw_prev in (7, 19) and raw_curr in (7, 19):
+            # Pure fifths: 7 or 19 or 31 semitones (modulo 12 == 7)
+            if raw_prev % 12 == 7 and raw_curr % 12 == 7:
                 violations.append(
                     RuleViolation(
                         rule_id="CONTRARY_FIFTHS",
@@ -156,17 +156,24 @@ def check_contrary_fifths_and_octaves(
                         voices=(v1, v2),
                     )
                 )
-            # Pure octaves: 12, 24, 36 semitones (unison 0 is not an octave)
-            elif raw_prev in (12, 24, 36) and raw_curr in (12, 24, 36):
+            # Pure octaves / unison: modulo 12 == 0
+            elif raw_prev % 12 == 0 and raw_prev > 0 and raw_curr % 12 == 0:
+                if raw_curr == 0:
+                    description = (
+                        f"Contrary motion octave to unison between {VOICE_NAMES[v1]} and {VOICE_NAMES[v2]}: "
+                        f"{p1}-{p2} (int {raw_prev}) -> {c1}-{c2} (int {raw_curr})"
+                    )
+                else:
+                    description = (
+                        f"Contrary octaves between {VOICE_NAMES[v1]} and {VOICE_NAMES[v2]}: "
+                        f"{p1}-{p2} (int {raw_prev}) -> {c1}-{c2} (int {raw_curr})"
+                    )
                 violations.append(
                     RuleViolation(
                         rule_id="CONTRARY_OCTAVES",
                         severity="hard_gate",
                         penalty=100000.0,
-                        description=(
-                            f"Contrary octaves between {VOICE_NAMES[v1]} and {VOICE_NAMES[v2]}: "
-                            f"{p1}-{p2} (int {raw_prev}) -> {c1}-{c2} (int {raw_curr})"
-                        ),
+                        description=description,
                         voices=(v1, v2),
                     )
                 )
@@ -177,12 +184,18 @@ def check_contrary_fifths_and_octaves(
 def check_hidden_fifths_and_octaves(
     prev_voicing: Any,
     curr_voicing: Any,
+    existing_violations: list[RuleViolation] | None = None,
 ) -> list[RuleViolation]:
     """
     Checks for hidden (direct) fifths and octaves between outer voices (Soprano and Bass).
     If Soprano and Bass move in the same direction into a pure 5th or 8ve,
     Soprano MUST move by step (|dS| <= 2). A leap in soprano (|dS| > 2) is forbidden.
+    Does not duplicate violation if parallel violation is already recorded for outer voices.
     """
+    if existing_violations is not None:
+        if any(v.voices == (0, 3) and "PARALLEL" in v.rule_id for v in existing_violations):
+            return []
+
     prev_satb = to_satb(prev_voicing)
     curr_satb = to_satb(curr_voicing)
     violations: list[RuleViolation] = []
@@ -192,11 +205,17 @@ def check_hidden_fifths_and_octaves(
 
     # Direct motion between outer voices
     if ds * db > 0:
-        int_curr = abs(curr_satb[0] - curr_satb[3]) % 12
+        raw_curr = abs(curr_satb[0] - curr_satb[3])
+        int_curr = raw_curr % 12
         if int_curr in (0, 7):
             # If soprano leaps by more than a step (> 2 semitones)
             if abs(ds) > 2:
-                interval_type = "octave" if int_curr == 0 else "fifth"
+                if int_curr == 7:
+                    interval_type = "fifth"
+                elif raw_curr == 0:
+                    interval_type = "unison"
+                else:
+                    interval_type = "octave"
                 violations.append(
                     RuleViolation(
                         rule_id="HIDDEN_FIFTHS_OCTAVES",
@@ -337,7 +356,7 @@ def check_melodic_intervals(
         for idx in range(4):
             d_prev = prev_satb[idx] - p2_satb[idx]
             d_curr = curr_satb[idx] - prev_satb[idx]
-            if abs(d_prev) > 2 and abs(d_curr) > 2 and (d_prev * d_curr > 0):
+            if abs(d_prev) > 4 and abs(d_curr) > 4 and (d_prev * d_curr > 0):
                 violations.append(
                     RuleViolation(
                         rule_id="MELODIC_TWO_LEAPS_SAME_DIRECTION",
@@ -374,42 +393,52 @@ def check_melodic_intervals(
 
         # Tritone leap (6 semitones: aug 4th or dim 5th)
         elif step == 6:
-            # Diminished 5th DOWN (-6 semitones): permitted if resolving inwards (+1 or +2)
+            # Diminished 5th DOWN (-6 semitones): permitted if resolving inwards
             if delta == -6:
-                if next_voicing is not None:
+                is_permitted = False
+                if prev2_voicing is not None:
+                    d_prev = prev_satb[idx] - to_satb(prev2_voicing)[idx]
+                    if d_prev >= 4:
+                        is_permitted = True
+                elif next_voicing is not None:
                     next_pitch = to_satb(next_voicing)[idx]
                     next_delta = next_pitch - c
-                    if next_delta not in (1, 2):
-                        violations.append(
-                            RuleViolation(
-                                rule_id="MELODIC_AUGMENTED_INTERVAL",
-                                severity="hard_gate",
-                                penalty=100000.0,
-                                description=(
-                                    f"Diminished 5th leap down in {VOICE_NAMES[idx]} must resolve inwards "
-                                    f"by step up (+1 or +2), got {next_delta:+d}"
-                                ),
-                                voices=(idx,),
-                            )
+                    if next_delta in (1, 2):
+                        is_permitted = True
+                else:
+                    # If prev2 is not provided and next_voicing is None, allow as before
+                    is_permitted = True
+
+                if not is_permitted:
+                    violations.append(
+                        RuleViolation(
+                            rule_id="MELODIC_AUGMENTED_INTERVAL",
+                            severity="hard_gate",
+                            penalty=100000.0,
+                            description=(
+                                f"Forbidden tritone leap ({step} semitones) "
+                                f"in {VOICE_NAMES[idx]}: {p} -> {c}"
+                            ),
+                            voices=(idx,),
                         )
-                # If next_voicing is not yet known (pair check), dim 5th down is legally allowed
+                    )
             else:
-                # Aug 4th leap (+6) is strictly forbidden
+                # Tritone leap (+6) is strictly forbidden
                 violations.append(
                     RuleViolation(
                         rule_id="MELODIC_AUGMENTED_INTERVAL",
                         severity="hard_gate",
                         penalty=100000.0,
                         description=(
-                            f"Forbidden tritone leap (augmented 4th, +6 semitones) "
+                            f"Forbidden tritone leap ({step} semitones) "
                             f"in {VOICE_NAMES[idx]}: {p} -> {c}"
                         ),
                         voices=(idx,),
                     )
                 )
 
-        # Augmented 2nd leap (3 semitones between VI and VII# in harmonic minor)
-        elif step == 3 and is_minor:
+        # Augmented 2nd leap (3 semitones between VI and VII# in harmonic minor/major)
+        elif step == 3:
             deg6_pc = (tonic_pc + 8) % 12
             deg7_pc = (tonic_pc + 11) % 12
             pcs = {p % 12, c % 12}
@@ -435,7 +464,7 @@ def check_melodic_intervals(
             if pcs == {deg6_pc, deg7_pc}:
                 violations.append(
                     RuleViolation(
-                        rule_id="MELODIC_AUGMENTED_INTERVAL",
+                        rule_id="MELODIC_DIMINISHED_SEVENTH",
                         severity="hard_gate",
                         penalty=100000.0,
                         description=(
@@ -446,12 +475,14 @@ def check_melodic_intervals(
                     )
                 )
 
-        # Augmented 5th leap (8 semitones, e.g. III -> VII# in harmonic minor)
-        elif step == 8 and is_minor:
-            deg3_pc = (tonic_pc + 3) % 12
+        # Augmented 5th leap (8 semitones, e.g. III -> VII# in harmonic minor, III -> VIb in harmonic major)
+        elif step == 8:
+            deg3_min_pc = (tonic_pc + 3) % 12
             deg7_pc = (tonic_pc + 11) % 12
+            deg6_pc = (tonic_pc + 8) % 12
+            deg3_maj_pc = (tonic_pc + 4) % 12
             pcs = {p % 12, c % 12}
-            if pcs == {deg3_pc, deg7_pc}:
+            if pcs == {deg3_min_pc, deg7_pc} or pcs == {deg3_maj_pc, deg6_pc}:
                 violations.append(
                     RuleViolation(
                         rule_id="MELODIC_AUGMENTED_INTERVAL",
@@ -465,40 +496,26 @@ def check_melodic_intervals(
                     )
                 )
 
-        # Diminished 4th leap (4 semitones between VII# and III in harmonic minor)
-        elif step == 4 and is_minor:
-            deg3_pc = (tonic_pc + 3) % 12
+        # Diminished 4th leap (4 semitones between VII# and III in harmonic minor/major)
+        elif step == 4:
+            deg3_min_pc = (tonic_pc + 3) % 12
             deg7_pc = (tonic_pc + 11) % 12
-            if p % 12 == deg7_pc and c % 12 == deg3_pc:
-                # Upwards from leading tone to mediant (VII# -> III, delta == +4): strictly forbidden
+            deg6_pc = (tonic_pc + 8) % 12
+            deg3_maj_pc = (tonic_pc + 4) % 12
+            pcs = {p % 12, c % 12}
+            if pcs == {deg3_min_pc, deg7_pc} or pcs == {deg3_maj_pc, deg6_pc}:
                 violations.append(
                     RuleViolation(
-                        rule_id="MELODIC_AUGMENTED_INTERVAL",
-                        severity="hard_gate",
-                        penalty=100000.0,
+                        rule_id="MELODIC_DIMINISHED_FOURTH_SOFT",
+                        severity="soft",
+                        penalty=5.0,
                         description=(
-                            f"Forbidden diminished 4th leap upwards from leading tone in {VOICE_NAMES[idx]}: {p} -> {c}"
+                            f"Diminished 4th leap (4 semitones) in {VOICE_NAMES[idx]}: {p} -> {c} "
+                            f"(soft penalty, permitted if resolving inwards)"
                         ),
                         voices=(idx,),
                     )
                 )
-            elif p % 12 == deg3_pc and c % 12 == deg7_pc and delta == -4:
-                # Downwards from mediant to leading tone (III -> VII#, delta == -4):
-                # Permitted in classical voice leading (e.g. t -> D in Brigade Theme 23) if resolving upwards
-                if next_voicing is not None:
-                    next_pitch = to_satb(next_voicing)[idx]
-                    if next_pitch <= c:
-                        violations.append(
-                            RuleViolation(
-                                rule_id="MELODIC_AUGMENTED_INTERVAL",
-                                severity="hard_gate",
-                                penalty=100000.0,
-                                description=(
-                                    f"Diminished 4th leap down in {VOICE_NAMES[idx]} must resolve upwards, got {next_pitch - c:+d}"
-                                ),
-                                voices=(idx,),
-                            )
-                        )
 
     return violations
 
@@ -581,7 +598,11 @@ def validate_voice_leading(
             prev_voicing, curr_voicing, prev_chord=prev_chord, curr_chord=curr_chord
         )
     )
-    violations.extend(check_hidden_fifths_and_octaves(prev_voicing, curr_voicing))
+    violations.extend(
+        check_hidden_fifths_and_octaves(
+            prev_voicing, curr_voicing, existing_violations=violations
+        )
+    )
     violations.extend(check_voice_overlapping(prev_voicing, curr_voicing))
     violations.extend(check_unisons(prev_voicing, curr_voicing))
     violations.extend(

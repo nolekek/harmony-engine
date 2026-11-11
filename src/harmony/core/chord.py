@@ -39,6 +39,7 @@ class ChordFunction(str, Enum):
     VII = "VII"
     III = "III"
     K64 = "K64"
+    DD = "DD"
 
     @classmethod
     def from_str(cls, s: str) -> ChordFunction:
@@ -60,6 +61,8 @@ class ChordFunction(str, Enum):
             return cls.III
         if cleaned in ("K64", "K6/4", "CADENTIAL64", "CAD64"):
             return cls.K64
+        if cleaned in ("DD", "DOUBLE_DOMINANT", "D/V", "DV"):
+            return cls.DD
         raise ValueError(f"Unknown chord function: '{s}'.")
 
     @property
@@ -71,7 +74,7 @@ class ChordFunction(str, Enum):
             return ScaleDegree(4, 0)
         if self == ChordFunction.D:
             return ScaleDegree(5, 0)
-        if self == ChordFunction.II:
+        if self in (ChordFunction.II, ChordFunction.DD):
             return ScaleDegree(2, 0)
         if self == ChordFunction.VI:
             return ScaleDegree(6, 0)
@@ -232,26 +235,27 @@ class ChordDefinition:
     @classmethod
     def from_string(cls, name: str, key: Key) -> ChordDefinition:
         """
-        Parse ChordDefinition from notation like 'T', 'T6', 'K64', 'D7', 'D43', 's6', 'VI'.
+        Parse ChordDefinition from notation like 'T', 'T6', 'K64', 'D7', 'D43', 's6', 'VI', 'DD', 'DD7', 'CAD64'.
         """
         raw = name.strip()
         if not raw:
             raise ValueError("Chord definition string cannot be empty.")
 
-        # K64 special case
-        if raw.upper().startswith("K"):
+        upper_raw = raw.upper()
+        # K64 / CAD64 special case
+        if upper_raw.startswith("K") or upper_raw.startswith("CAD") or upper_raw == "I64":
             return cls(function=ChordFunction.K64, inversion=Inversion.QUARTSEXTA, key=key)
 
-        # Patterns like:
-        # T, T6, T64, T53
-        # S, S6, S64, s, s6
-        # D, D6, D7, D65, D43, D2
-        # VI, VI6
-        # II, II6, II7, II65
-        # VII, VII6, VII7
-        # III, III6
-        pattern = r"^(T|S|D|II|VI|VII|III|t|s|d|ii|vi|vii|iii)(53|64|65|43|6|7|2)?$"
-        match = re.match(pattern, raw)
+        cleaned = raw.replace("-", "").replace("/", "")
+        upper_clean = cleaned.upper()
+
+        if upper_clean in ("D7V", "DD7"):
+            return cls(function=ChordFunction.DD, inversion=Inversion.SEPTIMA, key=key, is_seventh=True)
+        if upper_clean in ("DV", "DD"):
+            return cls(function=ChordFunction.DD, inversion=Inversion.ROOT, key=key, is_seventh=False)
+
+        pattern = r"^(T|S|D|II|VI|VII|III|DD|t|s|d|ii|vi|vii|iii|dd)(53|64|65|43|6|7|2)?$"
+        match = re.match(pattern, cleaned)
         if not match:
             raise ValueError(f"Unrecognized chord notation: '{name}'.")
 
@@ -278,6 +282,10 @@ class ChordDefinition:
         In D (Dominant) in minor keys, the third is always raised to the leading tone
         (гармонический вид — мажорная доминанта!).
         """
+        if self.function == ChordFunction.DD:
+            # Secondary leading tone: raised IV degree (+6 semitones from tonic)
+            return PitchClass((self.key.tonic.value + 6) % 12)
+
         if self.function == ChordFunction.D:
             return self.key.leading_tone
 
@@ -298,6 +306,10 @@ class ChordDefinition:
     @property
     def fifth(self) -> PitchClass:
         """Fifth pitch class of the chord."""
+        if self.function == ChordFunction.DD:
+            # VI scale degree (+9 semitones from tonic)
+            return PitchClass((self.key.tonic.value + 9) % 12)
+
         if self.function in (ChordFunction.T, ChordFunction.K64):
             return self.key.pitch_class_for_degree(ScaleDegree(5, 0))
         if self.function == ChordFunction.S:
@@ -329,6 +341,12 @@ class ChordDefinition:
             return self.key.pitch_class_for_degree(ScaleDegree(7, 0))
         if self.function == ChordFunction.S:
             return self.key.pitch_class_for_degree(ScaleDegree(3, 0))
+        if self.function == ChordFunction.VI:
+            return self.key.pitch_class_for_degree(ScaleDegree(5, 0))
+        if self.function == ChordFunction.III:
+            return self.key.pitch_class_for_degree(ScaleDegree(2, 0))
+        if self.function == ChordFunction.DD:
+            return self.key.tonic
         return None
 
     @property
@@ -351,8 +369,9 @@ class ChordDefinition:
     @property
     def bass_pitch_class(self) -> PitchClass:
         """The exact PitchClass required in the bass voice."""
-        assert self.bass_factor is not None
-        return self.factors[self.bass_factor]
+        if self.bass_factor and self.bass_factor in self.factors:
+            return self.factors[self.bass_factor]
+        return self.factors.get("root", self.root)
 
     @property
     def allowed_doublings(self) -> tuple[str, ...]:
@@ -393,6 +412,10 @@ class ChordDefinition:
         # III / III6
         if self.function == ChordFunction.III:
             return ("root", "fifth", "third")
+
+        # DD triad
+        if self.function == ChordFunction.DD:
+            return ("root",)
 
         # Main triads in root position (T, S, D)
         if self.inversion == Inversion.ROOT:

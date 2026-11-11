@@ -2,6 +2,7 @@
 Core domain types for Brigade Harmony Engine.
 """
 
+import re
 from typing import NamedTuple, Any, Sequence, Mapping
 from dataclasses import dataclass, field
 
@@ -310,9 +311,18 @@ def parse_chord_symbol(chord: Any) -> str:
 
     # Normalize accents / slashes / spaces
     cleaned = sym.strip().replace("^", "").replace("/", "")
+
+    # Normalize hyphenated chord symbols: VII-6 -> VII6, II-6 -> II6, T-6 -> T6,
+    # D-7 -> D7, D-65 -> D65, D-43 -> D43, D-2 -> D2, T-53 -> T53, etc.
+    cleaned = re.sub(
+        r"^([A-Za-z]+)-(53|64|65|43|6|7|2)$",
+        r"\1\2",
+        cleaned,
+    )
+
     # Check common synonyms (T64 is deliberately excluded from K64 per Brigade rules)
     upper_c = cleaned.upper()
-    if upper_c in ("K64", "K6/4", "CAD64", "I64"):
+    if upper_c in ("K64", "K6/4", "CAD64", "I64", "CADENTIAL64"):
         return "K64"
     if upper_c in ("D65", "D6/5"):
         return "D65"
@@ -322,11 +332,11 @@ def parse_chord_symbol(chord: Any) -> str:
         return "D2"
     if upper_c in ("D7",):
         return "D7"
-    if upper_c in ("T6", "T-6"):
+    if upper_c in ("T6",):
         return "T6"
-    if upper_c in ("S6", "S-6"):
+    if upper_c in ("S6",):
         return "S6"
-    if upper_c in ("D6", "D-6"):
+    if upper_c in ("D6",):
         return "D6"
     return cleaned
 

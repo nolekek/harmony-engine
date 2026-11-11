@@ -503,6 +503,77 @@ def check_secondary_dominant_resolution(
     return violations
 
 
+II7_CHORDS = {"II7", "II65", "II43", "II2"}
+II7_DOMINANT_TARGETS = {"D", "D53", "D6", "D7", "D65", "D43", "D2", "K64"}
+
+
+def check_ii7_resolution(
+    prev_voicing: Any,
+    curr_voicing: Any,
+    prev_chord: Any,
+    curr_chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    Validates resolution of supertonic seventh chords (II7, II65, II43, II2):
+    - Target chord must belong to dominant group (D, D6, D7, D65, D43, D2, K64),
+      otherwise hard RESOLUTION_II7_TO_DOMINANT.
+    - Seventh of II7 (scale degree I / tonic_pc) must resolve down by step
+      (-1 or -2 semitones), or be held as a common tone in K64 (delta == 0),
+      otherwise hard RESOLUTION_II7_SEVENTH_DOWN.
+    """
+    if prev_chord is None or curr_chord is None:
+        return []
+
+    prev_sym = parse_chord_symbol(prev_chord).strip().upper().replace("/", "").replace("-", "")
+    if prev_sym not in II7_CHORDS:
+        return []
+
+    curr_sym = parse_chord_symbol(curr_chord).strip().upper().replace("/", "").replace("-", "")
+    violations: list[RuleViolation] = []
+
+    # 1. Target function check: must belong to dominant group
+    if curr_sym not in II7_DOMINANT_TARGETS:
+        violations.append(
+            RuleViolation(
+                rule_id="RESOLUTION_II7_TO_DOMINANT",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"Supertonic seventh chord '{prev_sym}' must resolve to dominant group "
+                    f"(D, D6, D7, D65, D43, D2, K64), but got '{curr_sym}'"
+                ),
+            )
+        )
+
+    # 2. Seventh resolution check: seventh (tonic PC) must step down by 1-2 semitones (or held in K64)
+    tonic_pc, _ = parse_key(key) if key is not None else (0, "MAJOR")
+    seventh_pc = tonic_pc % 12
+
+    prev_satb = to_satb(prev_voicing)
+    curr_satb = to_satb(curr_voicing)
+
+    for idx in range(4):
+        if prev_satb[idx] % 12 == seventh_pc:
+            delta = curr_satb[idx] - prev_satb[idx]
+            is_k64_held = (curr_sym == "K64" and delta == 0)
+            if not (delta in (-1, -2) or is_k64_held):
+                violations.append(
+                    RuleViolation(
+                        rule_id="RESOLUTION_II7_SEVENTH_DOWN",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Seventh (scale degree I, PC {seventh_pc}) of '{prev_sym}' in "
+                            f"{VOICE_NAMES[idx]} must resolve down by step (-1 or -2 semitones), moved {delta:+d}"
+                        ),
+                        voices=(idx,),
+                    )
+                )
+
+    return violations
+
+
 def validate_resolutions(
     prev_voicing: Any,
     curr_voicing: Any,
@@ -541,6 +612,11 @@ def validate_resolutions(
     )
     violations.extend(
         check_secondary_dominant_resolution(
+            prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
+        )
+    )
+    violations.extend(
+        check_ii7_resolution(
             prev_voicing, curr_voicing, prev_chord, curr_chord, key=key
         )
     )

@@ -144,6 +144,20 @@
       "description": "В трезвучии VI ступени при прерванном обороте (D -> VI) строго удваивается терция (I ступень тоники)."
     },
     {
+      "id": "DOUBLING_VII_LEADING_TONE",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В уменьшённом трезвучии VII ступени (VII 5/3) категорически запрещено удвоение примы (вводного тона), а также пропуск квинты (неполный аккорд)."
+    },
+    {
+      "id": "DOUBLING_PASSING_64",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В проходящих и вспомогательных квартсекстаккордах (T64, S64) строго удваивается бас (квинта трезвучия); удвоение терции запрещено."
+    },
+    {
       "id": "RESOLUTION_SEVENTH_DOWN",
       "category": "resolution",
       "severity": "hard_gate",
@@ -155,7 +169,21 @@
       "category": "resolution",
       "severity": "hard_gate",
       "penalty": 100000.0,
-      "description": "D43 обязан разрешаться в T6, так как септима в басу обязана сделать шаг вниз в терцию тоники."
+      "description": "D43 разрешается в T или T6; септима в верхних голосах идет на ступень вниз (в басу D43 квинта доминанты — II ступень лада, идущая в I или III)."
+    },
+    {
+      "id": "RESOLUTION_II7_SEVENTH_DOWN",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Септима септаккорда II ступени (II7 и обращений, I ступень лада) обязана разрешаться на ступень вниз (-1 или -2 полутона) или удерживаться на месте при переходе в K64."
+    },
+    {
+      "id": "RESOLUTION_II7_TO_DOMINANT",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Септаккорд II ступени (II7, II65, II43, II2) обязан разрешаться в доминантовую группу (D, D6, D7, D65, D43, D2, K64)."
     },
     {
       "id": "RESOLUTION_D2_TO_T6",

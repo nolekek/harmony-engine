@@ -344,6 +344,7 @@ class RuleEngine:
         is_downbeat: bool = False,
         is_final_chord: bool = False,
         phrase_boundary: bool = False,
+        prev2_voicing: Any | None = None,
     ) -> ValidationResult:
         """
         Validates transition from prev_voicing to curr_voicing or evaluates
@@ -385,6 +386,7 @@ class RuleEngine:
                     key=key,
                     prev_chord=prev_chord,
                     curr_chord=curr_chord,
+                    prev2_voicing=prev2_voicing,
                 )
             )
             violations.extend(
@@ -440,6 +442,7 @@ class RuleEngine:
         key: Any = None,
         is_downbeat: bool = False,
         is_final_chord: bool = False,
+        prev2_voicing: Any | None = None,
     ) -> ValidationResult:
         """
         Convenience method to validate a single isolated vertical slice.
@@ -452,4 +455,5 @@ class RuleEngine:
             key=key,
             is_downbeat=is_downbeat,
             is_final_chord=is_final_chord,
+            prev2_voicing=prev2_voicing,
         )

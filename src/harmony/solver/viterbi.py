@@ -226,6 +226,12 @@ class ViterbiSolver:
                         if delta[t - 1][i] == float("inf"):
                             continue
 
+                        prev2_v = None
+                        if t >= 2:
+                            prev2_idx = psi[t - 1][i]
+                            if prev2_idx >= 0:
+                                prev2_v = lattice[t - 2][prev2_idx]
+
                         res = self.rule_engine.validate(
                             prev_voicing=prev_v,
                             curr_voicing=curr_v,
@@ -235,6 +241,7 @@ class ViterbiSolver:
                             is_downbeat=is_downbeat,
                             is_final_chord=(t == n - 1),
                             phrase_boundary=phrase_boundaries[t],
+                            prev2_voicing=prev2_v,
                         )
 
                         # In SATB harmonization of a given cantus firmus, soprano melodic intervals
@@ -243,7 +250,7 @@ class ViterbiSolver:
                         # (soprano) melodic intervals must not prune the lattice for accompanying voices.
                         hard_violations = [
                             v for v in res.violations
-                            if v.is_hard and not (relax_soprano_intervals and v.voices == (0,) and v.rule_id == "MELODIC_AUGMENTED_INTERVAL")
+                            if v.is_hard and not (relax_soprano_intervals and v.voices == (0,) and v.rule_id in ("MELODIC_AUGMENTED_INTERVAL", "MELODIC_DIMINISHED_SEVENTH"))
                         ]
                         if hard_violations:
                             continue

@@ -239,6 +239,8 @@ def check_main_triad_doubling(
     where doubling the third in T is mandatory by Brigade rules to avoid parallel fifths.
     """
     sym = parse_chord_symbol(chord)
+    if sym in ("T53", "S53", "D53", "t53", "s53", "d53"):
+        sym = sym.replace("53", "")
     if sym not in ("T", "S", "D", "t", "s"):
         return []
 
@@ -703,6 +705,118 @@ def check_seventh_chord_doubling(
     return violations
 
 
+def check_vii_triad_doubling(
+    voicing: Any,
+    chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    In root-position diminished triad VII (VII 5/3, vii 5/3):
+    - The root (leading tone) must NEVER be doubled (rule_id: DOUBLING_VII_LEADING_TONE).
+    - Omitting the fifth (incomplete VII 5/3) is forbidden (rule_id: DOUBLING_VII_LEADING_TONE).
+    """
+    sym = parse_chord_symbol(chord).strip().replace("/", "")
+    if sym not in ("VII", "VII53", "vii", "vii53"):
+        return []
+
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    root, third, fifth = get_triad_tones(sym, tonic_pc, mode)
+
+    satb = to_satb(voicing)
+    pcs = [p % 12 for p in satb]
+    counts = Counter(pcs)
+
+    violations: list[RuleViolation] = []
+
+    # 1. Root (leading tone) NEVER doubled
+    if counts[root] >= 2:
+        v_idx = tuple(i for i, p in enumerate(satb) if p % 12 == root)
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_VII_LEADING_TONE",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In root-position diminished triad '{sym}', doubling the root "
+                    f"(leading tone, PC {root}) is strictly forbidden (found {counts[root]} times)"
+                ),
+                voices=v_idx,
+            )
+        )
+
+    # 2. Incomplete VII53 without fifth is forbidden
+    if counts[fifth] == 0:
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_VII_LEADING_TONE",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In diminished triad '{sym}', omitting the fifth (PC {fifth}) is strictly forbidden"
+                ),
+            )
+        )
+
+    return violations
+
+
+def check_passing_64_doubling(
+    voicing: Any,
+    chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    In passing and auxiliary six-four chords (T64, S64, t64, s64):
+    - The bass (fifth of the triad) must be doubled.
+    - Doubling the third is strictly forbidden.
+    Otherwise raises DOUBLING_PASSING_64.
+    """
+    sym = parse_chord_symbol(chord).strip().replace("/", "")
+    if sym not in ("T64", "S64", "t64", "s64"):
+        return []
+
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    root, third, fifth = get_triad_tones(sym, tonic_pc, mode)
+
+    satb = to_satb(voicing)
+    pcs = [p % 12 for p in satb]
+    counts = Counter(pcs)
+
+    violations: list[RuleViolation] = []
+
+    # 1. Bass (fifth of the triad) MUST be doubled
+    if counts[fifth] < 2:
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_PASSING_64",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In passing/auxiliary six-four chord '{sym}', the bass (fifth, PC {fifth}) "
+                    f"must be doubled (found {counts[fifth]} times)"
+                ),
+            )
+        )
+
+    # 2. Third must NOT be doubled
+    if counts[third] > 1:
+        v_idx = tuple(i for i, p in enumerate(satb) if p % 12 == third)
+        violations.append(
+            RuleViolation(
+                rule_id="DOUBLING_PASSING_64",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"In passing/auxiliary six-four chord '{sym}', doubling the third "
+                    f"(PC {third}) is forbidden (found {counts[third]} times)"
+                ),
+                voices=v_idx,
+            )
+        )
+
+    return violations
+
+
 def check_doubling(
     voicing: Any,
     chord: Any,
@@ -717,6 +831,8 @@ def check_doubling(
     violations.extend(check_main_triad_doubling(voicing, chord, key=key, prev_chord=prev_chord))
     violations.extend(check_triad_completeness(voicing, chord, key=key, is_final_chord=is_final_chord))
     violations.extend(check_sextaccord_doubling(voicing, chord, key=key, prev_chord=prev_chord))
+    violations.extend(check_vii_triad_doubling(voicing, chord, key=key))
+    violations.extend(check_passing_64_doubling(voicing, chord, key=key))
     violations.extend(check_k64_doubling(voicing, chord, key=key))
     violations.extend(check_secondary_dominant_doubling(voicing, chord, key=key))
     violations.extend(check_seventh_chord_doubling(voicing, chord, key=key))
