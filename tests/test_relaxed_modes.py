@@ -238,7 +238,8 @@ def test_api_harmonize_with_relaxed_flags(api_client):
     assert len(cand["relaxed_violations"]) > 0
     assert "RESOLUTION_LEADING_TONE_UP" in cand["relaxed_violations"]
 
-    # 3. Both flags accepted together:
+    # 3. Both flags accepted together. Unisons often unblock the strict pass, so
+    # a clean plan is preferred and ``relaxed`` metadata may legitimately be absent.
     resp_both = api_client.post(
         "/api/harmonize",
         json={
@@ -251,7 +252,13 @@ def test_api_harmonize_with_relaxed_flags(api_client):
     assert resp_both.status_code == 200
     data_both = resp_both.json()
     assert data_both["is_success"] is True
-    assert data_both.get("relaxed") is True
     cand_both = data_both["candidates"][0]
-    assert cand_both["cost"] >= 10000.0
-    assert isinstance(cand_both.get("relaxed_violations"), list)
+    if data_both.get("relaxed") is True:
+        # Relaxation was actually needed: penalties and ids must be visible.
+        assert cand_both["cost"] >= 10000.0
+        assert isinstance(cand_both.get("relaxed_violations"), list)
+        assert len(cand_both["relaxed_violations"]) > 0
+    else:
+        # Strict pass won: no penalty may leak into the response.
+        assert cand_both["cost"] < 10000.0
+        assert "relaxed_violations" not in cand_both
