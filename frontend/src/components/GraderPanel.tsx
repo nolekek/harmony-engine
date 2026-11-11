@@ -31,13 +31,23 @@ export interface GraderReportData {
   grade: string;
 }
 
+export interface GraderMeta {
+  key: { tonic: string; mode: string };
+  timeSignature: string;
+  chords: string[];
+  durations: string[];
+  asciiScore?: string;
+}
+
 interface GraderPanelProps {
   selectedKey: { tonic: string; mode: string };
+  timeSignature?: string;
   allowExtendedRanges: boolean;
   onGradeComplete: (
     report: GraderReportData,
     musicxml: string,
-    voicings: SATBVoicing[]
+    voicings: SATBVoicing[],
+    meta?: GraderMeta
   ) => void;
   onHighlightMeasure: (measure: number) => void;
 }
@@ -47,16 +57,19 @@ const SAMPLE_TESTS = [
   {
     name: "Задача с грубыми ошибками (Параллельные квинты/октавы)",
     key: { tonic: "C", mode: "Major" },
+    timeSignature: "4/4",
     voicings: [
       { soprano: 67, alto: 60, tenor: 55, bass: 48 }, // G4, C4, G3, C3 (T)
       { soprano: 69, alto: 62, tenor: 57, bass: 50 }, // A4, D4, A3, D3 (Parallel 5ths & 8ves!)
       { soprano: 67, alto: 64, tenor: 55, bass: 48 }, // G4, E4, G3, C3
     ],
     chords: ["T", "II", "T"],
+    durations: ["half", "half", "half"],
   },
   {
     name: "Эталонное решение (Способин, без ошибок)",
     key: { tonic: "C", mode: "Major" },
+    timeSignature: "4/4",
     voicings: [
       { soprano: 64, alto: 60, tenor: 55, bass: 48 }, // E4, C4, G3, C3 (T)
       { soprano: 65, alto: 60, tenor: 57, bass: 45 }, // F4, C4, A3, A2 (VI)
@@ -66,27 +79,54 @@ const SAMPLE_TESTS = [
       { soprano: 60, alto: 60, tenor: 55, bass: 48 }, // C4, C4, G3, C3 (T)
     ],
     chords: ["T", "VI", "S", "T", "D", "T"],
+    durations: ["half", "half", "half", "half", "half", "half"],
   },
 ];
 
 export const GraderPanel: React.FC<GraderPanelProps> = ({
   selectedKey,
+  timeSignature = "4/4",
   allowExtendedRanges,
   onGradeComplete,
   onHighlightMeasure,
 }) => {
   const [voicings, setVoicings] = useState<SATBVoicing[]>(SAMPLE_TESTS[0].voicings);
   const [chordsInput, setChordsInput] = useState<string>("T, II, T");
+  const [currentKey, setCurrentKey] = useState<{ tonic: string; mode: string }>(selectedKey);
+  const [currentTimeSignature, setCurrentTimeSignature] = useState<string>(
+    SAMPLE_TESTS[0].timeSignature || timeSignature
+  );
+  const [currentDurations, setCurrentDurations] = useState<string[]>(
+    SAMPLE_TESTS[0].durations || ["half", "half", "half"]
+  );
   const [isGrading, setIsGrading] = useState<boolean>(false);
   const [report, setReport] = useState<GraderReportData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const runGrading = async (
     targetVoicings = voicings,
-    targetChords = chordsInput.split(",").map((c) => c.trim()).filter(Boolean)
+    targetChordsInput = chordsInput,
+    targetKey = currentKey,
+    targetTimeSig = currentTimeSignature,
+    targetDurations = currentDurations
   ) => {
+    const targetChords = targetChordsInput
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    if (targetChords.length === 0) {
+      setErrorMessage("Укажите гармонические функции (аккорды), например: T, S, D, T. Поле не может быть пустым.");
+      return;
+    }
+
     setIsGrading(true);
     setErrorMessage(null);
+
+    const durs =
+      targetDurations && targetDurations.length === targetVoicings.length
+        ? targetDurations
+        : targetVoicings.map((v) => v.duration || "half");
 
     try {
       const resp = await fetch("/api/grade", {
@@ -94,21 +134,46 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           voicings: targetVoicings,
-          key: selectedKey,
-          chords: targetChords.length > 0 ? targetChords : undefined,
+          key: targetKey,
+          chords: targetChords,
+          time_signature: targetTimeSig || "4/4",
+          durations: durs,
           allow_extended_ranges: allowExtendedRanges,
         }),
       });
 
       if (!resp.ok) {
-        throw new Error(`Ошибка сервера: ${resp.statusText}`);
+        let detailMsg = `Ошибка сервера (${resp.status})`;
+        try {
+          const errData = await resp.json();
+          if (errData.detail) {
+            if (typeof errData.detail === "string") {
+              detailMsg = errData.detail;
+            } else if (Array.isArray(errData.detail)) {
+              detailMsg = errData.detail
+                .map((d: any) =>
+                  d.msg ? `${d.loc ? d.loc.join(".") + ": " : ""}${d.msg}` : JSON.stringify(d)
+                )
+                .join("; ");
+            }
+          }
+        } catch {
+          // ignore json parse error
+        }
+        throw new Error(detailMsg);
       }
 
       const data = await resp.json();
       setReport(data.report);
-      onGradeComplete(data.report, data.musicxml, targetVoicings);
+      onGradeComplete(data.report, data.musicxml, targetVoicings, {
+        key: targetKey,
+        timeSignature: targetTimeSig || "4/4",
+        chords: targetChords,
+        durations: durs,
+        asciiScore: data.ascii_score,
+      });
     } catch (err) {
-      setErrorMessage(String(err));
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setIsGrading(false);
     }
@@ -136,13 +201,25 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
       if (data.satb_voicings && data.satb_voicings.length > 0) {
         setVoicings(data.satb_voicings);
         const chordsList = data.chords && data.chords.length > 0 ? data.chords : [];
-        setChordsInput(chordsList.join(", "));
-        await runGrading(data.satb_voicings, chordsList);
+        const chordsStr = chordsList.join(", ");
+        setChordsInput(chordsStr);
+
+        const fKey = data.key || currentKey;
+        const fTime = data.time_signature || currentTimeSignature;
+        const fDurs =
+          data.durations ||
+          data.satb_voicings.map((v: SATBVoicing) => v.duration || "half");
+
+        if (data.key) setCurrentKey(fKey);
+        if (data.time_signature) setCurrentTimeSignature(fTime);
+        setCurrentDurations(fDurs);
+
+        await runGrading(data.satb_voicings, chordsStr, fKey, fTime, fDurs);
       } else {
         throw new Error("В файле не найдено 4 голоса SATB");
       }
     } catch (err) {
-      setErrorMessage(String(err));
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setIsGrading(false);
     }
@@ -150,8 +227,14 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
 
   const loadSample = (sample: (typeof SAMPLE_TESTS)[0]) => {
     setVoicings(sample.voicings);
-    setChordsInput(sample.chords.join(", "));
-    runGrading(sample.voicings, sample.chords);
+    const chordsStr = sample.chords.join(", ");
+    setChordsInput(chordsStr);
+    setCurrentKey(sample.key);
+    const ts = sample.timeSignature || "4/4";
+    setCurrentTimeSignature(ts);
+    const durs = sample.durations || sample.voicings.map(() => "half");
+    setCurrentDurations(durs);
+    runGrading(sample.voicings, chordsStr, sample.key, ts, durs);
   };
 
   // Matrix cell change helper
@@ -212,6 +295,25 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
         ))}
       </div>
 
+      {/* Harmonic Functions (Chords) Input & Meta Indicator */}
+      <div className="space-y-1.5 bg-slate-950/40 p-3 rounded-lg border border-slate-800">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-300">
+            Гармонические функции (аккорды через запятую):
+          </label>
+          <span className="text-[11px] text-slate-400 font-mono">
+            Тональность: <strong className="text-amber-300">{currentKey.tonic} {currentKey.mode === "Major" ? "мажор" : "гарм. минор"}</strong> · Размер: <strong className="text-indigo-300">{currentTimeSignature}</strong>
+          </span>
+        </div>
+        <input
+          type="text"
+          value={chordsInput}
+          onChange={(e) => setChordsInput(e.target.value)}
+          placeholder="Например: T, S, D, T или T, II, T"
+          className="w-full text-xs bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 font-mono focus:border-amber-500 focus:outline-none"
+        />
+      </div>
+
       {/* Matrix Editor for SATB Voicings */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -229,6 +331,7 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
                   bass: 48,
                 };
                 setVoicings([...voicings, { ...last }]);
+                setCurrentDurations([...currentDurations, "half"]);
               }}
               className="text-xs px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-200"
             >
@@ -237,7 +340,10 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
             {voicings.length > 2 && (
               <button
                 type="button"
-                onClick={() => setVoicings(voicings.slice(0, -1))}
+                onClick={() => {
+                  setVoicings(voicings.slice(0, -1));
+                  setCurrentDurations(currentDurations.slice(0, -1));
+                }}
                 className="text-xs px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-rose-300"
               >
                 - Удалить последний

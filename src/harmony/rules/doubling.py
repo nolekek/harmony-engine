@@ -19,7 +19,7 @@ def get_triad_tones(symbol: str, tonic_pc: int, mode: str) -> tuple[int, int, in
     Returns (root_pc, third_pc, fifth_pc) for the given chord function.
     Supports all standard inversions and extensions (D7, D43, K64, S6, T6, II6, VI, etc.).
     """
-    is_minor = "MINOR" in mode or symbol.islower()
+    is_minor = "MINOR" in mode.upper() or symbol.islower()
     sym_upper = symbol.strip().upper()
 
     if sym_upper.startswith("DD") or sym_upper in ("D7V", "DV", "D7/V", "D/V"):
@@ -74,6 +74,12 @@ def get_triad_tones(symbol: str, tonic_pc: int, mode: str) -> tuple[int, int, in
         # Dominant in both major and harmonic minor has major third (leading tone)
         third = (tonic_pc + 11) % 12
         fifth = (tonic_pc + 2) % 12
+        return root, third, fifth
+
+    if sym_upper.startswith("III"):
+        root = (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12
+        third = (tonic_pc + 7) % 12
+        fifth = (tonic_pc + 10 if is_minor else tonic_pc + 11) % 12
         return root, third, fifth
 
     if sym_upper.startswith("II"):
@@ -216,6 +222,12 @@ def check_main_triad_doubling(
                 voices=v_idx,
             )
         )
+
+    # If soprano is a non-chord tone (NCT), the lower 3 voices form a complete triad
+    # (1 root, 1 third, 1 fifth), so doubling of the root in 4 voices is not possible.
+    soprano_pc = satb[0] % 12
+    if soprano_pc not in (root, third, fifth):
+        return violations
 
     # Standard requirement: root must be doubled (multiplicity >= 2)
     if counts[root] < 2:
@@ -429,7 +441,7 @@ def check_sextaccord_doubling(
       Either the root (V) or fifth (II) must be doubled.
     """
     sym = parse_chord_symbol(chord)
-    if sym not in ("T6", "S6", "D6", "t6", "s6", "d6"):
+    if sym not in ("T6", "S6", "D6", "t6", "s6", "d6", "VII6", "vii6", "II6", "ii6"):
         return []
 
     tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
@@ -441,6 +453,55 @@ def check_sextaccord_doubling(
 
     violations: list[RuleViolation] = []
     prev_sym = parse_chord_symbol(prev_chord) if prev_chord is not None else ""
+
+    # If soprano is a non-chord tone (NCT), skip doubling requirement
+    soprano_pc = satb[0] % 12
+    if soprano_pc not in (root, third, fifth):
+        return violations
+
+    # VII6 / vii6: Leading tone (root) NEVER doubled; double third (bass) or fifth
+    if sym in ("VII6", "vii6"):
+        if counts[root] >= 2:
+            violations.append(
+                RuleViolation(
+                    rule_id="DOUBLING_VII6_LEADING_TONE",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=(
+                        f"In leading-tone sextaccord '{sym}', the root (leading tone, PC {root}) "
+                        f"must NEVER be doubled (found {counts[root]} times)"
+                    ),
+                )
+            )
+        if counts[third] < 2 and counts[fifth] < 2:
+            violations.append(
+                RuleViolation(
+                    rule_id="DOUBLING_SEXTACCORD",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=(
+                        f"In leading-tone sextaccord '{sym}', either third (PC {third}) "
+                        f"or fifth (PC {fifth}) must be doubled"
+                    ),
+                )
+            )
+        return violations
+
+    # II6 / ii6: double third (bass, IV degree) or root (II degree)
+    if sym in ("II6", "ii6"):
+        if counts[third] < 2 and counts[root] < 2:
+            violations.append(
+                RuleViolation(
+                    rule_id="DOUBLING_SEXTACCORD",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description=(
+                        f"In supertonic sextaccord '{sym}', either third (PC {third}) "
+                        f"or root (PC {root}) must be doubled"
+                    ),
+                )
+            )
+        return violations
 
     # D6 / d6: Leading tone (third) NEVER doubled
     if sym in ("D6", "d6"):

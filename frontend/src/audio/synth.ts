@@ -13,6 +13,7 @@ export interface SATBVoicing {
   bass: number;
   measure?: number;
   is_downbeat?: boolean;
+  duration?: string;
 }
 
 export class AudioEngine {

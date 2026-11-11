@@ -16,12 +16,16 @@ ALL_FUNCTIONS = [
     "D", "D6", "D7", "D65", "D43", "D2",
     "K64",
     "VI",
-    "II6", "II",
+    "II", "II6", "II7", "II65",
+    "VII", "VII6", "VII7",
+    "III", "III6",
     "DD", "DD7",
 ]
 
-DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2"}
-SUBDOMINANT_GROUP = {"S", "S6", "S64", "II", "II6", "II65"}
+DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2", "VII", "VII6", "VII7"}
+PRIMARY_DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2"}
+LEADING_TONE_GROUP = {"VII", "VII6", "VII7"}
+SUBDOMINANT_GROUP = {"S", "S6", "S64", "II", "II6", "II65", "II7"}
 SECONDARY_DOMINANT_GROUP = {"DD", "DD7", "DD65", "DD43", "DD2"}
 
 
@@ -58,6 +62,13 @@ class HarmonicGrammar:
             pcs.add((tonic_pc + 5) % 12)
         elif fn_upper in ("DD7", "DD65", "DD43", "DD2"):
             pcs.add(tonic_pc % 12)
+        elif fn_upper in ("II7", "II65"):
+            pcs.add(tonic_pc % 12)
+        elif fn_upper == "VII7":
+            is_minor = "MINOR" in mode.upper() or fn.islower()
+            pcs.add((tonic_pc + 8 if is_minor else tonic_pc + 9) % 12)
+            if not is_minor:
+                pcs.add((tonic_pc + 8) % 12)
         return pcs
 
     def get_compatible_chords_for_pitch(
@@ -113,6 +124,10 @@ class HarmonicGrammar:
                     continue
                 if fn in ("DD7", "DD65", "DD43", "DD2") and pc == tonic_pc % 12:
                     continue
+                if fn in ("II7", "II65") and pc == tonic_pc % 12:
+                    continue
+                if fn == "VII7" and pc in ((tonic_pc + 8) % 12, (tonic_pc + 9) % 12):
+                    continue
 
             root, third, fifth = get_triad_tones(fn, tonic_pc, mode)
             allowed_pcs = {root, third, fifth}
@@ -130,13 +145,20 @@ class HarmonicGrammar:
             if fn in ("DD2", "DD43") and pc == tonic_pc % 12:
                 continue
 
-            # Add 7th for dominant seventh chords
+            # Add 7th for seventh chords
             if fn in ("D7", "D65", "D43", "D2"):
                 seventh = (tonic_pc + 5) % 12
                 allowed_pcs.add(seventh)
             elif fn in ("DD7", "DD65", "DD43", "DD2"):
                 seventh = tonic_pc % 12
                 allowed_pcs.add(seventh)
+            elif fn in ("II7", "II65"):
+                seventh = tonic_pc % 12
+                allowed_pcs.add(seventh)
+            elif fn == "VII7":
+                allowed_pcs.add((tonic_pc + 8 if is_minor else tonic_pc + 9) % 12)
+                if not is_minor:
+                    allowed_pcs.add((tonic_pc + 8) % 12)
 
             if pc in allowed_pcs:
                 compatible.append(fn)
@@ -178,11 +200,38 @@ class HarmonicGrammar:
 
         # Secondary dominant (DD) cannot resolve to subdominant, tonic, or VI
         if prev_upper in SECONDARY_DOMINANT_GROUP:
-            if curr_upper in SUBDOMINANT_GROUP or curr_upper in ("T", "T6", "VI"):
+            if curr_upper in SUBDOMINANT_GROUP or curr_upper in ("T", "T6", "VI", "III", "III6"):
                 return False
 
         # Dominant cannot regress to secondary dominant (D -> DD)
         if prev_upper in DOMINANT_GROUP and curr_upper in SECONDARY_DOMINANT_GROUP:
+            return False
+
+        # Dominant cannot regress to mediant (D -> III, D -> III6)
+        if prev_upper in DOMINANT_GROUP and curr_upper in ("III", "III6"):
+            return False
+
+        # Mediant cannot move to K64, DD, or VII
+        if prev_upper in ("III", "III6"):
+            if curr_upper == "K64" or curr_upper in SECONDARY_DOMINANT_GROUP or curr_upper in ("VII", "VII6", "VII7"):
+                return False
+
+        # Root-position diminished VII triad (VII, VII53) is strictly forbidden in classical harmony
+        if curr_upper in ("VII", "VII53"):
+            return False
+
+        # Supertonic seventh chords (II7, II65) can only resolve to Dominant group, K64, or T64
+        if prev_upper in ("II7", "II65"):
+            if curr_upper not in ("D", "D7", "D43", "D2", "D65", "D6", "K64", "T64"):
+                return False
+
+        # Leading-tone chords (VII6, VII7) can only resolve to Tonic or intra-functionally to Dominant
+        if prev_upper in ("VII", "VII6", "VII7"):
+            if curr_upper not in ("T", "T6", "T53", "T-6", "t", "t6", "D", "D7", "D65", "d", "d7"):
+                return False
+
+        # VII6 is a passing chord between tonic inversions (T-VII6-T6, T6-VII6-T); cannot follow subdominant
+        if prev_upper in SUBDOMINANT_GROUP and curr_upper == "VII6":
             return False
 
         # D43 must resolve to T6 or T (and T53)
@@ -291,7 +340,7 @@ class HarmonicGrammar:
                         # If both prev_fn and cand are root-position triads (T, S, D, II, VI),
                         # and soprano has the fifth in both chords, outer voices form a pure 5th
                         # in both chords, mathematically forcing either parallel or contrary fifths.
-                        root_triads = {"T", "S", "D", "II", "VI", "t", "s", "d"}
+                        root_triads = {"T", "S", "D", "II", "VI", "III", "t", "s", "d"}
                         if prev_fn in root_triads and cand in root_triads:
                             _, _, p_fifth = get_triad_tones(prev_fn, tonic_pc, mode)
                             _, _, c_fifth = get_triad_tones(cand, tonic_pc, mode)
@@ -306,7 +355,7 @@ class HarmonicGrammar:
                                 continue
 
                         # Root-to-third outer voice octave law:
-                        # Moving between root position and sextachord of the same function (T->T6, T6->T, S->S6, S6->S, D->D6, D6->D):
+                        # Moving between root position and sextachord of the same function (T->T6, T6->T, S->S6, S6->S, D->D6, D6->D, III->III6, III6->III):
                         # Bass moves between root and third. If soprano also moves between root and third,
                         # outer voices start and end in octaves/unisons, mathematically guaranteeing parallel or contrary octaves.
                         same_triad_inversion = (
@@ -316,6 +365,8 @@ class HarmonicGrammar:
                             or (prev_fn in ("S6", "s6") and cand in ("S", "s"))
                             or (prev_fn in ("D", "d") and cand in ("D6", "d6"))
                             or (prev_fn in ("D6", "d6") and cand in ("D", "d"))
+                            or (prev_fn in ("III", "iii") and cand in ("III6", "iii6"))
+                            or (prev_fn in ("III6", "iii6") and cand in ("III", "iii"))
                         )
                         if same_triad_inversion:
                             p_root, p_third, _ = get_triad_tones(prev_fn, tonic_pc, mode)
@@ -324,20 +375,51 @@ class HarmonicGrammar:
                             if (p_mel in (p_root, p_third)) and (c_mel in (p_root, p_third)) and (p_mel != c_mel):
                                 continue
 
+                        # Outer voice parallel/hidden octaves law in D -> T resolution:
+                        # If dominant moves to root tonic (T, t), and soprano rises scale degree 5 -> 1 (e.g. G4 -> C5),
+                        # soprano moves up 5 -> 1 while bass also moves 5 -> 1 (G -> C).
+                        # In root D, this mathematically guarantees parallel octaves (outer voices).
+                        # In D6/D65, bass rises 7 -> 1 while soprano leaps 5 -> 1, mathematically guaranteeing hidden octaves.
+                        if prev_fn in DOMINANT_GROUP and cand in ("T", "t"):
+                            if (
+                                (notes[i - 1].pitch % 12) == (tonic_pc + 7) % 12
+                                and (notes[i].pitch % 12) == tonic_pc
+                                and notes[i].pitch > notes[i - 1].pitch
+                            ):
+                                continue
+
                         # Heuristic transitions
                         trans_score = 0.0
 
-                        # Stepwise soprano motion: prioritize sextachords (S6, D6, II6) (T13, BK-02)
+                        # Stepwise soprano motion: prioritize sextachords (S6, D6, II6, VII6, III6) (T13, BK-02)
                         soprano_step = abs(notes[i].pitch - notes[i - 1].pitch) in (1, 2)
-                        if soprano_step and cand in ("S6", "s6", "D6", "d6", "II6"):
+                        if soprano_step and cand in ("S6", "s6", "D6", "d6", "II6", "VII6", "III6"):
                             trans_score += 2.5
+
+                        # Descending leading tone (T16): C -> B (1 -> 7) descending into III or VII6
+                        is_descending_leading = (
+                            (notes[i - 1].pitch % 12 == tonic_pc)
+                            and (notes[i].pitch % 12 == (tonic_pc + 11) % 12)
+                            and (notes[i].pitch < notes[i - 1].pitch)
+                        )
+                        if is_descending_leading and cand in ("III", "III6", "VII6"):
+                            trans_score += 4.0
+
+                        # III progression reward: III -> S, S6, VI, II, II6, II65
+                        if prev_fn in ("III", "iii", "III6", "iii6") and cand in ("S", "S6", "s", "s6", "VI", "vi", "II", "II6", "II65"):
+                            trans_score += 3.0
 
                         # Reward standard cycles: T -> S (+1), S -> D (+2), D -> T (+2), K64 -> D7 (+3)
                         is_chromatic_note = (notes[i].pitch % 12) == (tonic_pc + 6) % 12
                         if prev_fn == "K64" and cand in ("D", "D7"):
                             trans_score += 3.0
-                        elif prev_fn in SUBDOMINANT_GROUP and cand in DOMINANT_GROUP:
+                        elif prev_fn in SUBDOMINANT_GROUP and cand in PRIMARY_DOMINANT_GROUP:
                             trans_score += 2.0
+                        elif prev_fn in SUBDOMINANT_GROUP and cand in LEADING_TONE_GROUP:
+                            if (notes[i].pitch % 12) == (tonic_pc + 11) % 12:
+                                trans_score += 4.0
+                            else:
+                                trans_score += 0.5
                         elif prev_fn in SUBDOMINANT_GROUP and cand in ("T", "T6"):
                             # Plagal return (S -> T)
                             trans_score += 1.5
@@ -350,13 +432,17 @@ class HarmonicGrammar:
                                 trans_score -= 1.0
                         elif prev_fn in SECONDARY_DOMINANT_GROUP and cand in ("K64", "D", "D7"):
                             trans_score += 2.0
-                        elif prev_fn in DOMINANT_GROUP and cand in ("T", "T6"):
+                        elif prev_fn in PRIMARY_DOMINANT_GROUP and cand in ("T", "T6"):
                             trans_score += 2.0
-                        elif prev_fn in ("T", "T6") and cand in SUBDOMINANT_GROUP:
+                        elif prev_fn in LEADING_TONE_GROUP and cand in ("T", "T6"):
+                            trans_score += 1.0
+                        elif prev_fn in ("T", "T6", "VI", "vi") and cand in SUBDOMINANT_GROUP:
                             trans_score += 1.5
-                        elif prev_fn in ("T", "T6") and cand in DOMINANT_GROUP:
+                        elif prev_fn in ("T", "T6") and cand in PRIMARY_DOMINANT_GROUP:
                             # Tonic opening into dominant (T -> D, T -> D7, etc.)
                             trans_score += 1.5
+                        elif prev_fn in ("T", "T6") and cand in LEADING_TONE_GROUP:
+                            trans_score += 0.5
                         # Penalize rapid repetitions, UNLESS soprano pitch is sustained/repeated
                         elif prev_fn == cand:
                             if notes[i].pitch == notes[i - 1].pitch:
@@ -364,8 +450,18 @@ class HarmonicGrammar:
                             else:
                                 trans_score -= 1.0
                     else:
-                        # Starting chord preference: T
-                        trans_score = 3.0 if cand in ("T", "t") else 0.0
+                        # Initial chord rule: Classical exercises cannot start on unstable/transitional chords
+                        if cand in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7"):
+                            continue
+                        # Starting chord preference: T, T6, VI
+                        if cand in ("T", "t"):
+                            trans_score = 3.0
+                        elif cand in ("T6", "t6"):
+                            trans_score = 2.5
+                        elif cand in ("VI", "vi"):
+                            trans_score = 2.0
+                        else:
+                            trans_score = 0.0
 
                     new_beams.append((score + trans_score, path + [cand]))
 
@@ -379,19 +475,35 @@ class HarmonicGrammar:
                                 continue
                             new_beams.append((score - 10.0, path + [cand]))
                         else:
+                            if cand in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7"):
+                                continue
                             new_beams.append((score - 10.0, [cand]))
 
             # Fallback 2: Check all functions containing the pitch that are valid transitions
             if not new_beams:
+                is_final_step = (i == n - 1)
                 for score, path in beams:
                     if path:
                         prev_fn = path[-1]
                         for fn in ALL_FUNCTIONS:
+                            if is_final_step:
+                                if (notes[i].pitch % 12) in tonic_tones:
+                                    if fn not in ("T", "t", "T6", "t6"):
+                                        continue
+                                else:
+                                    if fn in ("VI", "vi") and prev_fn in ("D", "d", "D7"):
+                                        pass
+                                    elif fn in ("D", "d", "D7"):
+                                        pass
+                                    else:
+                                        continue
                             if (notes[i].pitch % 12) in self.get_chord_pitch_classes(fn, k):
                                 if self.is_valid_syntax_transition(prev_fn, fn, is_downbeat):
                                     new_beams.append((score - 20.0, path + [fn]))
                     else:
                         for fn in ALL_FUNCTIONS:
+                            if fn in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7"):
+                                continue
                             if (notes[i].pitch % 12) in self.get_chord_pitch_classes(fn, k):
                                 new_beams.append((score - 20.0, [fn]))
 

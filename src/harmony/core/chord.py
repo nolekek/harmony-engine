@@ -27,6 +27,7 @@ class ChordFunction(str, Enum):
     - II: Supertonic (II degree)
     - VI: Submediant (VI degree)
     - VII: Leading-tone triad / chord (VII degree)
+    - III: Mediant triad / chord (III degree)
     - K64: Cadential Six-Four chord (каденционный квартсекстаккорд)
     """
 
@@ -36,6 +37,7 @@ class ChordFunction(str, Enum):
     II = "II"
     VI = "VI"
     VII = "VII"
+    III = "III"
     K64 = "K64"
 
     @classmethod
@@ -54,6 +56,8 @@ class ChordFunction(str, Enum):
             return cls.VI
         if cleaned in ("VII", "7"):
             return cls.VII
+        if cleaned in ("III", "3"):
+            return cls.III
         if cleaned in ("K64", "K6/4", "CADENTIAL64", "CAD64"):
             return cls.K64
         raise ValueError(f"Unknown chord function: '{s}'.")
@@ -73,6 +77,8 @@ class ChordFunction(str, Enum):
             return ScaleDegree(6, 0)
         if self == ChordFunction.VII:
             return ScaleDegree(7, 0)
+        if self == ChordFunction.III:
+            return ScaleDegree(3, 0)
         raise ValueError(f"Unknown root degree for {self}")
 
     @property
@@ -242,8 +248,9 @@ class ChordDefinition:
         # D, D6, D7, D65, D43, D2
         # VI, VI6
         # II, II6, II7, II65
-        # VII, VII7
-        pattern = r"^(T|S|D|II|VI|VII|t|s|d)(53|64|65|43|6|7|2)?$"
+        # VII, VII6, VII7
+        # III, III6
+        pattern = r"^(T|S|D|II|VI|VII|III|t|s|d|ii|vi|vii|iii)(53|64|65|43|6|7|2)?$"
         match = re.match(pattern, raw)
         if not match:
             raise ValueError(f"Unrecognized chord notation: '{name}'.")
@@ -284,6 +291,8 @@ class ChordDefinition:
             return self.key.pitch_class_for_degree(ScaleDegree(1, 0))
         if self.function == ChordFunction.VII:
             return self.key.pitch_class_for_degree(ScaleDegree(2, 0))
+        if self.function == ChordFunction.III:
+            return self.key.pitch_class_for_degree(ScaleDegree(5, 0))
         raise ValueError(f"Unknown third for {self.function}")
 
     @property
@@ -301,6 +310,8 @@ class ChordDefinition:
             return self.key.pitch_class_for_degree(ScaleDegree(3, 0))
         if self.function == ChordFunction.VII:
             return self.key.pitch_class_for_degree(ScaleDegree(4, 0))
+        if self.function == ChordFunction.III:
+            return self.key.pitch_class_for_degree(ScaleDegree(7, 0))
         raise ValueError(f"Unknown fifth for {self.function}")
 
     @property
@@ -374,6 +385,14 @@ class ChordDefinition:
         # II6
         if self.function == ChordFunction.II and self.inversion == Inversion.SEXTA:
             return ("third", "root")
+
+        # VII6 (leading tone root cannot be doubled; double third or fifth)
+        if self.function == ChordFunction.VII and self.inversion == Inversion.SEXTA:
+            return ("third", "fifth")
+
+        # III / III6
+        if self.function == ChordFunction.III:
+            return ("root", "fifth", "third")
 
         # Main triads in root position (T, S, D)
         if self.inversion == Inversion.ROOT:
@@ -516,3 +535,29 @@ class ChordDefinition:
             f"ChordDefinition(function={self.function.value}, inversion={self.inversion.name}, "
             f"key='{self.key.name}', is_seventh={self.is_seventh}, bass_factor='{self.bass_factor}')"
         )
+
+
+def normalize_roman(symbol: str) -> str:
+    """
+    Normalizes Roman numeral chord notation to harmonic function symbol:
+    I -> T, IV -> S, V -> D (lowercase to minor variants: i -> t, iv -> s, v -> d).
+    Preserves II, III, VI, VII and existing function symbols (T, S, D, K64, etc.),
+    as well as figured bass inversion suffixes (e.g. V7 -> D7, i6 -> t6, IV6 -> S6).
+    """
+    s = symbol.strip()
+    if not s:
+        return s
+
+    mapping = {
+        "VII": "VII", "vii": "vii",
+        "VI": "VI",   "vi": "vi",
+        "IV": "S",    "iv": "s",
+        "III": "III", "iii": "iii",
+        "II": "II",   "ii": "ii",
+        "I": "T",     "i": "t",
+        "V": "D",     "v": "d",
+    }
+    for roman, repl in mapping.items():
+        if s.startswith(roman):
+            return repl + s[len(roman):]
+    return s

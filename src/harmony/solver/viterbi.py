@@ -116,12 +116,18 @@ class ViterbiSolver:
             step_diag: list[SolverStepDiagnostic] = []
 
             for t in range(n):
+                prev_s = melody_pitches[t - 1] if t > 0 else None
+                next_s = melody_pitches[t + 1] if t + 1 < n else None
+                is_db = downbeats[t]
                 candidates = generate_candidate_voicings(
                     soprano_pitch=melody_pitches[t],
                     chord=parsed_chords[t],
                     key=parsed_key,
                     allow_extended_ranges=allow_extended_ranges,
                     prev_chord=parsed_chords[t - 1] if t > 0 else None,
+                    prev_soprano=prev_s,
+                    next_soprano=next_s,
+                    is_downbeat=is_db,
                 )
                 lattice.append(candidates)
                 step_diag.append(

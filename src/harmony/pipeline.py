@@ -102,14 +102,23 @@ class Harmonizer:
 
         # Pre-process melody with exact metric structure and durations
         metric_info = calculate_metric_structure(melody, default_time_signature=parsed_ts)
-        processed_melody = [
-            {
+        processed_melody = []
+        for i, info in enumerate(metric_info):
+            raw_item = melody[i]
+            if isinstance(raw_item, dict) and "is_downbeat" in raw_item and raw_item["is_downbeat"] is not None:
+                db = bool(raw_item["is_downbeat"])
+            elif isinstance(raw_item, int) or (isinstance(raw_item, dict) and "is_downbeat" not in raw_item):
+                # When downbeats are not explicitly declared, measure start (offset 0.0)
+                # defines the primary downbeat; secondary accents (offset > 0.0) are
+                # unaccented for NCT melodic classifications.
+                db = (info["offset_in_measure"] == 0.0)
+            else:
+                db = bool(info["is_downbeat"])
+            processed_melody.append({
                 "pitch": info["pitch"],
                 "duration": info["duration"],
-                "is_downbeat": info["is_downbeat"],
-            }
-            for info in metric_info
-        ]
+                "is_downbeat": db,
+            })
         durations_list = [info["duration"] for info in metric_info]
 
         # 1. Determine functional plans to try

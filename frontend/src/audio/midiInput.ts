@@ -34,6 +34,7 @@ export class WebMidiManager {
   private isRecording: boolean = false;
   private metronomeTimer: number | null = null;
   private beatCounter: number = 0;
+  private timeSignature: string = "4/4";
   private onNoteCallback: MidiNoteCallback | null = null;
   private audioCtx: AudioContext | null = null;
 
@@ -91,20 +92,22 @@ export class WebMidiManager {
   public startRecording(
     bpm: number,
     onNote: MidiNoteCallback,
-    onMetronomeTick?: (beat: number) => void
+    onMetronomeTick?: (beat: number) => void,
+    timeSignature: string = "4/4"
   ) {
     this.isRecording = true;
     this.onNoteCallback = onNote;
     this.beatCounter = 0;
+    this.timeSignature = timeSignature;
 
+    const beatsPerMeasure = this.getBeatsPerMeasure();
     const intervalMs = (60 / bpm) * 1000;
 
     // Start metronome click
     const playTick = () => {
       if (!this.isRecording) return;
       this.beatCounter++;
-      // TODO(T14): хардкод 4/4
-      const measureBeat = ((this.beatCounter - 1) % 4) + 1;
+      const measureBeat = ((this.beatCounter - 1) % beatsPerMeasure) + 1;
       this.playClick(measureBeat === 1);
       if (onMetronomeTick) onMetronomeTick(measureBeat);
       this.metronomeTimer = window.setTimeout(playTick, intervalMs);
@@ -122,6 +125,12 @@ export class WebMidiManager {
     }
   }
 
+  private getBeatsPerMeasure(): number {
+    const parts = (this.timeSignature || "4/4").split("/");
+    const beats = parseInt(parts[0], 10);
+    return isNaN(beats) || beats <= 0 ? 4 : beats;
+  }
+
   private handleMidiMessage(event: LocalMidiMessageEvent) {
     if (!this.isRecording || !this.onNoteCallback) return;
     const data = event.data;
@@ -132,10 +141,14 @@ export class WebMidiManager {
 
     // Note On with velocity > 0
     if (command === 9 && velocity > 0) {
-      // Metric check: if current beat in 4/4 is 1 or 3 -> downbeat
-      // TODO(T14): хардкод 4/4
-      const beatInMeasure = ((this.beatCounter - 1) % 4) + 1;
-      const isDownbeat = beatInMeasure === 1 || beatInMeasure === 3;
+      const beats = this.getBeatsPerMeasure();
+      const beatInMeasure = ((this.beatCounter - 1) % beats) + 1;
+      let isDownbeat = beatInMeasure === 1;
+      if (beats === 4 && beatInMeasure === 3) {
+        isDownbeat = true;
+      } else if (beats === 6 && beatInMeasure === 4) {
+        isDownbeat = true;
+      }
       this.onNoteCallback(note, isDownbeat);
     }
   }

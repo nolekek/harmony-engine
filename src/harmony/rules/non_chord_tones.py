@@ -30,6 +30,50 @@ class NonChordToneAnalysis:
     violations: list[RuleViolation]
 
 
+def classify_nct(
+    prev_pitch: int | None,
+    curr_pitch: int,
+    next_pitch: int | None,
+    chord_pcs: Any,
+    is_downbeat: bool = False,
+) -> str | None:
+    """
+    Classifies a soprano melodic pitch relative to chord pitch classes.
+    Returns: 'passing' | 'neighbor' | 'suspension' | 'chord_tone' | None
+    
+    Rules:
+    - chord_tone: curr_pitch % 12 is in chord_pcs.
+    - suspension: tone held from previous pitch (d1 == 0), on downbeat (is_downbeat == True),
+                  resolves down by step (d2 in (-1, -2)).
+    - passing: moves in the same direction by step (abs(d1) in (1, 2), abs(d2) in (1, 2), d1 * d2 > 0)
+               between surrounding pitches.
+    - neighbor: moves by step (abs(d1) in (1, 2)) and returns back to the same pitch (next_pitch == prev_pitch).
+    """
+    norm_pcs = {pc % 12 for pc in chord_pcs}
+    if (curr_pitch % 12) in norm_pcs:
+        return "chord_tone"
+
+    if prev_pitch is None or next_pitch is None:
+        return None
+
+    d1 = curr_pitch - prev_pitch
+    d2 = next_pitch - curr_pitch
+
+    # Suspension: held note on downbeat resolving down by step
+    if d1 == 0 and is_downbeat and d2 in (-1, -2):
+        return "suspension"
+
+    # Passing tone: stepwise motion in the same direction
+    if abs(d1) in (1, 2) and abs(d2) in (1, 2) and (d1 * d2 > 0):
+        return "passing"
+
+    # Neighbor tone: step and return
+    if abs(d1) in (1, 2) and next_pitch == prev_pitch:
+        return "neighbor"
+
+    return None
+
+
 def classify_melodic_tone(
     prev_pitch: int,
     curr_pitch: int,

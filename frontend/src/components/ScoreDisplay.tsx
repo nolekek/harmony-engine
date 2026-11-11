@@ -16,9 +16,11 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
+  const loadSequenceRef = useRef<number>(0);
   const [isRendered, setIsRendered] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize OSMD and load/render MusicXML with race condition guard
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -37,39 +39,118 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     }
 
     const osmd = osmdRef.current;
-    if (!musicxml.trim()) return;
 
+    // Empty musicxml clears score
+    if (!musicxml || !musicxml.trim()) {
+      try {
+        osmd.clear();
+      } catch {
+        // ignore
+      }
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+      setIsRendered(false);
+      setError(null);
+      return;
+    }
+
+    const currentLoadId = ++loadSequenceRef.current;
+    let isMounted = true;
     setError(null);
+
     osmd
       .load(musicxml)
       .then(() => {
+        if (!isMounted || currentLoadId !== loadSequenceRef.current) return;
         osmd.render();
         setIsRendered(true);
-        applyVoiceColoringAndMeasureHighlights();
       })
       .catch((err) => {
+        if (!isMounted || currentLoadId !== loadSequenceRef.current) return;
         console.error("OSMD render error:", err);
         setError("Ошибка рендеринга MusicXML: " + String(err));
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, [musicxml]);
 
-  // Apply voice styling & red measure highlights
-  const applyVoiceColoringAndMeasureHighlights = () => {
+  // Apply red measure highlights matching ONLY problemMeasures
+  const applyMeasureHighlights = (measuresToHighlight: number[]) => {
     if (!containerRef.current) return;
     const svg = containerRef.current.querySelector("svg");
     if (!svg) return;
 
-    // Apply red border highlight to problem measures if present
-    if (problemMeasures && problemMeasures.length > 0) {
-      // Find measure groups or graphical elements in SVG
-      const measureBoxes = svg.querySelectorAll("g[id*='Measure'], g.vf-measure");
-      measureBoxes.forEach((m) => {
-        // problem highlight
-        (m as SVGGraphicsElement).style.filter = "drop-shadow(0 0 6px rgba(239, 68, 68, 0.6))";
+    // 1. Clear any existing measure highlights
+    const allHighlighted = svg.querySelectorAll<SVGGraphicsElement>(
+      "g[data-measure-highlight='true'], g[id^='osmd-m'], g[id*='Measure'], g.vf-measure"
+    );
+    allHighlighted.forEach((el) => {
+      if (
+        el.style.filter.includes("drop-shadow") ||
+        el.getAttribute("data-measure-highlight") === "true"
+      ) {
+        el.style.filter = "";
+        el.removeAttribute("data-measure-highlight");
+      }
+    });
+
+    if (!measuresToHighlight || measuresToHighlight.length === 0) {
+      return;
+    }
+
+    const targetSet = new Set(measuresToHighlight);
+
+    // 2. Try highlighting via OSMD GraphicSheet if available
+    const osmd = osmdRef.current;
+    if (osmd && (osmd as any).GraphicSheet?.MeasureList) {
+      const measureList: any[][] = (osmd as any).GraphicSheet.MeasureList;
+      measureList.forEach((measuresInStaff, measureListIdx) => {
+        // Measure numbers are 1-based, measureListIdx is 0-based
+        const measureNum =
+          measuresInStaff[0]?.parentSourceMeasure?.MeasureNumber ??
+          measuresInStaff[0]?.MeasureNumber ??
+          measureListIdx + 1;
+
+        if (targetSet.has(measureNum)) {
+          measuresInStaff.forEach((gm) => {
+            const el: SVGGraphicsElement | null =
+              gm?.getSVGGElement?.() || gm?.svgGElement || null;
+            if (el) {
+              el.style.filter = "drop-shadow(0 0 6px rgba(239, 68, 68, 0.75))";
+              el.setAttribute("data-measure-highlight", "true");
+            }
+          });
+        }
       });
     }
+
+    // 3. Highlight via SVG element IDs / classes matching specific measure number
+    measuresToHighlight.forEach((mNum) => {
+      const mIdx = mNum - 1; // 0-based index used in OSMD element ids: osmd-m{idx}-{staff}
+      const selectors = [
+        `g[id^='osmd-m${mIdx}-']`,
+        `g[id^='osmd-m${mIdx}x-']`,
+        `g[id='vf-measure-${mIdx}']`,
+        `g[id='vf-measure-${mNum}']`,
+      ];
+      const matching = svg.querySelectorAll<SVGGraphicsElement>(selectors.join(", "));
+      matching.forEach((el) => {
+        el.style.filter = "drop-shadow(0 0 6px rgba(239, 68, 68, 0.75))";
+        el.setAttribute("data-measure-highlight", "true");
+      });
+    });
   };
 
+  // Dedicated effect for problem measure highlights
+  useEffect(() => {
+    if (!isRendered || !osmdRef.current || !containerRef.current) return;
+    applyMeasureHighlights(problemMeasures);
+  }, [problemMeasures, isRendered, musicxml]);
+
+  // Cursor playback effect
   useEffect(() => {
     if (!osmdRef.current || !isRendered) return;
     const osmd = osmdRef.current;
@@ -80,7 +161,6 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           osmd.cursor.show();
           osmd.cursor.reset();
         }
-        // Move cursor to step
         osmd.cursor.reset();
         for (let i = 0; i < currentChordIndex; i++) {
           osmd.cursor.next();
@@ -88,7 +168,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
       } else {
         osmd.cursor.hide();
       }
-    } catch (e) {
+    } catch {
       // Cursor might not be supported if empty
     }
   }, [currentChordIndex, isRendered]);

@@ -27,6 +27,7 @@ interface MelodyInputProps {
   onChange: (newMelody: MelodyNote[]) => void;
   selectedKey: { tonic: string; mode: string };
   onAutoDetectKey: () => void;
+  timeSignature?: string;
 }
 
 const DURATIONS = [
@@ -38,6 +39,51 @@ const DURATIONS = [
   { id: "dotted_eighth", label: "Восьмая с точкой (𝅘𝅥𝅮.)", beats: 0.75 },
   { id: "eighth", label: "Восьмая (𝅘𝅥𝅮)", beats: 0.5 },
 ];
+
+const DURATION_BEATS_MAP: Record<string, number> = {
+  whole: 4,
+  dotted_half: 3,
+  half: 2,
+  dotted_quarter: 1.5,
+  quarter: 1,
+  dotted_eighth: 0.75,
+  eighth: 0.5,
+};
+
+export function recalculateDownbeats(
+  notes: MelodyNote[],
+  timeSignature: string = "4/4"
+): MelodyNote[] {
+  const parts = timeSignature.split("/");
+  const beats = parseInt(parts[0], 10) || 4;
+  const beatType = parseInt(parts[1], 10) || 4;
+  const measureQuarters = beats * (4.0 / beatType);
+
+  let currentOffset = 0.0;
+  return notes.map((note) => {
+    while (currentOffset >= measureQuarters - 1e-4) {
+      currentOffset -= measureQuarters;
+    }
+    if (Math.abs(currentOffset) < 1e-4) {
+      currentOffset = 0.0;
+    }
+
+    let isDownbeat = currentOffset === 0.0;
+    if (beats === 4 && beatType === 4 && Math.abs(currentOffset - 2.0) < 1e-4) {
+      isDownbeat = true;
+    } else if (beats === 6 && beatType === 8 && Math.abs(currentOffset - 1.5) < 1e-4) {
+      isDownbeat = true;
+    }
+
+    const dur = DURATION_BEATS_MAP[note.duration] ?? 2;
+    currentOffset += dur;
+
+    return {
+      ...note,
+      is_downbeat: isDownbeat,
+    };
+  });
+}
 
 // C4 to A5 natural and accidental notes
 const STAFF_PITCHES = [
@@ -70,6 +116,7 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
   onChange,
   selectedKey,
   onAutoDetectKey,
+  timeSignature = "4/4",
 }) => {
   const [activeTab, setActiveTab] = useState<"staff" | "midi" | "file" | "text">("staff");
   const [selectedDuration, setSelectedDuration] = useState<string>("half");
@@ -94,33 +141,34 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
     melodyRef.current = melody;
   }, [melody]);
 
-  // Calculate downbeat based on metric duration sum
-  const calculateDownbeatForIndex = (currentMelody: MelodyNote[]): boolean => {
-    let totalBeats = 0;
-    currentMelody.forEach((n) => {
-      const dur = DURATIONS.find((d) => d.id === n.duration);
-      totalBeats += dur ? dur.beats : 2;
-    });
-    const beatInMeasure = totalBeats % 4;
-    return beatInMeasure === 0 || beatInMeasure === 2;
-  };
+  // Recalculate downbeats automatically whenever timeSignature changes
+  useEffect(() => {
+    if (melody && melody.length > 0) {
+      const recalculated = recalculateDownbeats(melody, timeSignature);
+      const isChanged = recalculated.some(
+        (n, i) => n.is_downbeat !== melody[i]?.is_downbeat
+      );
+      if (isChanged) {
+        onChange(recalculated);
+      }
+    }
+  }, [timeSignature]);
 
   const addNote = (pitch: number, name: string) => {
     audioEngine.playNote(0, pitch, 0.4);
-    const isDownbeat = calculateDownbeatForIndex(melody);
     const newNote: MelodyNote = {
       pitch,
       name,
       duration: selectedDuration,
-      is_downbeat: isDownbeat,
+      is_downbeat: false,
     };
-    onChange([...melody, newNote]);
+    const updated = recalculateDownbeats([...melody, newNote], timeSignature);
+    onChange(updated);
   };
 
   const removeNote = (idx: number) => {
-    const updated = [...melody];
-    updated.splice(idx, 1);
-    onChange(updated);
+    const updated = melody.filter((_, i) => i !== idx);
+    onChange(recalculateDownbeats(updated, timeSignature));
   };
 
   const toggleDownbeat = (idx: number) => {
@@ -166,19 +214,22 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
             name: `Note ${pitch}`,
           };
           audioEngine.playNote(0, pitch, 0.4);
-          onChange([
-            ...melodyRef.current,
-            {
-              pitch,
-              name: noteObj.name,
-              duration: "half",
-              is_downbeat: isDownbeat,
-            },
-          ]);
+          const newNote: MelodyNote = {
+            pitch,
+            name: noteObj.name,
+            duration: "half",
+            is_downbeat: isDownbeat,
+          };
+          const updated = recalculateDownbeats(
+            [...melodyRef.current, newNote],
+            timeSignature
+          );
+          onChange(updated);
         },
         (beat) => {
           setActiveBeat(beat);
-        }
+        },
+        timeSignature
       );
     }
   };
@@ -432,11 +483,14 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
               )}
             </button>
 
-            {/* 4/4 Beat Indicator */}
+            {/* Meter Beat Indicator */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 font-medium">Тактовая доля:</span>
               <div className="flex items-center gap-1.5">
-                {[1, 2, 3, 4].map((beat) => (
+                {Array.from(
+                  { length: Math.max(1, parseInt((timeSignature || "4/4").split("/")[0], 10) || 4) },
+                  (_, i) => i + 1
+                ).map((beat) => (
                   <div
                     key={beat}
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold font-mono transition ${

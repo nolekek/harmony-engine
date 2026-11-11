@@ -13,7 +13,7 @@ import type { CandidateSolution } from "./components/ControlPanel";
 import { ScoreDisplay } from "./components/ScoreDisplay";
 import { AudioControls } from "./components/AudioControls";
 import { GraderPanel } from "./components/GraderPanel";
-import type { GraderReportData } from "./components/GraderPanel";
+import type { GraderReportData, GraderMeta } from "./components/GraderPanel";
 import { ExportBar } from "./components/ExportBar";
 import type { SATBVoicing } from "./audio/synth";
 
@@ -27,13 +27,52 @@ const INITIAL_MELODY: MelodyNote[] = [
   { pitch: 60, name: "C4", duration: "whole", is_downbeat: false },
 ];
 
+export interface TabScoreState {
+  musicxml: string;
+  voicings: SATBVoicing[];
+  chords: string[];
+  asciiScore: string;
+  title: string;
+  problemMeasures: number[];
+  durations: string[];
+  key: { tonic: string; mode: string };
+  timeSignature: string;
+  currentPlaybackIndex: number;
+}
+
+const INITIAL_HARMONIZER_STATE: TabScoreState = {
+  musicxml: "",
+  voicings: [],
+  chords: [],
+  asciiScore: "",
+  title: "Гармонизация мелодии",
+  problemMeasures: [],
+  durations: INITIAL_MELODY.map((m) => m.duration),
+  key: { tonic: "C", mode: "Major" },
+  timeSignature: "4/4",
+  currentPlaybackIndex: -1,
+};
+
+const INITIAL_GRADER_STATE: TabScoreState = {
+  musicxml: "",
+  voicings: [],
+  chords: [],
+  asciiScore: "",
+  title: "Консерваторский инспектор",
+  problemMeasures: [],
+  durations: [],
+  key: { tonic: "C", mode: "Major" },
+  timeSignature: "4/4",
+  currentPlaybackIndex: -1,
+};
+
 export function App() {
   const [activeTab, setActiveTab] = useState<"harmonizer" | "grader">("harmonizer");
 
   // Melody & Keys
   const [melody, setMelody] = useState<MelodyNote[]>(INITIAL_MELODY);
   const [canonicalKeys, setCanonicalKeys] = useState<
-    Array<{ tonic: string; mode: string; fifths: number; title: string }>
+    Array<{ tonic: string; mode: string; fifths: number; title?: string; name?: string }>
   >([]);
   const [selectedKey, setSelectedKey] = useState<{ tonic: string; mode: string }>({
     tonic: "C",
@@ -54,20 +93,23 @@ export function App() {
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorDiagnostics, setErrorDiagnostics] = useState<string[]>([]);
-  const [activeDurations, setActiveDurations] = useState<string[]>(
-    INITIAL_MELODY.map((m) => m.duration)
-  );
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Score & Playback state
-  const [activeMusicXml, setActiveMusicXml] = useState<string>("");
-  const [activeVoicings, setActiveVoicings] = useState<SATBVoicing[]>([]);
-  const [activeChords, setActiveChords] = useState<string[]>([]);
-  const [asciiScore, setAsciiScore] = useState<string>("");
-  const [currentPlaybackIndex, setCurrentPlaybackIndex] = useState<number>(-1);
-  const [problemMeasures, setProblemMeasures] = useState<number[]>([]);
-  const [scoreTitle, setScoreTitle] = useState<string>("Гармонизация мелодии");
+  // Independent tab score states: Harmonizer vs Grader
+  const [harmonizerScore, setHarmonizerScore] = useState<TabScoreState>(INITIAL_HARMONIZER_STATE);
+  const [graderScore, setGraderScore] = useState<TabScoreState>(INITIAL_GRADER_STATE);
+
+  // Active state for score rendering and export
+  const activeScoreState = activeTab === "harmonizer" ? harmonizerScore : graderScore;
+
+  const setPlaybackIndex = (tab: "harmonizer" | "grader", idx: number) => {
+    if (tab === "harmonizer") {
+      setHarmonizerScore((prev) => ({ ...prev, currentPlaybackIndex: idx }));
+    } else {
+      setGraderScore((prev) => ({ ...prev, currentPlaybackIndex: idx }));
+    }
+  };
 
   // Load canonical keys on mount
   useEffect(() => {
@@ -92,7 +134,6 @@ export function App() {
     setIsHarmonizing(true);
     setErrorMessage(null);
     setErrorDiagnostics([]);
-    setProblemMeasures([]);
 
     try {
       const resp = await fetch("/api/harmonize", {
@@ -142,10 +183,17 @@ export function App() {
 
         setCandidates([]);
         setSelectedCandidate(null);
-        setActiveMusicXml("");
         setLatencyMs(null);
         setErrorMessage(detailMsg);
         setErrorDiagnostics([]);
+        setHarmonizerScore((prev) => ({
+          ...prev,
+          musicxml: "",
+          voicings: [],
+          chords: [],
+          asciiScore: "",
+          problemMeasures: [],
+        }));
         return;
       }
 
@@ -158,26 +206,40 @@ export function App() {
         setCandidates(data.candidates);
         const best = data.best_candidate || data.candidates[0];
         setSelectedCandidate(best);
-        setActiveMusicXml(best.musicxml);
-        setActiveVoicings(best.voicings);
-        setActiveChords(best.chords);
-        setAsciiScore(best.ascii_score);
-        setActiveDurations(
-          best.durations || melody.map((m) => m.duration)
-        );
-        setScoreTitle(
-          `Решение #${best.rank} · ${best.description} (Стоимость: ${best.cost})`
-        );
+        const bestDurs = best.durations || melody.map((m) => m.duration);
+        const bestCost = Math.abs(best.cost);
+
+        setHarmonizerScore((prev) => ({
+          ...prev,
+          musicxml: best.musicxml,
+          voicings: best.voicings,
+          chords: best.chords,
+          asciiScore: best.ascii_score,
+          durations: bestDurs,
+          problemMeasures: [],
+          key: selectedKey,
+          timeSignature: timeSignature,
+          currentPlaybackIndex: -1,
+          title: `Решение #${best.rank} · ${best.description} (Штраф: ${bestCost})`,
+        }));
       } else {
         setCandidates([]);
         setSelectedCandidate(null);
-        setActiveMusicXml("");
         setLatencyMs(null);
         const msg =
           data.error?.message ??
           data.message ??
           "Не удалось построить гармонизацию";
         setErrorMessage(msg);
+
+        setHarmonizerScore((prev) => ({
+          ...prev,
+          musicxml: "",
+          voicings: [],
+          chords: [],
+          asciiScore: "",
+          problemMeasures: [],
+        }));
 
         if (data.error?.diagnostics && Array.isArray(data.error.diagnostics)) {
           setErrorDiagnostics(
@@ -206,12 +268,19 @@ export function App() {
       console.error("Harmonize request error:", e);
       setCandidates([]);
       setSelectedCandidate(null);
-      setActiveMusicXml("");
       setLatencyMs(null);
       setErrorMessage(
         e instanceof Error ? e.message : "Не удалось построить гармонизацию"
       );
       setErrorDiagnostics([]);
+      setHarmonizerScore((prev) => ({
+        ...prev,
+        musicxml: "",
+        voicings: [],
+        chords: [],
+        asciiScore: "",
+        problemMeasures: [],
+      }));
     } finally {
       if (abortControllerRef.current === controller) {
         setIsHarmonizing(false);
@@ -242,7 +311,12 @@ export function App() {
       });
       const data = await resp.json();
       if (data && data.tonic && data.mode) {
-        setSelectedKey({ tonic: data.tonic, mode: data.mode });
+        const detectedKey = { tonic: data.tonic, mode: data.mode };
+        setSelectedKey(detectedKey);
+        setHarmonizerScore((prev) => ({
+          ...prev,
+          key: detectedKey,
+        }));
       }
     } catch (e) {
       console.error("Key detection error:", e);
@@ -252,35 +326,81 @@ export function App() {
   // Candidate selection
   const handleSelectCandidate = (cand: CandidateSolution) => {
     setSelectedCandidate(cand);
-    setActiveMusicXml(cand.musicxml);
-    setActiveVoicings(cand.voicings);
-    setActiveChords(cand.chords);
-    setAsciiScore(cand.ascii_score);
-    setActiveDurations(
+    const candCost = Math.abs(cand.cost);
+    const candDurs =
       (cand as unknown as { durations?: string[] }).durations ||
-        melody.map((m) => m.duration)
-    );
-    setScoreTitle(
-      `Решение #${cand.rank} · ${cand.description} (Стоимость: ${cand.cost})`
-    );
+      melody.map((m) => m.duration);
+
+    setHarmonizerScore((prev) => ({
+      ...prev,
+      musicxml: cand.musicxml,
+      voicings: cand.voicings,
+      chords: cand.chords,
+      asciiScore: cand.ascii_score,
+      durations: candDurs,
+      problemMeasures: [],
+      key: selectedKey,
+      timeSignature: timeSignature,
+      currentPlaybackIndex: -1,
+      title: `Решение #${cand.rank} · ${cand.description} (Штраф: ${candCost})`,
+    }));
   };
 
   // Melody change handler
   const handleMelodyChange = (newMelody: MelodyNote[]) => {
     setMelody(newMelody);
-    setActiveDurations(newMelody.map((m) => m.duration));
+    setHarmonizerScore((prev) => ({
+      ...prev,
+      durations: newMelody.map((m) => m.duration),
+    }));
   };
 
-  // Grader complete handler
+  // Time signature change handler for Harmonizer
+  const handleTimeSignatureChange = (newTs: string) => {
+    setTimeSignature(newTs);
+    setHarmonizerScore((prev) => ({
+      ...prev,
+      timeSignature: newTs,
+    }));
+  };
+
+  // Key change handler for Harmonizer
+  const handleKeyChange = (newKey: { tonic: string; mode: string }) => {
+    setSelectedKey(newKey);
+    setHarmonizerScore((prev) => ({
+      ...prev,
+      key: newKey,
+    }));
+  };
+
+  // Grader complete handler — isolated to graderScore
   const handleGradeComplete = (
     report: GraderReportData,
     musicxml: string,
-    voicings: SATBVoicing[]
+    voicings: SATBVoicing[],
+    meta?: GraderMeta
   ) => {
-    setActiveMusicXml(musicxml);
-    setActiveVoicings(voicings);
-    setProblemMeasures(report.problem_measures);
-    setScoreTitle(`Инспектор: ${report.grade}`);
+    setGraderScore((prev) => ({
+      ...prev,
+      musicxml,
+      voicings,
+      chords: meta?.chords ?? prev.chords,
+      asciiScore: meta?.asciiScore ?? prev.asciiScore,
+      problemMeasures: report.problem_measures,
+      title: `Инспектор: ${report.grade}`,
+      key: meta?.key ?? selectedKey,
+      timeSignature: meta?.timeSignature ?? timeSignature,
+      durations: meta?.durations ?? voicings.map((v) => v.duration || "half"),
+      currentPlaybackIndex: -1,
+    }));
+  };
+
+  // Grader measure highlight handler
+  const handleHighlightMeasure = (m: number) => {
+    setGraderScore((prev) => ({
+      ...prev,
+      problemMeasures: [m],
+    }));
   };
 
   return (
@@ -392,21 +512,23 @@ export function App() {
                 onChange={handleMelodyChange}
                 selectedKey={selectedKey}
                 onAutoDetectKey={handleAutoDetectKey}
+                timeSignature={timeSignature}
               />
 
               <ControlPanel
                 keys={canonicalKeys}
                 selectedKey={selectedKey}
-                onKeyChange={setSelectedKey}
+                onKeyChange={handleKeyChange}
                 onAutoDetectKey={handleAutoDetectKey}
                 timeSignature={timeSignature}
-                onTimeSignatureChange={setTimeSignature}
+                onTimeSignatureChange={handleTimeSignatureChange}
                 allowExtendedRanges={allowExtendedRanges}
                 onToggleExtendedRanges={setAllowExtendedRanges}
                 allowSecondaryDominants={allowSecondaryDominants}
                 onToggleSecondaryDominants={setAllowSecondaryDominants}
                 onHarmonize={handleHarmonize}
                 isHarmonizing={isHarmonizing}
+                isMelodyEmpty={melody.length === 0}
                 latencyMs={latencyMs}
                 candidates={candidates}
                 selectedCandidateId={selectedCandidate?.id || null}
@@ -414,31 +536,31 @@ export function App() {
               />
             </div>
 
-            {/* Right Column (Score Display, Playback & Export) */}
+            {/* Right Column (Score Display, Playback & Export for Harmonizer) */}
             <div className="lg:col-span-7 space-y-5">
               {/* Score Display (OSMD) */}
               <ScoreDisplay
-                musicxml={activeMusicXml}
-                currentChordIndex={currentPlaybackIndex}
-                problemMeasures={problemMeasures}
-                title={scoreTitle}
+                musicxml={activeScoreState.musicxml}
+                currentChordIndex={activeScoreState.currentPlaybackIndex}
+                problemMeasures={activeScoreState.problemMeasures}
+                title={activeScoreState.title}
               />
 
               {/* Audio Playback Controls */}
               <AudioControls
-                voicings={activeVoicings}
-                currentChordIndex={currentPlaybackIndex}
-                onStepChange={setCurrentPlaybackIndex}
+                voicings={activeScoreState.voicings}
+                currentChordIndex={activeScoreState.currentPlaybackIndex}
+                onStepChange={(idx) => setPlaybackIndex("harmonizer", idx)}
               />
 
-              {/* One-Click Export */}
+              {/* One-Click Export from Active Harmonizer State */}
               <ExportBar
-                voicings={activeVoicings}
-                chords={activeChords}
-                keyObj={selectedKey}
-                timeSignature={timeSignature}
-                asciiScore={asciiScore}
-                durations={activeDurations}
+                voicings={activeScoreState.voicings}
+                chords={activeScoreState.chords}
+                keyObj={activeScoreState.key}
+                timeSignature={activeScoreState.timeSignature}
+                asciiScore={activeScoreState.asciiScore}
+                durations={activeScoreState.durations}
               />
             </div>
           </div>
@@ -449,34 +571,36 @@ export function App() {
             <div className="lg:col-span-6 space-y-6">
               <GraderPanel
                 selectedKey={selectedKey}
+                timeSignature={timeSignature}
                 allowExtendedRanges={allowExtendedRanges}
                 onGradeComplete={handleGradeComplete}
-                onHighlightMeasure={(m) => setProblemMeasures([m])}
+                onHighlightMeasure={handleHighlightMeasure}
               />
             </div>
 
-            {/* Right: Real-time Score with error highlighting & audio playback */}
+            {/* Right: Real-time Score with error highlighting & audio playback for Grader */}
             <div className="lg:col-span-6 space-y-5">
               <ScoreDisplay
-                musicxml={activeMusicXml}
-                currentChordIndex={currentPlaybackIndex}
-                problemMeasures={problemMeasures}
-                title={scoreTitle}
+                musicxml={activeScoreState.musicxml}
+                currentChordIndex={activeScoreState.currentPlaybackIndex}
+                problemMeasures={activeScoreState.problemMeasures}
+                title={activeScoreState.title}
               />
 
               <AudioControls
-                voicings={activeVoicings}
-                currentChordIndex={currentPlaybackIndex}
-                onStepChange={setCurrentPlaybackIndex}
+                voicings={activeScoreState.voicings}
+                currentChordIndex={activeScoreState.currentPlaybackIndex}
+                onStepChange={(idx) => setPlaybackIndex("grader", idx)}
               />
 
+              {/* One-Click Export from Active Grader State */}
               <ExportBar
-                voicings={activeVoicings}
-                chords={activeChords}
-                keyObj={selectedKey}
-                timeSignature={timeSignature}
-                asciiScore={asciiScore}
-                durations={activeDurations}
+                voicings={activeScoreState.voicings}
+                chords={activeScoreState.chords}
+                keyObj={activeScoreState.key}
+                timeSignature={activeScoreState.timeSignature}
+                asciiScore={activeScoreState.asciiScore}
+                durations={activeScoreState.durations}
               />
             </div>
           </div>

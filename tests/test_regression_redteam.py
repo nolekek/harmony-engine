@@ -35,7 +35,6 @@ def test_default_melody_harmonizes_without_explicit_max_plans():
     assert res.best_solution.chords[-1].function in ("T", "t")
 
 
-@pytest.mark.xfail(strict=True, reason="T16: III/VII6 in ALL_FUNCTIONS")
 def test_descending_diatonic_4_notes():
     """
     REPORT §1.2: C5-B4-A4-G4 [72,71,69,67] in C-dur.
@@ -50,7 +49,6 @@ def test_descending_diatonic_4_notes():
     assert res.is_success is True, f"Harmonization failed: {res.message}"
 
 
-@pytest.mark.xfail(strict=True, reason="T16: III/VII6 in ALL_FUNCTIONS")
 def test_descending_scale_8_notes():
     """
     REPORT §1.3: 8-note descending scale C5-B4-A4-G4-F4-E4-D4-C4 [72,71,69,67,65,64,62,60].

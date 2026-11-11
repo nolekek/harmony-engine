@@ -8,6 +8,7 @@ from typing import Any, Sequence
 from src.harmony.core.types import Voicing, Key, Chord, to_satb, parse_key
 from src.harmony.rules.spacing import STANDARD_VOICE_RANGES, EXTENDED_VOICE_RANGES
 from src.harmony.rules.doubling import get_triad_tones, check_doubling
+from src.harmony.rules.non_chord_tones import classify_nct
 
 
 def generate_candidate_voicings(
@@ -17,6 +18,9 @@ def generate_candidate_voicings(
     allow_extended_ranges: bool = False,
     prev_chord: Any = None,
     is_final_chord: bool = False,
+    prev_soprano: int | None = None,
+    next_soprano: int | None = None,
+    is_downbeat: bool = False,
 ) -> list[Voicing]:
     """
     Generates all statically valid SATB voicings for a given soprano pitch and chord.
@@ -70,8 +74,9 @@ def generate_candidate_voicings(
             allowed_pcs.add(seventh_pc)
         elif sym_clean.startswith("VII"):
             # diminished 7th in minor/harmonic major (deg 6 = +8), or natural major (+9)
+            seventh_pc = (tonic_pc + 8 if ("MINOR" in mode or sym_clean.islower()) else tonic_pc + 9) % 12
+            allowed_pcs.add(seventh_pc)
             allowed_pcs.add((tonic_pc + 8) % 12)
-            allowed_pcs.add((tonic_pc + 9) % 12)
         elif sym_clean.startswith("II"):
             seventh_pc = tonic_pc % 12
             allowed_pcs.add(seventh_pc)
@@ -85,9 +90,22 @@ def generate_candidate_voicings(
             seventh_pc = (tonic_pc + 5) % 12
             allowed_pcs.add(seventh_pc)
 
-    # Check that soprano belongs to chord
+    # Check that soprano belongs to chord, or qualify as melodic non-chord tone (NCT)
+    is_nct = False
     if soprano_pitch % 12 not in allowed_pcs:
-        return []
+        if is_downbeat:
+            return []
+        nct_type = classify_nct(
+            prev_pitch=prev_soprano,
+            curr_pitch=soprano_pitch,
+            next_pitch=next_soprano,
+            chord_pcs=allowed_pcs,
+            is_downbeat=is_downbeat,
+        )
+        if nct_type in ("passing", "neighbor"):
+            is_nct = True
+        else:
+            return []
 
     # Inversion bass pitch class requirement
     # 5/3: root; 6: third; 6/4: fifth; 7: root; 6/5: third; 4/3: fifth/seventh; 2: seventh
@@ -136,6 +154,13 @@ def generate_candidate_voicings(
                     continue
                 if b % 12 not in allowed_pcs:
                     continue
+
+                if is_nct:
+                    # Soprano is excluded from chord tones.
+                    # Lower 3 voices (A, T, B) must provide triad completeness (root, third, fifth).
+                    lower_pcs = {a % 12, t % 12, b % 12}
+                    if not {root_pc, third_pc, fifth_pc}.issubset(lower_pcs):
+                        continue
 
                 v = Voicing(soprano=soprano_pitch, alto=a, tenor=t, bass=b)
 

@@ -22,7 +22,7 @@ export interface CandidateSolution {
 }
 
 interface ControlPanelProps {
-  keys: Array<{ tonic: string; mode: string; fifths: number; title: string }>;
+  keys: Array<{ tonic: string; mode: string; fifths: number; title?: string; name?: string }>;
   selectedKey: { tonic: string; mode: string };
   onKeyChange: (key: { tonic: string; mode: string }) => void;
   onAutoDetectKey: () => void;
@@ -34,6 +34,7 @@ interface ControlPanelProps {
   onToggleSecondaryDominants: (val: boolean) => void;
   onHarmonize: () => void;
   isHarmonizing: boolean;
+  isMelodyEmpty?: boolean;
   latencyMs: number | null;
   candidates: CandidateSolution[];
   selectedCandidateId: string | null;
@@ -53,6 +54,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onToggleSecondaryDominants,
   onHarmonize,
   isHarmonizing,
+  isMelodyEmpty = false,
   latencyMs,
   candidates,
   selectedCandidateId,
@@ -79,7 +81,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       {/* Row 1: Key selection + Auto detect */}
       <div className="space-y-2">
         <label className="block text-xs font-medium text-slate-300">
-          Тональность (24 канонических лада)
+          Тональность (24 тональности)
         </label>
         <div className="flex items-center gap-2">
           <select
@@ -92,7 +94,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           >
             {keys.map((k) => (
               <option key={`${k.tonic}:${k.mode}`} value={`${k.tonic}:${k.mode}`}>
-                {k.title} ({k.tonic} {k.mode === "Major" ? "мажор" : "гарм. минор"})
+                {k.name ?? k.title} ({k.tonic} {k.mode === "Major" ? "мажор" : "гарм. минор"})
               </option>
             ))}
           </select>
@@ -174,7 +176,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       <button
         type="button"
         onClick={onHarmonize}
-        disabled={isHarmonizing}
+        disabled={isHarmonizing || isMelodyEmpty}
         className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium text-sm rounded-xl shadow-lg shadow-indigo-500/20 active:scale-[0.99] transition-all disabled:opacity-50 disabled:pointer-events-none"
       >
         <Wand2 className={`w-4 h-4 ${isHarmonizing ? "animate-spin" : ""}`} />
@@ -223,13 +225,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
-                      <span>Стоимость:</span>
+                      <span>Штраф:</span>
                       <span
                         className={`font-semibold ${
-                          cand.cost <= 0 ? "text-emerald-400" : "text-amber-400"
+                          cand.cost === 0 ? "text-emerald-400" : "text-amber-400"
                         }`}
                       >
-                        {cand.cost}
+                        {Math.abs(cand.cost)}
                       </span>
                     </div>
                   </div>
