@@ -276,6 +276,8 @@ class Harmonizer:
             steps_to_try = [blocked_t]
             if blocked_t > 0:
                 steps_to_try.append(blocked_t - 1)
+            if blocked_t > 1:
+                steps_to_try.append(0)
 
             for target_step in steps_to_try:
                 if attempts >= max_attempts or (time.perf_counter() - start_time) >= timeout_sec:
@@ -312,10 +314,20 @@ class Harmonizer:
                         if grammar.is_valid_syntax_transition(prev_fn, fn, is_downbeat=is_db)
                     ]
                 else:
-                    cand_alts = [
-                        fn for fn in cand_alts
-                        if fn not in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7")
-                    ]
+                    tonic_pc_0, mode_0 = parse_key(key)
+                    is_minor_0 = "MINOR" in str(mode_0).upper()
+                    tonic_tones_0 = {
+                        tonic_pc_0,
+                        (tonic_pc_0 + 3 if is_minor_0 else tonic_pc_0 + 4) % 12,
+                        (tonic_pc_0 + 7) % 12,
+                    }
+                    if (target_pitch % 12) in tonic_tones_0:
+                        cand_alts = [fn for fn in cand_alts if fn in ("T", "t", "T6", "t6", "VI", "vi")]
+                    else:
+                        cand_alts = [
+                            fn for fn in cand_alts
+                            if fn not in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7")
+                        ]
 
                 # Deterministic ordering
                 # The final chord must be a legal cadence ending, never a
@@ -328,11 +340,16 @@ class Harmonizer:
                         (tonic_pc_r + 3 if is_minor_r else tonic_pc_r + 4) % 12,
                         (tonic_pc_r + 7) % 12,
                     }
-                    if (target_pitch % 12) in tonic_tones:
-                        cand_alts = [fn for fn in cand_alts if fn in ("T", "t", "T6", "t6", "K64")]
+                    if (target_pitch % 12) == tonic_pc_r:
+                        cand_alts = [fn for fn in cand_alts if fn in ("T", "t")]
+                    elif (target_pitch % 12) in tonic_tones:
+                        cand_alts = [fn for fn in cand_alts if fn in ("T", "t", "D", "d", "VI", "vi")]
                     else:
-                        cand_alts = [fn for fn in cand_alts if fn in ("D", "d", "D7", "d7", "VI", "vi")]
-                    cand_alts = [fn for fn in cand_alts if fn != "K64"]
+                        cand_alts = [fn for fn in cand_alts if fn in ("D", "d", "VI", "vi")]
+                    cand_alts = [
+                        fn for fn in cand_alts
+                        if fn not in ("K64", "k64", "D7", "d7", "T6", "t6", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2", "S6", "s6", "II6", "ii6", "III6", "iii6")
+                    ]
 
                 cand_alts.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
 
@@ -376,10 +393,31 @@ class Harmonizer:
                                     (tonic_pc_k + 3 if is_minor_k else tonic_pc_k + 4) % 12,
                                     (tonic_pc_k + 7) % 12,
                                 }
-                                if (k_p % 12) in tonic_tones_k:
-                                    k_cands = [fn for fn in k_cands if fn in ("T", "t", "T6", "t6")]
+                                if (k_p % 12) == tonic_pc_k:
+                                    k_cands = [fn for fn in k_cands if fn in ("T", "t")]
+                                elif (k_p % 12) in tonic_tones_k:
+                                    k_cands = [fn for fn in k_cands if fn in ("T", "t", "D", "d", "VI", "vi")]
                                 else:
-                                    k_cands = [fn for fn in k_cands if fn in ("D", "d", "D7", "d7", "VI", "vi")]
+                                    k_cands = [fn for fn in k_cands if fn in ("D", "d", "VI", "vi")]
+                                k_cands = [
+                                    fn for fn in k_cands
+                                    if fn not in ("K64", "k64", "D7", "d7", "T6", "t6", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2", "S6", "s6", "II6", "ii6", "III6", "iii6")
+                                ]
+                            elif k_penult:
+                                next_pitch_k = melody[n - 1]["pitch"]
+                                tonic_pc_k, mode_k = parse_key(key)
+                                is_minor_k = "MINOR" in str(mode_k).upper()
+                                tonic_tones_k = {
+                                    tonic_pc_k,
+                                    (tonic_pc_k + 3 if is_minor_k else tonic_pc_k + 4) % 12,
+                                    (tonic_pc_k + 7) % 12,
+                                }
+                                if (next_pitch_k % 12) in tonic_tones_k:
+                                    dom_tones_k = {(tonic_pc_k + 7) % 12, (tonic_pc_k + 11) % 12, (tonic_pc_k + 2) % 12, (tonic_pc_k + 5) % 12}
+                                    if (k_p % 12) in dom_tones_k:
+                                        d_cands_k = [fn for fn in k_cands if fn in ("D", "d", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2", "D6", "d6")]
+                                        if d_cands_k:
+                                            k_cands = d_cands_k + [fn for fn in k_cands if fn not in d_cands_k]
                             k_cands.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
 
                             new_beams = []
@@ -389,19 +427,28 @@ class Harmonizer:
                                     if not grammar.is_valid_syntax_transition(last_c, cand_c, is_downbeat=k_db):
                                         continue
                                     b_score = 0.0
-                                    if cand_c in ("T", "T6"):
+                                    if cand_c in ("T", "t"):
+                                        b_score += 4.0
+                                    elif cand_c in ("T6", "t6"):
                                         b_score += 2.0
                                     elif cand_c in ("D", "D7"):
                                         b_score += 2.0
                                     elif cand_c in ("S", "S6"):
                                         b_score += 1.5
+                                    # Penalize identical chord repetition on moving soprano
+                                    if cand_c == last_c and k_p != melody[k - 1]["pitch"]:
+                                        b_score -= 5.0
+                                    # Penalize III6 / VI chains
+                                    if (last_c in ("III", "iii", "III6", "iii6") and cand_c in ("VI", "vi")) or \
+                                       (last_c in ("VI", "vi") and cand_c in ("III", "iii", "III6", "iii6")):
+                                        b_score -= 8.0
                                     new_beams.append((score + b_score, path + [cand_c]))
 
                             if not new_beams:
                                 beams = []
                                 break
-                            new_beams.sort(key=lambda x: (x[0], x[1]), reverse=True)
-                            beams = new_beams[:4]
+                            new_beams.sort(key=lambda x: x[0], reverse=True)
+                            beams = new_beams[:16]
 
                         full_plans = [path for _, path in beams if len(path) == n]
 

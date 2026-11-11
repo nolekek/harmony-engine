@@ -16,6 +16,14 @@ from src.harmony.core.types import (
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.solver.state_generator import generate_candidate_voicings
 
+# Thread-safe global cache for static slice validations (no transition context)
+_STATIC_STEP0_CACHE: dict[tuple, tuple[bool, bool, float]] = {}
+
+
+def clear_solver_cache() -> None:
+    """Clears static Step 0 validation cache."""
+    _STATIC_STEP0_CACHE.clear()
+
 
 @dataclass
 class SolverStepDiagnostic:
@@ -43,8 +51,13 @@ class ViterbiSolver:
     Runs in under 10ms for typical 8-16 bar exercises.
     """
 
-    def __init__(self, rule_engine: RuleEngine | None = None):
+    def __init__(self, rule_engine: RuleEngine | None = None, early_stopping_k: int = 0):
         self.rule_engine = rule_engine or RuleEngine()
+        self.early_stopping_k = early_stopping_k
+        self._current_session_key: tuple | None = None
+        self._session_best_cost: float = float("inf")
+        self._session_solutions_count: int = 0
+        self._session_stagnant_count: int = 0
 
     def solve(
         self,
@@ -113,6 +126,24 @@ class ViterbiSolver:
         # Parse key
         parsed_key = Key.parse(key) if key is not None else Key("C", "Major")
 
+        # Session tracking for early stopping on long melodies with multiple candidate plans
+        session_key = (n, tuple(melody_pitches), parsed_key.tonic, parsed_key.mode)
+        if session_key != self._current_session_key:
+            self._current_session_key = session_key
+            self._session_best_cost = float("inf")
+            self._session_solutions_count = 0
+            self._session_stagnant_count = 0
+        elif self.early_stopping_k > 0 and n >= 16 and self._session_solutions_count >= 3:
+            if self._session_stagnant_count >= self.early_stopping_k:
+                return SolverResult(
+                    is_success=False,
+                    voicings=None,
+                    total_cost=float("inf"),
+                    diagnostics=[],
+                    message="Early stopping: search converged on optimal solution.",
+                    step_diagnostics=None,
+                )
+
         # Configure rule engine extended ranges
         orig_extended = getattr(self.rule_engine, "allow_extended_ranges", False)
         self.rule_engine.allow_extended_ranges = allow_extended_ranges
@@ -169,21 +200,40 @@ class ViterbiSolver:
             delta: list[list[float]] = []
             psi: list[list[int]] = []
 
-            # Step 0: Initial cost based on static spacing
+            # Step 0: Initial cost based on static spacing (cached without context)
             init_delta: list[float] = []
+            chord_sym_0 = parsed_chords[0].function if hasattr(parsed_chords[0], "function") else str(parsed_chords[0])
             for v in lattice[0]:
-                res = self.rule_engine.validate(
-                    prev_voicing=None,
-                    curr_voicing=v,
-                    prev_chord=None,
-                    curr_chord=parsed_chords[0],
-                    key=parsed_key,
-                    is_downbeat=downbeats[0],
-                    is_final_chord=(n == 1),
-                    phrase_boundary=phrase_boundaries[0],
+                cache_key_0 = (
+                    v,
+                    chord_sym_0,
+                    parsed_key.tonic,
+                    parsed_key.mode,
+                    downbeats[0],
+                    (n == 1),
+                    phrase_boundaries[0],
+                    self.rule_engine.allow_extended_ranges,
                 )
-                if res.is_valid and not res.has_hard_violations:
-                    init_delta.append(res.cost)
+                if cache_key_0 in _STATIC_STEP0_CACHE:
+                    is_valid, has_hard, cost = _STATIC_STEP0_CACHE[cache_key_0]
+                else:
+                    res = self.rule_engine.validate(
+                        prev_voicing=None,
+                        curr_voicing=v,
+                        prev_chord=None,
+                        curr_chord=parsed_chords[0],
+                        key=parsed_key,
+                        is_downbeat=downbeats[0],
+                        is_final_chord=(n == 1),
+                        phrase_boundary=phrase_boundaries[0],
+                    )
+                    is_valid = res.is_valid
+                    has_hard = res.has_hard_violations
+                    cost = res.cost
+                    _STATIC_STEP0_CACHE[cache_key_0] = (is_valid, has_hard, cost)
+
+                if is_valid and not has_hard:
+                    init_delta.append(cost)
                 else:
                     init_delta.append(float("inf"))
 
@@ -218,13 +268,42 @@ class ViterbiSolver:
                 step_delta: list[float] = [float("inf")] * len(curr_candidates)
                 step_psi: list[int] = [-1] * len(curr_candidates)
 
+                # Pre-filter reachable predecessors and sort by accumulated cost for branch pruning
+                reachable_prev = [
+                    (delta[t - 1][i], i, prev_candidates[i])
+                    for i in range(len(prev_candidates))
+                    if delta[t - 1][i] < float("inf")
+                ]
+                if not reachable_prev:
+                    delta.append(step_delta)
+                    psi.append(step_psi)
+                    step_diag[t].reachable_candidates_count = 0
+                    msg = f"Step {t} ({curr_chord.function}): all {len(curr_candidates)} candidates blocked by hard-rule violations from step {t-1}."
+                    return SolverResult(
+                        is_success=False,
+                        voicings=None,
+                        total_cost=float("inf"),
+                        diagnostics=[{
+                            "step": t,
+                            "chord": curr_chord.function,
+                            "blocked": len(curr_candidates),
+                            "message": msg,
+                        }],
+                        message=msg,
+                        step_diagnostics=step_diag,
+                    )
+
+                reachable_prev.sort(key=lambda item: (item[0], item[1]))
+
                 for j, curr_v in enumerate(curr_candidates):
                     best_cost = float("inf")
                     best_prev_idx = -1
 
-                    for i, prev_v in enumerate(prev_candidates):
-                        if delta[t - 1][i] == float("inf"):
-                            continue
+                    for prev_cost, i, prev_v in reachable_prev:
+                        # Non-negative transition cost guarantee: if prev_cost >= best_cost,
+                        # no subsequent predecessor can improve best_cost. Prune safely.
+                        if prev_cost >= best_cost:
+                            break
 
                         prev2_v = None
                         if t >= 2:
@@ -256,7 +335,7 @@ class ViterbiSolver:
                             continue
 
                         trans_cost = res.cost if res.cost < float("inf") else self.rule_engine.compute_soft_cost(prev_v, curr_v)
-                        total_cost = delta[t - 1][i] + trans_cost
+                        total_cost = prev_cost + trans_cost
                         if total_cost < best_cost:
                             best_cost = total_cost
                             best_prev_idx = i
@@ -315,6 +394,14 @@ class ViterbiSolver:
                 curr_idx = prev_idx
 
             optimal_path.reverse()
+
+            if self.early_stopping_k > 0:
+                self._session_solutions_count += 1
+                if optimal_cost < self._session_best_cost - 1e-4:
+                    self._session_best_cost = optimal_cost
+                    self._session_stagnant_count = 0
+                else:
+                    self._session_stagnant_count += 1
 
             return SolverResult(
                 is_success=True,

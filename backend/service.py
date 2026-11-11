@@ -6,6 +6,7 @@ scoring, MusicXML/ASCII formatting, and structured error reporting.
 
 from __future__ import annotations
 
+import copy
 import logging
 import time
 from typing import Any
@@ -20,6 +21,14 @@ from src.harmony.export.ascii import format_ascii_score
 from backend.exporters import build_colored_musicxml
 
 logger = logging.getLogger(__name__)
+
+# Request-level cache for idempotent repeated requests
+_SERVICE_REQUEST_CACHE: dict[tuple, dict[str, Any]] = {}
+
+
+def clear_service_cache() -> None:
+    """Flushes the service-level request cache."""
+    _SERVICE_REQUEST_CACHE.clear()
 
 
 def select_top_candidates(solutions: list[dict[str, Any]], k: int = 3) -> list[dict[str, Any]]:
@@ -199,6 +208,22 @@ class HarmonizationService:
         ]
         durations_list = [item["duration"] for item in metric_grid]
 
+        # Request-level cache lookup for identical parameters
+        cache_key = (
+            tuple((item["pitch"], item["duration"], item["is_downbeat"]) for item in melody_dicts),
+            parsed_key.tonic,
+            parsed_key.mode,
+            str(time_sig),
+            allow_extended_ranges,
+            allow_secondary_dominants,
+            max_plans,
+        )
+        if cache_key in _SERVICE_REQUEST_CACHE:
+            cached_resp = copy.deepcopy(_SERVICE_REQUEST_CACHE[cache_key])
+            cached_resp["latency_ms"] = round((time.perf_counter() - t_start) * 1000, 2)
+            logger.info("Harmonization returned from request cache in %.2f ms", cached_resp["latency_ms"])
+            return cached_resp
+
         # 1. Synthesize candidate functional plans
         grammar = HarmonicGrammar(key=parsed_key)
         all_plans = grammar.generate_plans(melody=melody_dicts, key=parsed_key, max_plans=max_plans)
@@ -285,7 +310,21 @@ class HarmonizationService:
         solutions: list[dict[str, Any]] = []
         collected_diagnostics: list[dict[str, Any]] = []
 
+        best_cost_seen = float("inf")
+        stagnant_count = 0
+        early_stop_threshold = 15 if len(norm_melody_input) >= 16 else 0
+        timeout_sec = float(data.get("timeout_sec", 4.0))
+
         for plan_idx, plan in enumerate(plans_to_try):
+            if time.perf_counter() - t_start > timeout_sec:
+                logger.warning(
+                    "Harmonization plan evaluation reached timeout limit (%.2fs) after %d/%d plans",
+                    timeout_sec,
+                    plan_idx,
+                    len(plans_to_try),
+                )
+                break
+
             res = self.solver.solve(
                 melody=melody_dicts,
                 chords=plan,
@@ -294,6 +333,12 @@ class HarmonizationService:
             )
 
             if res.is_success and res.voicings:
+                if res.total_cost < best_cost_seen - 1e-4:
+                    best_cost_seen = res.total_cost
+                    stagnant_count = 0
+                else:
+                    stagnant_count += 1
+
                 chords_list = [c.function for c in plan]
                 voicings_list = [
                     {"soprano": v.s, "alto": v.a, "tenor": v.t, "bass": v.b}
@@ -336,6 +381,17 @@ class HarmonizationService:
                     for d in res.diagnostics:
                         if isinstance(d, dict) and d not in collected_diagnostics:
                             collected_diagnostics.append(d)
+                if len(solutions) >= 3:
+                    stagnant_count += 1
+
+            if early_stop_threshold > 0 and len(solutions) >= 3 and stagnant_count >= early_stop_threshold:
+                logger.info(
+                    "Early stopping triggered at plan %d/%d (best cost: %.2f)",
+                    plan_idx + 1,
+                    len(plans_to_try),
+                    best_cost_seen,
+                )
+                break
 
         # 2b. Bounded replanning fallback: the fast path above walks plans one by
         # one; the core engine owns macro/micro replanning for melodies whose
@@ -386,7 +442,7 @@ class HarmonizationService:
             solutions[0]["cost"],
         )
 
-        return {
+        final_response = {
             "is_success": True,
             "candidates": solutions,
             "best_candidate": solutions[0],
@@ -394,4 +450,6 @@ class HarmonizationService:
             "latency_ms": latency,
             "error": None,
         }
+        _SERVICE_REQUEST_CACHE[cache_key] = copy.deepcopy(final_response)
+        return final_response
 

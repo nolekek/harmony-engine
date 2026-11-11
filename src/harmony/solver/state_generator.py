@@ -10,6 +10,16 @@ from src.harmony.rules.spacing import STANDARD_VOICE_RANGES, EXTENDED_VOICE_RANG
 from src.harmony.rules.doubling import get_triad_tones, check_doubling
 from src.harmony.rules.non_chord_tones import classify_nct
 
+# Thread-safe global memoization caches for candidate voicings and static doubling checks
+_CANDIDATE_VOICINGS_CACHE: dict[tuple, list[Voicing]] = {}
+_STATIC_DOUBLING_CACHE: dict[tuple, list[Any]] = {}
+
+
+def clear_candidate_cache() -> None:
+    """Clears candidate voicings and static doubling caches."""
+    _CANDIDATE_VOICINGS_CACHE.clear()
+    _STATIC_DOUBLING_CACHE.clear()
+
 
 def generate_candidate_voicings(
     soprano_pitch: int,
@@ -46,6 +56,30 @@ def generate_candidate_voicings(
        - Seventh chords: complete (1-3-5-7) or incomplete (doubled root, 3, 7).
        - Inversions: bass note strictly matches required factor (5/3: root; 6: 3rd; 6/4: 5th; 6/5: 3rd; 4/3 & 2: 7th).
     """
+    chord_sym = chord.function if hasattr(chord, "function") else str(chord)
+    chord_bpc = getattr(chord, "bass_pitch_class", None)
+    if hasattr(chord_bpc, "value"):
+        chord_bpc = chord_bpc.value
+    chord_is_7th = getattr(chord, "is_seventh", None)
+    chord_key = (chord_sym, chord_bpc, chord_is_7th)
+
+    key_key = (key.tonic, key.mode) if hasattr(key, "tonic") and hasattr(key, "mode") else (str(key) if key is not None else None)
+    prev_chord_sym = (prev_chord.function if hasattr(prev_chord, "function") else str(prev_chord)) if prev_chord is not None else None
+
+    cache_key = (
+        soprano_pitch,
+        chord_key,
+        key_key,
+        bool(allow_extended_ranges),
+        prev_chord_sym,
+        bool(is_final_chord),
+        prev_soprano,
+        next_soprano,
+        bool(is_downbeat),
+    )
+
+    if cache_key in _CANDIDATE_VOICINGS_CACHE:
+        return list(_CANDIDATE_VOICINGS_CACHE[cache_key])
     ranges = EXTENDED_VOICE_RANGES if allow_extended_ranges else STANDARD_VOICE_RANGES
     s_min, s_max = ranges[0]
     a_min, a_max = ranges[1]
@@ -164,17 +198,34 @@ def generate_candidate_voicings(
 
                 v = Voicing(soprano=soprano_pitch, alto=a, tenor=t, bass=b)
 
-                # Check doublings via doubling validator
-                doubling_violations = check_doubling(
-                    v,
-                    chord=chord,
-                    key=key,
-                    prev_chord=prev_chord,
-                    is_final_chord=is_final_chord,
-                )
+                # Check doublings via doubling validator (cache static checks without context)
+                if prev_chord is None:
+                    static_key = (v, chord_key, key_key, bool(is_final_chord))
+                    if static_key in _STATIC_DOUBLING_CACHE:
+                        doubling_violations = _STATIC_DOUBLING_CACHE[static_key]
+                    else:
+                        doubling_violations = check_doubling(
+                            v,
+                            chord=chord,
+                            key=key,
+                            prev_chord=None,
+                            is_final_chord=is_final_chord,
+                        )
+                        _STATIC_DOUBLING_CACHE[static_key] = doubling_violations
+                else:
+                    # Contextual check: DO NOT CACHE
+                    doubling_violations = check_doubling(
+                        v,
+                        chord=chord,
+                        key=key,
+                        prev_chord=prev_chord,
+                        is_final_chord=is_final_chord,
+                    )
+
                 if any(viol.is_hard for viol in doubling_violations):
                     continue
 
                 candidates.append(v)
 
-    return candidates
+    _CANDIDATE_VOICINGS_CACHE[cache_key] = candidates
+    return list(candidates)

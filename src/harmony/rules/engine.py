@@ -107,6 +107,17 @@ def check_syntax_rules(
             )
         )
 
+    # Consecutive mediant chords (III6 -> III6, etc.) strictly forbidden
+    if prev_sym in ("III", "iii", "III6", "iii6") and curr_sym in ("III", "iii", "III6", "iii6"):
+        violations.append(
+            RuleViolation(
+                rule_id="SYNTAX_NO_CONSECUTIVE_III6",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=f"Consecutive mediant chords ({prev_sym} -> {curr_sym}) are strictly forbidden",
+            )
+        )
+
     return violations
 
 
@@ -216,7 +227,21 @@ class RuleEngine:
         # not on a mediant/submediant wandering chord.
         if chord is not None:
             sym = parse_chord_symbol(chord)
-            cost += self._OPENING_PENALTY.get(sym, 6.0)
+            if key is not None:
+                tonic_pc, mode = parse_key(key)
+                is_minor = "MINOR" in str(mode).upper()
+                tonic_tones = {tonic_pc, (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12, (tonic_pc + 7) % 12}
+                if satb[0] % 12 in tonic_tones:
+                    if sym in ("T", "t"):
+                        cost += 0.0
+                    elif sym in ("T6", "t6"):
+                        cost += 1.0
+                    else:
+                        cost += 20.0
+                else:
+                    cost += self._OPENING_PENALTY.get(sym, 6.0)
+            else:
+                cost += self._OPENING_PENALTY.get(sym, 6.0)
 
         # Distance from center of comfortable vocal tessitura:
         # S ~ 69 (A4), A ~ 62 (D4), T ~ 55 (G3), B ~ 47 (B2)
@@ -313,21 +338,33 @@ class RuleEngine:
         cost = 0.0
 
         if is_final_chord:
-            if curr_sym in ("T", "t", "T6", "t6"):
-                if prev_sym in ("D7", "d7", "D65", "d65", "D", "d", "K64", "k64"):
+            if curr_sym in ("T", "t"):
+                if prev_sym in ("D7", "d7", "D65", "d65", "D", "d"):
                     cost += 0.0
                 elif prev_sym in ("D6", "d6", "D43", "d43", "D2", "d2"):
                     cost += 0.8  # weaker inversions of the dominant
                 elif prev_sym in ("VI", "vi"):
                     cost += 1.5  # deceptive cadence as the final is weak
+                elif prev_sym in ("K64", "k64"):
+                    cost += 10.0  # K64 directly to T without D resolution
                 else:
                     cost += 4.0  # plagal / unprepared final tonic
-            elif curr_sym in ("D", "d", "D7", "d7"):
+            elif curr_sym in ("T6", "t6"):
+                cost += 50.0  # T6 in final is unacceptable
+            elif curr_sym in ("D", "d"):
                 cost += 0.5  # half cadence is legitimate but less conclusive
+            elif curr_sym in ("VI", "vi"):
+                cost += 1.0  # deceptive cadence
+            else:
+                cost += 10.0
             return cost
 
         if curr_sym in ("III", "iii", "III6", "iii6"):
             cost += 4.0
+        # Chains of III6/VI as patches
+        if (prev_sym in ("III", "iii", "III6", "iii6") and curr_sym in ("VI", "vi")) or \
+           (prev_sym in ("VI", "vi") and curr_sym in ("III", "iii", "III6", "iii6")):
+            cost += 8.0
         if curr_sym in ("VI", "vi") and prev_sym not in self._DOMINANT_FAMILY:
             cost += 2.0
         if prev_sym in self._DOMINANT_FAMILY and curr_sym in ("VI", "vi"):
@@ -405,20 +442,67 @@ class RuleEngine:
             soft_cost += self.compute_functional_cost(
                 prev_chord, curr_chord, is_final_chord=is_final_chord
             )
+            # Penalize repeating identical chord on moving soprano note
+            if prev_chord is not None and curr_chord is not None:
+                prev_sym = parse_chord_symbol(prev_chord)
+                curr_sym = parse_chord_symbol(curr_chord)
+                prev_s = to_satb(prev_voicing)[0]
+                curr_s = to_satb(curr_voicing)[0]
+                if prev_sym == curr_sym and prev_s != curr_s:
+                    soft_cost += 5.0
         else:
             soft_cost = self.compute_initial_cost(curr_voicing, chord=curr_chord, key=key)
 
-        # Cadential 6/4 must resolve to the dominant: it can never be the
-        # final chord of a piece.
-        if is_final_chord and parse_chord_symbol(curr_chord) in ("K64", "k64"):
-            violations.append(
-                RuleViolation(
-                    rule_id="CADENCE_K64_FINAL",
-                    severity="hard_gate",
-                    penalty=100000.0,
-                    description="K64 must resolve to D/D7 and cannot be the final chord",
+        # Cadential final chord validation:
+        if is_final_chord:
+            curr_sym = parse_chord_symbol(curr_chord)
+            if curr_sym in ("K64", "k64"):
+                violations.append(
+                    RuleViolation(
+                        rule_id="CADENCE_K64_FINAL",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description="K64 must resolve to D/D7 and cannot be the final chord",
+                    )
                 )
-            )
+            elif curr_sym[-1:] in ("7", "2") or curr_sym[-2:] in ("65", "43"):
+                violations.append(
+                    RuleViolation(
+                        rule_id="CADENCE_FINAL_SEVENTH_FORBIDDEN",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=(
+                            f"Final chord cannot be a seventh chord ({curr_sym}); "
+                            "a cadence closes on a triad (T, D or VI)"
+                        ),
+                    )
+                )
+            elif curr_sym in ("T6", "t6", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2", "VII6", "vii6", "VII", "vii", "S6", "s6", "II6", "ii6", "III6", "iii6"):
+                violations.append(
+                    RuleViolation(
+                        rule_id="CADENCE_FINAL_INVERSION_FORBIDDEN",
+                        severity="hard_gate",
+                        penalty=100000.0,
+                        description=f"Final chord cannot be an inversion or non-cadential chord ({curr_sym}); must be root position T, D, or VI.",
+                    )
+                )
+
+            # Outer voice direct motion (HIDDEN_FIFTHS_OCTAVES) is permitted in cadences as soft penalty
+            adjusted: list[RuleViolation] = []
+            for v in violations:
+                if v.rule_id == "HIDDEN_FIFTHS_OCTAVES" and v.is_hard:
+                    adjusted.append(
+                        RuleViolation(
+                            rule_id=v.rule_id,
+                            severity="soft_penalty",
+                            penalty=2.0,
+                            description=v.description + " (permitted in final cadence)",
+                            voices=v.voices,
+                        )
+                    )
+                else:
+                    adjusted.append(v)
+            violations = adjusted
 
         # 4. Determine validity and final cost
         has_hard = any(v.is_hard for v in violations)
