@@ -170,10 +170,17 @@ def w1_validation(wave: str, name: str) -> None:
 
 
 def w1_secondary(wave: str, name: str) -> None:
+    # The flag must be respected: either an honest refusal, or a success that
+    # contains no secondary dominants (diatonic plan / NCT).
     r = harmonize(melody([64, 66, 67, 64, 62, 60]), sec=False)
     data = r.json()
-    check(wave, name, data.get("is_success") is False and not data.get("candidates"),
-          f"status={r.status_code} is_success={data.get('is_success')} msg={str(data.get('message'))[:80]}")
+    chords = [c.get("chords") or [] for c in (data.get("candidates") or [])]
+    no_dd = all(not any(str(fn).startswith("DD") for fn in ch) for ch in chords)
+    if data.get("is_success"):
+        ok, detail = no_dd, f"success without DD: {chords[:1]}"
+    else:
+        ok, detail = not data.get("candidates"), f"refusal: {str(data.get('message'))[:80]}"
+    check(wave, name, ok, detail)
 
 
 def w1_parity(wave: str, name: str) -> None:

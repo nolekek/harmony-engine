@@ -152,10 +152,17 @@ def r_invariants(wave: str, name: str) -> None:
 
 
 def r_secondary(wave: str, name: str) -> None:
+    # With secondary dominants disabled the engine may now legitimately succeed
+    # via a diatonic plan + chromatic NCT — as long as NO candidate uses DD*.
     data = harmonize(melody([64, 66, 67, 64, 62, 60]), sec=False).json()
-    code = (data.get("error") or {}).get("code")
-    check(wave, name, data.get("is_success") is False and code == "SECONDARY_DOMINANTS_DISABLED",
-          f"code={code!r}")
+    chords = [c.get("chords") or [] for c in (data.get("candidates") or [])]
+    no_dd = all(not any(str(fn).startswith("DD") for fn in ch) for ch in chords)
+    if data.get("is_success"):
+        ok, detail = no_dd, f"success without DD: {chords[:1]}"
+    else:
+        code = (data.get("error") or {}).get("code")
+        ok, detail = code == "SECONDARY_DOMINANTS_DISABLED", f"refusal code={code!r}"
+    check(wave, name, ok, detail)
 
 
 def r_grade(wave: str, name: str) -> None:
