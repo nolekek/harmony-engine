@@ -1,4 +1,4 @@
-"""
+﻿"""
 Standard MIDI file exporter for four-part SATB voicings.
 Pure Python implementation (no external dependencies required).
 Supports Format 1 (4 tracks, channels 0..3, Program Change 52 Choir Aahs),
@@ -8,7 +8,6 @@ variable durations, dotted notes, and time signature changes.
 from typing import Any, Sequence
 import struct
 import math
-import inspect
 from pathlib import Path
 from src.harmony.core.types import (
     Voicing,
@@ -57,11 +56,8 @@ def export_to_midi(
     out_p.parent.mkdir(parents=True, exist_ok=True)
 
     if midi_format is None:
-        try:
-            is_legacy = any(f.function == "test_midi_export_inspection" for f in inspect.stack())
-        except Exception:
-            is_legacy = False
-        midi_format = 0 if is_legacy else 1
+        # Default contract: SMF Format 1 — one track per SATB voice.
+        midi_format = 1
 
     melody_items = []
     for i, v in enumerate(voicings):
@@ -171,3 +167,4 @@ def export_to_midi(
     header_chunk = b"MThd" + struct.pack(">IHHH", 6, 1, 4, ticks_per_beat)
     out_p.write_bytes(header_chunk + bytes(track_chunks))
     return out_p
+

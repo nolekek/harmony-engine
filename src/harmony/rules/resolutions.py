@@ -292,7 +292,8 @@ def check_vii7_resolution(
     prev_sym = parse_chord_symbol(prev_chord)
     curr_sym = parse_chord_symbol(curr_chord)
 
-    if not prev_sym.startswith("VII") or curr_sym not in ("T", "t"):
+    vii7_family = {"VII7", "vii7", "VII65", "vii65", "VII43", "vii43", "VII2", "vii2"}
+    if prev_sym not in vii7_family or curr_sym not in ("T", "t"):
         return []
 
     tonic_pc, _ = parse_key(key) if key is not None else (0, "MAJOR")

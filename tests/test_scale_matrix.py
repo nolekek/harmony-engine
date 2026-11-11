@@ -59,7 +59,9 @@ def test_scale_matrix_case(harmonizer, name, key_obj, melody):
     Every scale in the 48-case matrix must resolve successfully without failure.
     Replanning automatically rescues micro-infeasible functional lattices.
     """
-    res = harmonizer.harmonize(melody, key_obj)
+    # B/Bb octave scales exceed the strict C4-A5 soprano compass by one tone,
+    # so the matrix exercises the documented extended-range mode.
+    res = harmonizer.harmonize(melody, key_obj, allow_extended_ranges=True)
     assert res.is_success, f"Failed on {name}: {res.message}"
     assert res.best_solution is not None
     assert len(res.best_solution.voicings) == 8

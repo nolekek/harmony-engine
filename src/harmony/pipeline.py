@@ -15,6 +15,7 @@ from src.harmony.core.types import (
     Chord,
     TimeSignature,
     calculate_metric_structure,
+    parse_key,
 )
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.syntax.grammar import HarmonicGrammar, ALL_FUNCTIONS
@@ -160,7 +161,9 @@ class Harmonizer:
         failed_plans: list[tuple[list[Chord], SolverResult]] = []
 
         # 2. Run Viterbi optimization on candidate plans
-        effective_extended = allow_extended_ranges or (allow_replanning and any(m["pitch"] < 60 or m["pitch"] > 81 for m in processed_melody))
+        # Honour the caller's flag: replanning must never silently widen the
+        # allowed vocal ranges when allow_extended_ranges=False.
+        effective_extended = allow_extended_ranges
         for plan in plans_to_try:
             res: SolverResult = self.solver.solve(
                 melody=processed_melody,
@@ -244,7 +247,7 @@ class Harmonizer:
         if n == 0:
             return None
 
-        effective_extended = allow_extended_ranges or any(m["pitch"] < 60 or m["pitch"] > 81 for m in melody)
+        effective_extended = allow_extended_ranges
         grammar = HarmonicGrammar(key=key)
         seen_plans: set[tuple[str, ...]] = {tuple(c.function for c in p) for p, _ in failed_plans}
         solutions: list[HarmonizationSolution] = []
@@ -315,6 +318,22 @@ class Harmonizer:
                     ]
 
                 # Deterministic ordering
+                # The final chord must be a legal cadence ending, never a
+                # dominant inversion (D6/D65/D43) or a passing chord.
+                if is_final:
+                    tonic_pc_r, mode_r = parse_key(key)
+                    is_minor_r = "MINOR" in str(mode_r).upper()
+                    tonic_tones = {
+                        tonic_pc_r,
+                        (tonic_pc_r + 3 if is_minor_r else tonic_pc_r + 4) % 12,
+                        (tonic_pc_r + 7) % 12,
+                    }
+                    if (target_pitch % 12) in tonic_tones:
+                        cand_alts = [fn for fn in cand_alts if fn in ("T", "t", "T6", "t6", "K64")]
+                    else:
+                        cand_alts = [fn for fn in cand_alts if fn in ("D", "d", "D7", "d7", "VI", "vi")]
+                    cand_alts = [fn for fn in cand_alts if fn != "K64"]
+
                 cand_alts.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
 
                 for alt_fn in cand_alts:
@@ -345,6 +364,22 @@ class Harmonizer:
                             for fn in ALL_FUNCTIONS:
                                 if (k_p % 12) in grammar.get_chord_pitch_classes(fn, key) and fn not in k_cands:
                                     k_cands.append(fn)
+
+                            # The final chord of the rebuilt tail must also be a
+                            # legal cadence ending (T-family, or D/VI for a
+                            # half/deceptive cadence) — never a dominant inversion.
+                            if k_final:
+                                tonic_pc_k, mode_k = parse_key(key)
+                                is_minor_k = "MINOR" in str(mode_k).upper()
+                                tonic_tones_k = {
+                                    tonic_pc_k,
+                                    (tonic_pc_k + 3 if is_minor_k else tonic_pc_k + 4) % 12,
+                                    (tonic_pc_k + 7) % 12,
+                                }
+                                if (k_p % 12) in tonic_tones_k:
+                                    k_cands = [fn for fn in k_cands if fn in ("T", "t", "T6", "t6")]
+                                else:
+                                    k_cands = [fn for fn in k_cands if fn in ("D", "d", "D7", "d7", "VI", "vi")]
                             k_cands.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
 
                             new_beams = []

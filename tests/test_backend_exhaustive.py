@@ -323,11 +323,11 @@ def test_musicxml_all_meters_and_durations_validity(meter: str, dur_name: str, d
 
 def test_midi_export_inspection():
     """
-    Verifies MIDI export generates valid MIDI Format 0 with:
+    Verifies MIDI export generates valid SMF Format 1 with:
     - ticks_per_beat = 480
     - Exact Time Signature Meta Event
     - Set Tempo Meta Event matching BPM
-    - Note-on and note-off events for all 4 voices
+    - Note-on and note-off events for all 4 voices (one track per voice)
     """
     voicings = [
         Voicing(64, 60, 55, 48),
@@ -345,11 +345,11 @@ def test_midi_export_inspection():
     )
     mid = mido.MidiFile(file=io.BytesIO(midi_bytes))
 
-    assert mid.type == 0
+    assert mid.type == 1
     assert mid.ticks_per_beat == 480
-    assert len(mid.tracks) == 1
+    assert len(mid.tracks) == 4
 
-    # Check meta events
+    # Check meta events in the first (conductor/global) track
     track = mid.tracks[0]
     time_sigs = [msg for msg in track if msg.type == "time_signature"]
     tempos = [msg for msg in track if msg.type == "set_tempo"]
@@ -362,9 +362,12 @@ def test_midi_export_inspection():
     expected_tempo = int(60_000_000 / bpm)
     assert abs(tempos[0].tempo - expected_tempo) <= 1
 
-    # Check note on / note off
-    note_ons = [msg for msg in track if msg.type == "note_on" and msg.velocity > 0]
-    note_offs = [msg for msg in track if msg.type in ("note_off", "note_on") and msg.velocity == 0]
+    # Check note on / note off across all voice tracks
+    note_ons = [msg for t in mid.tracks for msg in t if msg.type == "note_on" and msg.velocity > 0]
+    note_offs = [
+        msg for t in mid.tracks for msg in t
+        if msg.type == "note_off" or (msg.type == "note_on" and msg.velocity == 0)
+    ]
 
     assert len(note_ons) == 3 * 4  # 3 chords * 4 voices
     assert len(note_offs) == 3 * 4

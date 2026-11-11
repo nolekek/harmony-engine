@@ -351,28 +351,21 @@ export function App() {
   // Melody change handler
   const handleMelodyChange = (newMelody: MelodyNote[]) => {
     setMelody(newMelody);
-    setHarmonizerScore((prev) => ({
-      ...prev,
-      durations: newMelody.map((m) => m.duration),
-    }));
   };
 
-  // Time signature change handler for Harmonizer
+  // Melody edit only changes the input, never the rendered/exported score:
+  // the score keeps the durations it was harmonized with until the next run.
   const handleTimeSignatureChange = (newTs: string) => {
     setTimeSignature(newTs);
-    setHarmonizerScore((prev) => ({
-      ...prev,
-      timeSignature: newTs,
-    }));
+    // Do NOT rewrite harmonizerScore.timeSignature: it belongs to the rendered
+    // score and must stay in sync with the voicings it was produced with.
   };
 
   // Key change handler for Harmonizer
   const handleKeyChange = (newKey: { tonic: string; mode: string }) => {
     setSelectedKey(newKey);
-    setHarmonizerScore((prev) => ({
-      ...prev,
-      key: newKey,
-    }));
+    // Do NOT rewrite harmonizerScore.key: exporting old voicings under a new
+    // key/meter used to produce a Frankenstein file.
   };
 
   // Grader complete handler — isolated to graderScore

@@ -151,6 +151,14 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
     }
   }, [timeSignature]);
 
+  // Stop the MIDI metronome and detach the device listener when the input
+  // unmounts (tab switch): otherwise the click keeps ticking forever.
+  useEffect(() => {
+    return () => {
+      webMidiManager.cleanup();
+    };
+  }, []);
+
   const addNote = (pitch: number, name: string) => {
     audioEngine.playNote(0, pitch, 0.4);
     const newNote: MelodyNote = {

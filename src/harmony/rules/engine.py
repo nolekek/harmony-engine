@@ -406,6 +406,18 @@ class RuleEngine:
         else:
             soft_cost = self.compute_initial_cost(curr_voicing, chord=curr_chord, key=key)
 
+        # Cadential 6/4 must resolve to the dominant: it can never be the
+        # final chord of a piece.
+        if is_final_chord and parse_chord_symbol(curr_chord) in ("K64", "k64"):
+            violations.append(
+                RuleViolation(
+                    rule_id="CADENCE_K64_FINAL",
+                    severity="hard_gate",
+                    penalty=100000.0,
+                    description="K64 must resolve to D/D7 and cannot be the final chord",
+                )
+            )
+
         # 4. Determine validity and final cost
         has_hard = any(v.is_hard for v in violations)
         if has_hard:

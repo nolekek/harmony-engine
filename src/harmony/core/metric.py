@@ -122,6 +122,12 @@ class MetricGrid:
             dur_q = parse_duration_quarters(dur_raw)
             measure_duration = curr_time_sig.measure_duration_quarters
             quarter_per_beat = 4.0 / curr_time_sig.beat_type
+            if measure_duration <= 1e-6 or quarter_per_beat <= 1e-6:
+                # Defensive: a degenerate meter (0/4, 4/0) must never spin the
+                # measure-advance loop forever. Fall back to 4/4.
+                curr_time_sig = TimeSignature(4, 4)
+                measure_duration = curr_time_sig.measure_duration_quarters
+                quarter_per_beat = 4.0 / curr_time_sig.beat_type
 
             # Advance measure if offset exceeds measure length
             while curr_offset >= measure_duration - 1e-4:

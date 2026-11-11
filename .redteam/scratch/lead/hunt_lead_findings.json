@@ -1,0 +1,742 @@
+[
+  {
+    "kind": "fifth_missing",
+    "detail": "C Major 3/4 len6 repeat [69, 64, 62, 65, 64, 60]: [4 III6] pcs=[4, 7]",
+    "label": "C Major 3/4 len6 repeat [69, 64, 62, 65, 64, 60]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C Major 3/4 len6 repeat [69, 64, 62, 65, 64, 60]: [4 III6] pcs=[4, 7]",
+    "label": "C Major 3/4 len6 repeat [69, 64, 62, 65, 64, 60]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C Major 6/8 len2 repeat [65, 60]: [0 S6] pcs=[5, 9]",
+    "label": "C Major 6/8 len2 repeat [65, 60]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]: [5 D7] pcs=[5, 7, 11]",
+    "label": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]: [3 D7] pcs=[5, 7, 11]",
+    "label": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]: [5 D7] pcs=[5, 7, 11]",
+    "label": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]: [5 D7] pcs=[5, 7, 11]",
+    "label": "C Major 6/8 len8 diath [69, 67, 65, 65, 62, 65, 62, 60]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 4/4 len4 diath [68, 63, 66, 61]: [2 S6] pcs=[6, 10]",
+    "label": "C# Major 4/4 len4 diath [68, 63, 66, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 4/4 len4 diath [68, 63, 66, 61]: [2 S6] pcs=[6, 10]",
+    "label": "C# Major 4/4 len4 diath [68, 63, 66, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 4/4 len4 diath [68, 63, 66, 61]: [2 S6] pcs=[6, 10]",
+    "label": "C# Major 4/4 len4 diath [68, 63, 66, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 3/4 len4 diath [66, 61, 61, 61]: [0 S6] pcs=[6, 10]",
+    "label": "C# Major 3/4 len4 diath [66, 61, 61, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 2/4 len2 diath [66, 61]: [0 S6] pcs=[6, 10]",
+    "label": "C# Major 2/4 len2 diath [66, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 2/4 len6 repeat [68, 65, 66, 68, 63, 61]: [2 S6] pcs=[6, 10]",
+    "label": "C# Major 2/4 len6 repeat [68, 65, 66, 68, 63, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 2/4 len6 repeat [68, 65, 66, 68, 63, 61]: [2 S6] pcs=[6, 10]",
+    "label": "C# Major 2/4 len6 repeat [68, 65, 66, 68, 63, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 2/4 len6 repeat [68, 65, 66, 68, 63, 61]: [2 S6] pcs=[6, 10]",
+    "label": "C# Major 2/4 len6 repeat [68, 65, 66, 68, 63, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 6/8 len2 diath [66, 61]: [0 S6] pcs=[6, 10]",
+    "label": "C# Major 6/8 len2 diath [66, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 6/8 len4 diath [66, 70, 70, 61]: [0 S6] pcs=[6, 10]",
+    "label": "C# Major 6/8 len4 diath [66, 70, 70, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 6/8 len4 diath [66, 70, 70, 61]: [0 II6] pcs=[3, 6]",
+    "label": "C# Major 6/8 len4 diath [66, 70, 70, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 6/8 len6 diath [70, 68, 63, 60, 68, 61]: [1 III6] pcs=[5, 8]",
+    "label": "C# Major 6/8 len6 diath [70, 68, 63, 60, 68, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 6/8 len6 diath [70, 68, 63, 60, 68, 61]: [1 III6] pcs=[5, 8]",
+    "label": "C# Major 6/8 len6 diath [70, 68, 63, 60, 68, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# Major 6/8 len6 diath [70, 68, 63, 60, 68, 61]: [1 III6] pcs=[5, 8]",
+    "label": "C# Major 6/8 len6 diath [70, 68, 63, 60, 68, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "C# MinorHarmonic 4/4 len2 diath [66, 61]: [0 S6] pcs=[6, 9]",
+    "label": "C# MinorHarmonic 4/4 len2 diath [66, 61]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 4/4 len2 chroma [67, 62]: [0 S6] pcs=[7, 11]",
+    "label": "D Major 4/4 len2 chroma [67, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 4/4 len4 diath [67, 66, 69, 62]: [0 D7] pcs=[1, 7, 9]",
+    "label": "D Major 4/4 len4 diath [67, 66, 69, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 4/4 len6 repeat [67, 71, 62, 71, 66, 62]: [0 S6] pcs=[7, 11]",
+    "label": "D Major 4/4 len6 repeat [67, 71, 62, 71, 66, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 4/4 len6 repeat [67, 71, 62, 71, 66, 62]: [0 S6] pcs=[7, 11]",
+    "label": "D Major 4/4 len6 repeat [67, 71, 62, 71, 66, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 3/4 len2 chroma [61, 62]: [0 D7] pcs=[1, 7, 9]",
+    "label": "D Major 3/4 len2 chroma [61, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]: [1 III6] pcs=[6, 9]",
+    "label": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]: [2 III6] pcs=[6, 9]",
+    "label": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]: [1 III6] pcs=[6, 9]",
+    "label": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]: [2 III6] pcs=[6, 9]",
+    "label": "D Major 6/8 len6 repeat [67, 66, 66, 64, 71, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D MinorHarmonic 4/4 len2 chroma [67, 62]: [0 S6] pcs=[7, 10]",
+    "label": "D MinorHarmonic 4/4 len2 chroma [67, 62]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]: [3 DD] pcs=[4, 11]",
+    "label": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]: [0 S6] pcs=[7, 10]",
+    "label": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]: [3 DD] pcs=[4, 11]",
+    "label": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]: [0 S6] pcs=[7, 10]",
+    "label": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]: [3 DD] pcs=[4, 11]",
+    "label": "D MinorHarmonic 4/4 len6 diath [67, 62, 64, 71, 69, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D MinorHarmonic 3/4 len2 chroma [67, 62]: [0 S6] pcs=[7, 10]",
+    "label": "D MinorHarmonic 3/4 len2 chroma [67, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D MinorHarmonic 3/4 len4 chroma [67, 69, 60, 62]: [0 S6] pcs=[7, 10]",
+    "label": "D MinorHarmonic 3/4 len4 chroma [67, 69, 60, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D MinorHarmonic 2/4 len2 repeat [61, 62]: [0 D7] pcs=[1, 7, 9]",
+    "label": "D MinorHarmonic 2/4 len2 repeat [61, 62]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 3/4 len2 diath [62, 63]: [0 D7] pcs=[2, 8, 10]",
+    "label": "D# Major 3/4 len2 diath [62, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]: [4 T6] pcs=[3, 7]",
+    "label": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]: [6 III6] pcs=[7, 10]",
+    "label": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]: [4 T6] pcs=[3, 7]",
+    "label": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]: [6 III6] pcs=[7, 10]",
+    "label": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]: [4 T6] pcs=[3, 7]",
+    "label": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]: [6 III6] pcs=[7, 10]",
+    "label": "D# Major 3/4 len8 repeat [63, 62, 62, 60, 63, 68, 67, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# Major 6/8 len6 repeat [67, 65, 65, 62, 68, 63]: [0 T6] pcs=[3, 7]",
+    "label": "D# Major 6/8 len6 repeat [67, 65, 65, 62, 68, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# MinorHarmonic 4/4 len2 diath [68, 63]: [0 S6] pcs=[8, 11]",
+    "label": "D# MinorHarmonic 4/4 len2 diath [68, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# MinorHarmonic 3/4 len2 repeat [68, 63]: [0 S6] pcs=[8, 11]",
+    "label": "D# MinorHarmonic 3/4 len2 repeat [68, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# MinorHarmonic 2/4 len6 repeat [62, 62, 62, 68, 62, 63]: [4 D7] pcs=[2, 8, 10]",
+    "label": "D# MinorHarmonic 2/4 len6 repeat [62, 62, 62, 68, 62, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# MinorHarmonic 2/4 len6 repeat [62, 62, 62, 68, 62, 63]: [4 D7] pcs=[2, 8, 10]",
+    "label": "D# MinorHarmonic 2/4 len6 repeat [62, 62, 62, 68, 62, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "D# MinorHarmonic 6/8 len2 diath [62, 63]: [0 D7] pcs=[2, 8, 10]",
+    "label": "D# MinorHarmonic 6/8 len2 diath [62, 63]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 4/4 len6 diath [64, 64, 68, 69, 64, 64]: [2 T6] pcs=[4, 8]",
+    "label": "E Major 4/4 len6 diath [64, 64, 68, 69, 64, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 4/4 len6 diath [64, 64, 68, 69, 64, 64]: [2 III6] pcs=[8, 11]",
+    "label": "E Major 4/4 len6 diath [64, 64, 68, 69, 64, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 3/4 len4 chroma [68, 64, 62, 64]: [0 T6] pcs=[4, 8]",
+    "label": "E Major 3/4 len4 chroma [68, 64, 62, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 2/4 len4 repeat [63, 64, 61, 64]: [0 D7] pcs=[3, 9, 11]",
+    "label": "E Major 2/4 len4 repeat [63, 64, 61, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 2/4 len4 repeat [63, 64, 61, 64]: [0 D7] pcs=[3, 9, 11]",
+    "label": "E Major 2/4 len4 repeat [63, 64, 61, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 6/8 len2 diath [63, 64]: [0 D7] pcs=[3, 9, 11]",
+    "label": "E Major 6/8 len2 diath [63, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 6/8 len6 diath [69, 66, 66, 69, 71, 64]: [0 S6] pcs=[1, 9]",
+    "label": "E Major 6/8 len6 diath [69, 66, 66, 69, 71, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E Major 6/8 len6 diath [69, 66, 66, 69, 71, 64]: [3 S6] pcs=[1, 9]",
+    "label": "E Major 6/8 len6 diath [69, 66, 66, 69, 71, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E MinorHarmonic 3/4 len6 chroma [66, 71, 66, 66, 63, 64]: [4 D7] pcs=[3, 9, 11]",
+    "label": "E MinorHarmonic 3/4 len6 chroma [66, 71, 66, 66, 63, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "E MinorHarmonic 6/8 len2 chroma [69, 64]: [0 S6] pcs=[0, 9]",
+    "label": "E MinorHarmonic 6/8 len2 chroma [69, 64]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "E MinorHarmonic 6/8 len4 diath [71, 66, 63, 64]: [1 DD] pcs=[1, 6]",
+    "label": "E MinorHarmonic 6/8 len4 diath [71, 66, 63, 64]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]: [1 II6] pcs=[7, 10]",
+    "label": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]: [1 II6] pcs=[7, 10]",
+    "label": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]: [1 II6] pcs=[7, 10]",
+    "label": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]: [4 D7] pcs=[0, 4, 10]",
+    "label": "F Major 3/4 len6 diath [60, 67, 62, 62, 64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F Major 6/8 len2 diath [64, 65]: [0 D7] pcs=[0, 4, 10]",
+    "label": "F Major 6/8 len2 diath [64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 4/4 len2 diath [70, 65]: [0 S6] pcs=[1, 10]",
+    "label": "F MinorHarmonic 4/4 len2 diath [70, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 3/4 len2 diath [70, 65]: [0 S6] pcs=[1, 10]",
+    "label": "F MinorHarmonic 3/4 len2 diath [70, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 3/4 len6 diath [70, 67, 64, 65, 60, 65]: [2 D7] pcs=[0, 4, 10]",
+    "label": "F MinorHarmonic 3/4 len6 diath [70, 67, 64, 65, 60, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 3/4 len6 diath [70, 67, 64, 65, 60, 65]: [2 D7] pcs=[0, 4, 10]",
+    "label": "F MinorHarmonic 3/4 len6 diath [70, 67, 64, 65, 60, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 3/4 len6 diath [70, 67, 64, 65, 60, 65]: [2 D7] pcs=[0, 4, 10]",
+    "label": "F MinorHarmonic 3/4 len6 diath [70, 67, 64, 65, 60, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 2/4 len2 repeat [64, 65]: [0 D7] pcs=[0, 4, 10]",
+    "label": "F MinorHarmonic 2/4 len2 repeat [64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 6/8 len2 diath [70, 65]: [0 S6] pcs=[1, 10]",
+    "label": "F MinorHarmonic 6/8 len2 diath [70, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 6/8 len4 diath [64, 65, 64, 65]: [0 D7] pcs=[0, 4, 10]",
+    "label": "F MinorHarmonic 6/8 len4 diath [64, 65, 64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F MinorHarmonic 6/8 len4 diath [64, 65, 64, 65]: [2 D7] pcs=[0, 4, 10]",
+    "label": "F MinorHarmonic 6/8 len4 diath [64, 65, 64, 65]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 4/4 len2 diath [71, 66]: [0 S6] pcs=[3, 11]",
+    "label": "F# Major 4/4 len2 diath [71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 3/4 len2 diath [71, 66]: [0 S6] pcs=[3, 11]",
+    "label": "F# Major 3/4 len2 diath [71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]: [0 S6] pcs=[3, 11]",
+    "label": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]: [5 S6] pcs=[3, 11]",
+    "label": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]: [6 S6] pcs=[3, 11]",
+    "label": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]: [5 S6] pcs=[3, 11]",
+    "label": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]: [6 S6] pcs=[3, 11]",
+    "label": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]: [0 S6] pcs=[3, 11]",
+    "label": "F# Major 3/4 len8 repeat [71, 66, 68, 66, 66, 71, 71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 2/4 len2 diath [71, 66]: [0 S6] pcs=[3, 11]",
+    "label": "F# Major 2/4 len2 diath [71, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 2/4 len6 diath [61, 65, 70, 71, 70, 66]: [4 III6] pcs=[1, 10]",
+    "label": "F# Major 2/4 len6 diath [61, 65, 70, 71, 70, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 2/4 len6 diath [61, 65, 70, 71, 70, 66]: [4 III6] pcs=[1, 10]",
+    "label": "F# Major 2/4 len6 diath [61, 65, 70, 71, 70, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 2/4 len6 diath [61, 65, 70, 71, 70, 66]: [4 III6] pcs=[1, 10]",
+    "label": "F# Major 2/4 len6 diath [61, 65, 70, 71, 70, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 2/4 len8 diath [71, 66, 66, 70, 66, 63, 65, 66]: [6 D7] pcs=[1, 5, 11]",
+    "label": "F# Major 2/4 len8 diath [71, 66, 66, 70, 66, 63, 65, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 6/8 len2 diath [65, 66]: [0 D7] pcs=[1, 5, 11]",
+    "label": "F# Major 6/8 len2 diath [65, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 6/8 len8 repeat [66, 63, 71, 63, 71, 63, 61, 66]: [2 II6] pcs=[8, 11]",
+    "label": "F# Major 6/8 len8 repeat [66, 63, 71, 63, 71, 63, 61, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# Major 6/8 len8 repeat [66, 63, 71, 63, 71, 63, 61, 66]: [2 II6] pcs=[8, 11]",
+    "label": "F# Major 6/8 len8 repeat [66, 63, 71, 63, 71, 63, 61, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "F# MinorHarmonic 6/8 len6 diath [66, 61, 61, 66, 68, 66]: [3 T6] pcs=[6, 9]",
+    "label": "F# MinorHarmonic 6/8 len6 diath [66, 61, 61, 66, 68, 66]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 4/4 len8 repeat [69, 69, 62, 71, 67, 64, 62, 67]: [3 T6] pcs=[7, 11]",
+    "label": "G Major 4/4 len8 repeat [69, 69, 62, 71, 67, 64, 62, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 4/4 len8 repeat [69, 69, 62, 71, 67, 64, 62, 67]: [4 T6] pcs=[7, 11]",
+    "label": "G Major 4/4 len8 repeat [69, 69, 62, 71, 67, 64, 62, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 3/4 len4 repeat [64, 62, 69, 67]: [0 S6] pcs=[0, 4]",
+    "label": "G Major 3/4 len4 repeat [64, 62, 69, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 3/4 len8 diath [66, 62, 62, 71, 62, 71, 66, 67]: [6 D7] pcs=[0, 2, 6]",
+    "label": "G Major 3/4 len8 diath [66, 62, 62, 71, 62, 71, 66, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 2/4 len8 repeat [60, 62, 71, 66, 66, 69, 62, 67]: [6 D7] pcs=[0, 2, 6]",
+    "label": "G Major 2/4 len8 repeat [60, 62, 71, 66, 66, 69, 62, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]: [3 T6] pcs=[7, 11]",
+    "label": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]: [3 T6] pcs=[7, 11]",
+    "label": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]: [5 T6] pcs=[7, 11]",
+    "label": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]: [3 T6] pcs=[7, 11]",
+    "label": "G Major 6/8 len8 diath [71, 67, 62, 67, 67, 67, 69, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G MinorHarmonic 3/4 len2 diath [66, 67]: [0 D7] pcs=[0, 2, 6]",
+    "label": "G MinorHarmonic 3/4 len2 diath [66, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G MinorHarmonic 6/8 len4 diath [62, 62, 66, 67]: [1 D7] pcs=[0, 2, 6]",
+    "label": "G MinorHarmonic 6/8 len4 diath [62, 62, 66, 67]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G# Major 3/4 len4 diath [67, 63, 70, 68]: [1 D7] pcs=[1, 3, 7]",
+    "label": "G# Major 3/4 len4 diath [67, 63, 70, 68]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]: [6 T6] pcs=[0, 8]",
+    "label": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]: [6 T6] pcs=[0, 8]",
+    "label": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]: [4 DD7] pcs=[2, 8, 10]",
+    "label": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]: [6 T6] pcs=[0, 8]",
+    "label": "G# Major 2/4 len8 chroma [60, 63, 68, 61, 62, 63, 68, 68]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "G# Major 6/8 len2 diath [67, 68]: [0 D7] pcs=[1, 3, 7]",
+    "label": "G# Major 6/8 len2 diath [67, 68]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A Major 4/4 len6 diath [68, 64, 69, 66, 71, 69]: [2 T6] pcs=[1, 9]",
+    "label": "A Major 4/4 len6 diath [68, 64, 69, 66, 71, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A Major 4/4 len6 diath [68, 64, 69, 66, 71, 69]: [2 T6] pcs=[1, 9]",
+    "label": "A Major 4/4 len6 diath [68, 64, 69, 66, 71, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A Major 4/4 len6 diath [68, 64, 69, 66, 71, 69]: [2 T6] pcs=[1, 9]",
+    "label": "A Major 4/4 len6 diath [68, 64, 69, 66, 71, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A Major 3/4 len6 diath [61, 62, 69, 66, 64, 69]: [4 D7] pcs=[2, 4, 8]",
+    "label": "A Major 3/4 len6 diath [61, 62, 69, 66, 64, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A Major 3/4 len6 diath [61, 62, 69, 66, 64, 69]: [2 T6] pcs=[1, 9]",
+    "label": "A Major 3/4 len6 diath [61, 62, 69, 66, 64, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A Major 2/4 len6 diath [61, 69, 61, 66, 68, 69]: [4 D7] pcs=[2, 4, 8]",
+    "label": "A Major 2/4 len6 diath [61, 69, 61, 66, 68, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A Major 6/8 len4 repeat [69, 71, 66, 69]: [0 T6] pcs=[1, 9]",
+    "label": "A Major 6/8 len4 repeat [69, 71, 66, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A MinorHarmonic 6/8 len2 repeat [68, 69]: [0 D7] pcs=[2, 4, 8]",
+    "label": "A MinorHarmonic 6/8 len2 repeat [68, 69]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 3/4 len2 chroma [69, 70]: [0 D7] pcs=[3, 5, 9]",
+    "label": "A# Major 3/4 len2 chroma [69, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 3/4 len4 diath [62, 69, 69, 70]: [2 D7] pcs=[3, 5, 9]",
+    "label": "A# Major 3/4 len4 diath [62, 69, 69, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len2 diath [69, 70]: [0 D7] pcs=[3, 5, 9]",
+    "label": "A# Major 6/8 len2 diath [69, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len6 diath [60, 63, 70, 65, 62, 70]: [1 S6] pcs=[3, 7]",
+    "label": "A# Major 6/8 len6 diath [60, 63, 70, 65, 62, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len6 diath [60, 63, 70, 65, 62, 70]: [1 S6] pcs=[3, 7]",
+    "label": "A# Major 6/8 len6 diath [60, 63, 70, 65, 62, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [2 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [3 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [4 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [5 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [2 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [3 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [4 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [2 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [3 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]: [4 T6] pcs=[2, 10]",
+    "label": "A# Major 6/8 len8 diath [67, 65, 70, 70, 70, 70, 67, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# MinorHarmonic 4/4 len6 diath [65, 70, 63, 69, 70, 70]: [3 D7] pcs=[3, 5, 9]",
+    "label": "A# MinorHarmonic 4/4 len6 diath [65, 70, 63, 69, 70, 70]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "A# MinorHarmonic 3/4 len4 repeat [63, 67, 65, 70]: [1 DD] pcs=[0, 7]",
+    "label": "A# MinorHarmonic 3/4 len4 repeat [63, 67, 65, 70]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]: [1 DD] pcs=[0, 7]",
+    "label": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]: [3 D7] pcs=[3, 5, 9]",
+    "label": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]: [1 DD] pcs=[0, 7]",
+    "label": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]: [3 D7] pcs=[3, 5, 9]",
+    "label": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]"
+  },
+  {
+    "kind": "third_missing",
+    "detail": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]: [1 DD] pcs=[0, 7]",
+    "label": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]: [3 D7] pcs=[3, 5, 9]",
+    "label": "A# MinorHarmonic 3/4 len6 diath [63, 67, 63, 69, 70, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# MinorHarmonic 6/8 len6 diath [69, 60, 69, 65, 69, 70]: [4 D7] pcs=[3, 5, 9]",
+    "label": "A# MinorHarmonic 6/8 len6 diath [69, 60, 69, 65, 69, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "A# MinorHarmonic 6/8 len6 diath [69, 60, 69, 65, 69, 70]: [4 D7] pcs=[3, 5, 9]",
+    "label": "A# MinorHarmonic 6/8 len6 diath [69, 60, 69, 65, 69, 70]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "B Major 4/4 len4 diath [61, 66, 70, 71]: [2 D7] pcs=[4, 6, 10]",
+    "label": "B Major 4/4 len4 diath [61, 66, 70, 71]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "B Major 4/4 len4 diath [61, 66, 70, 71]: [2 D7] pcs=[4, 6, 10]",
+    "label": "B Major 4/4 len4 diath [61, 66, 70, 71]"
+  },
+  {
+    "kind": "fifth_missing",
+    "detail": "B Major 2/4 len2 repeat [70, 71]: [0 D7] pcs=[4, 6, 10]",
+    "label": "B Major 2/4 len2 repeat [70, 71]"
+  }
+]

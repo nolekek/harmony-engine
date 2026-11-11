@@ -52,6 +52,14 @@ def build_colored_musicxml(
     
     root = ET.fromstring(raw_xml)
 
+    def _is_tie_continuation(note: ET.Element) -> bool:
+        """True when this <note> is the continuation slice of a note tied over a barline."""
+        tie_types = [t.get("type") for t in note.findall("tie")]
+        if "stop" in tie_types and "start" not in tie_types:
+            return True
+        tied_types = [t.get("type") for t in note.findall(".//tied")]
+        return "stop" in tied_types and "start" not in tied_types
+
     # Process each measure
     measures = root.findall(".//measure")
     chord_idx = 0
@@ -70,7 +78,7 @@ def build_colored_musicxml(
                 lyric_el = note.find("lyric")
                 if lyric_el is not None:
                     txt_el = lyric_el.find("text")
-                    if txt_el is not None and txt_el.text:
+                    if txt_el is not None and txt_el.text and not _is_tie_continuation(note):
                         measure_chords.append(txt_el.text.strip())
                     note.remove(lyric_el)
 
@@ -88,6 +96,9 @@ def build_colored_musicxml(
 
             # If note is Bass (staff 2, voice 4), add lyric under bass
             if staff_val == "2" and v_val == "4":
+                if _is_tie_continuation(note):
+                    # Same harmony carried over the barline: no duplicate lyric.
+                    continue
                 if bass_note_counter < len(measure_chords):
                     chord_text = measure_chords[bass_note_counter]
                     lyric = ET.SubElement(note, "lyric", number="1")

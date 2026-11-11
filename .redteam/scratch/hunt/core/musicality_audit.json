@@ -1,0 +1,321 @@
+[
+  {
+    "index": 1,
+    "description": "Diatonic arpeggio & descent",
+    "key": "C Major",
+    "meter": "4/4",
+    "notes": [
+      60,
+      64,
+      67,
+      72,
+      71,
+      69,
+      67,
+      60
+    ],
+    "chords": [
+      "T",
+      "VI",
+      "D2",
+      "T6",
+      "III6",
+      "S6",
+      "D6",
+      "T"
+    ],
+    "cost": 38.8,
+    "suspicious": [
+      "FINAL_NOT_AUTHENTIC_CADENCE: Cadence is D6 -> T (not dominant preparation)",
+      "UNPREPARED_VI at step 1: 'VI' without preceding dominant in context ['T', 'VI', 'D2']",
+      "PATCH_III_CHORD at step 4: 'III6' used in context ['T6', 'III6', 'S6']"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 2,
+    "description": "Turn and cadence in G",
+    "key": "G Major",
+    "meter": "3/4",
+    "notes": [
+      67,
+      69,
+      71,
+      74,
+      72,
+      71,
+      69,
+      67
+    ],
+    "chords": [
+      "S",
+      "II",
+      "T",
+      "T",
+      "S",
+      "T",
+      "D7",
+      "T"
+    ],
+    "cost": 30.5,
+    "suspicious": [
+      "START_NOT_TONIC: Piece starts with S instead of tonic T/t",
+      "REPEATED_CHORD at step 3: 'T' repeated from previous step"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 3,
+    "description": "Ascending scale A minor",
+    "key": "A MinorHarmonic",
+    "meter": "4/4",
+    "notes": [
+      69,
+      71,
+      72,
+      74,
+      76,
+      77,
+      80,
+      81
+    ],
+    "chords": [
+      "T",
+      "II6",
+      "III6",
+      "II6",
+      "T",
+      "S6",
+      "D7",
+      "T"
+    ],
+    "cost": 35.85,
+    "suspicious": [
+      "PATCH_III_CHORD at step 2: 'III6' used in context ['II6', 'III6', 'II6']"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 4,
+    "description": "Descending scale A minor",
+    "key": "A MinorHarmonic",
+    "meter": "4/4",
+    "notes": [
+      81,
+      80,
+      77,
+      76,
+      74,
+      72,
+      71,
+      69
+    ],
+    "chords": [
+      "T",
+      "D",
+      "VII7",
+      "T",
+      "D7",
+      "T",
+      "D7",
+      "T"
+    ],
+    "cost": 33.35,
+    "suspicious": [],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 5,
+    "description": "F major lyric melody",
+    "key": "F Major",
+    "meter": "2/4",
+    "notes": [
+      65,
+      69,
+      72,
+      70,
+      69,
+      67,
+      65
+    ],
+    "chords": [
+      "T6",
+      "K64",
+      "D",
+      "VII6",
+      "T6",
+      "D6",
+      "T"
+    ],
+    "cost": 27.3,
+    "suspicious": [
+      "START_NOT_TONIC: Piece starts with T6 instead of tonic T/t",
+      "FINAL_NOT_AUTHENTIC_CADENCE: Cadence is D6 -> T (not dominant preparation)"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 6,
+    "description": "D minor 6/8 compound",
+    "key": "D MinorHarmonic",
+    "meter": "6/8",
+    "notes": [
+      62,
+      65,
+      69,
+      70,
+      69,
+      67,
+      65,
+      64,
+      62
+    ],
+    "chords": [
+      "S",
+      "T",
+      "T",
+      "S",
+      "T",
+      "S",
+      "K64",
+      "D7",
+      "T"
+    ],
+    "cost": 39.75,
+    "suspicious": [
+      "START_NOT_TONIC: Piece starts with S instead of tonic T/t",
+      "REPEATED_CHORD at step 2: 'T' repeated from previous step"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 7,
+    "description": "E major chorale tune",
+    "key": "E Major",
+    "meter": "4/4",
+    "notes": [
+      64,
+      68,
+      71,
+      73,
+      71,
+      69,
+      68,
+      64
+    ],
+    "chords": [
+      "T",
+      "VI",
+      "III6",
+      "II6",
+      "III6",
+      "S6",
+      "T",
+      "T"
+    ],
+    "cost": 43.7,
+    "suspicious": [
+      "FINAL_NOT_AUTHENTIC_CADENCE: Cadence is T -> T (not dominant preparation)",
+      "UNPREPARED_VI at step 1: 'VI' without preceding dominant in context ['T', 'VI', 'III6']",
+      "PATCH_III_CHORD at step 2: 'III6' used in context ['VI', 'III6', 'II6']",
+      "PATCH_III_CHORD at step 4: 'III6' used in context ['II6', 'III6', 'S6']",
+      "REPEATED_CHORD at step 7: 'T' repeated from previous step"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 8,
+    "description": "Bb major arc",
+    "key": "Bb Major",
+    "meter": "3/4",
+    "notes": [
+      70,
+      72,
+      74,
+      75,
+      74,
+      72,
+      70
+    ],
+    "chords": [
+      "T",
+      "II6",
+      "T6",
+      "S6",
+      "T6",
+      "D6",
+      "T"
+    ],
+    "cost": 20.900000000000002,
+    "suspicious": [
+      "FINAL_NOT_AUTHENTIC_CADENCE: Cadence is D6 -> T (not dominant preparation)"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 9,
+    "description": "C major ascending octave",
+    "key": "C Major",
+    "meter": "4/4",
+    "notes": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ],
+    "chords": [
+      "S",
+      "II",
+      "T",
+      "S",
+      "T",
+      "II6",
+      "D7",
+      "T"
+    ],
+    "cost": 40.1,
+    "suspicious": [
+      "START_NOT_TONIC: Piece starts with S instead of tonic T/t"
+    ],
+    "mismatched_voicings": []
+  },
+  {
+    "index": 10,
+    "description": "E minor leaps",
+    "key": "E MinorHarmonic",
+    "meter": "4/4",
+    "notes": [
+      64,
+      67,
+      71,
+      70,
+      71,
+      74,
+      75,
+      76
+    ],
+    "chords": [
+      "T",
+      "VI",
+      "III6",
+      "III6",
+      "T",
+      "III6",
+      "D",
+      "T"
+    ],
+    "cost": 38.65,
+    "suspicious": [
+      "UNPREPARED_VI at step 1: 'VI' without preceding dominant in context ['T', 'VI', 'III6']",
+      "PATCH_III_CHORD at step 2: 'III6' used in context ['VI', 'III6', 'III6']",
+      "PATCH_III_CHORD at step 3: 'III6' used in context ['III6', 'III6', 'T']",
+      "PATCH_III_CHORD at step 5: 'III6' used in context ['T', 'III6', 'D']",
+      "REPEATED_CHORD at step 3: 'III6' repeated from previous step"
+    ],
+    "mismatched_voicings": []
+  }
+]

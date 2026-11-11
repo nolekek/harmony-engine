@@ -32,6 +32,38 @@ app = FastAPI(
     version="1.0.0",
 )
 
+MAX_REQUEST_BYTES = 2 * 1024 * 1024  # 2 MB body limit (ReDoS / slowloris guard)
+
+
+@app.middleware("http")
+async def request_context_middleware(request: Request, call_next):
+    """Attaches a request id to every response and rejects oversized bodies."""
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    request.state.request_id = request_id
+
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > MAX_REQUEST_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "detail": "Тело запроса слишком большое (лимит 2 МБ).",
+                        "request_id": request_id,
+                    },
+                    headers={"X-Request-ID": request_id},
+                )
+        except ValueError:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Неверный заголовок Content-Length.", "request_id": request_id},
+                headers={"X-Request-ID": request_id},
+            )
+
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -59,9 +91,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         )
 
     error_id = str(uuid.uuid4())
+    request_id = getattr(request.state, "request_id", None) or error_id
     logger.exception(
-        "Unhandled exception [error_id=%s] on %s %s: %s",
+        "Unhandled exception [error_id=%s][request_id=%s] on %s %s: %s",
         error_id,
+        request_id,
         request.method,
         request.url.path,
         exc,
@@ -69,6 +103,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal Server Error", "error_id": error_id},
+        headers={"X-Request-ID": request_id},
     )
 
 

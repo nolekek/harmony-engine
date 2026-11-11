@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Play,
   Square,
@@ -43,6 +43,15 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     false,
     false,
   ]);
+
+  // Unmount (tab switch, navigation) must silence playback: the engine is a
+  // module singleton, so without this the chord sequence keeps playing and the
+  // component tries to update a detached tab's state.
+  useEffect(() => {
+    return () => {
+      audioEngine.stop();
+    };
+  }, []);
 
   const handlePlayToggle = () => {
     if (isPlaying) {

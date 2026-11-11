@@ -6,12 +6,47 @@ and third doubling in deceptive cadence (VI after D/D7).
 
 from typing import Any
 from collections import Counter
+import re
+
 from src.harmony.core.types import (
     RuleViolation,
     to_satb,
     parse_key,
     parse_chord_symbol,
 )
+
+# Triad symbols (root position, first inversion '6', second inversion '64') and
+# seventh-chord symbols (7, 65, 43, 2). Completeness rules must cover ALL of
+# them, not just root-position triads: a dominant without its leading tone is
+# not a dominant, and a seventh chord without its third is not a chord at all.
+_TRIAD_RE = re.compile(
+    r"^(T|t|S|s|D|d|II|ii|III|iii|VI|vi|VII|vii|DD|dd|K64)(53|6|64)?$"
+)
+_SEVENTH_RE = re.compile(
+    r"^(T|t|S|s|D|d|II|ii|III|iii|VI|vi|VII|vii|DD|dd)(7|65|43|2)$"
+)
+
+
+def _seventh_pcs(symbol: str, tonic_pc: int, mode: str) -> set[int]:
+    """Pitch classes allowed for the chord seventh of a seventh-chord symbol."""
+    sym = symbol.strip().upper()
+    is_minor = "MINOR" in mode.upper() or symbol.strip().islower()
+    if sym.startswith("DD"):
+        return {tonic_pc % 12}
+    if sym.startswith("VII"):
+        # The leading-tone seventh is a half-diminished VII7 in minor and a
+        # diminished VII7 (harmonic mixture) in major; the engine accepts both
+        # spellings of the seventh (Ab and A in C).
+        return {(tonic_pc + 8) % 12} if is_minor else {(tonic_pc + 8) % 12, (tonic_pc + 9) % 12}
+    if sym.startswith("II"):
+        return {tonic_pc % 12}
+    if sym.startswith("VI"):
+        return {(tonic_pc + 7) % 12}
+    if sym.startswith("IV") or sym.startswith("S"):
+        return {(tonic_pc + 3 if is_minor else tonic_pc + 4) % 12}
+    if sym.startswith("T"):
+        return {(tonic_pc + 11) % 12}
+    return {(tonic_pc + 5) % 12}
 
 
 def get_triad_tones(symbol: str, tonic_pc: int, mode: str) -> tuple[int, int, int]:
@@ -119,13 +154,18 @@ def check_triad_completeness(
     is_final_chord: bool = False,
 ) -> list[RuleViolation]:
     """
-    Checks triad completeness for root-position triads (T/S/D/VI/II/III and minor variants):
-    - Third is strictly required in ALL positions, including final chord (CHORD_THIRD_MISSING).
-    - Fifth is required in non-final chords (CHORD_FIFTH_MISSING).
-    - Incomplete triad (tripled root with third, omitting fifth) is permissible ONLY if is_final_chord=True.
+    Chord-tone completeness for triads (all inversions, DD, K64) and seventh chords:
+    - Third is strictly required everywhere (CHORD_THIRD_MISSING).
+    - Triads: fifth is required, except a first inversion of a non-diminished triad
+      (canon: the 5th may be omitted, but not in 2nd inversion or diminished chords)
+      and the canonical incomplete final tonic (tripled root + third).
+    - Seventh chords: fifth may be omitted (incomplete V7 doubles the root), but
+      root, third and seventh are mandatory.
     """
     sym = parse_chord_symbol(chord).strip().replace("/", "")
-    if sym not in TRIAD_SYMBOLS:
+    triad_match = _TRIAD_RE.match(sym)
+    seventh_match = _SEVENTH_RE.match(sym)
+    if not (triad_match or seventh_match):
         return []
 
     tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
@@ -137,31 +177,52 @@ def check_triad_completeness(
 
     violations: list[RuleViolation] = []
 
-    # 1. Third is mandatory in ALL triads (including final chord!)
-    if counts[third] == 0:
+    def _add(rule_id: str, description: str) -> None:
         violations.append(
             RuleViolation(
-                rule_id="CHORD_THIRD_MISSING",
+                rule_id=rule_id,
                 severity="hard_gate",
                 penalty=100000.0,
-                description=f"Triad '{sym}' is missing mandatory third (PC {third})",
+                description=description,
             )
         )
 
-    # 2. Fifth requirement
-    if counts[fifth] == 0:
-        # Incomplete triad allowed ONLY on final chord with tripled root and present third
-        if is_final_chord and counts[root] == 3 and counts[third] == 1 and sym in ("T", "t", "T53", "t53"):
-            pass  # Allowed canonical incomplete final tonic triad
-        else:
-            violations.append(
-                RuleViolation(
-                    rule_id="CHORD_FIFTH_MISSING",
-                    severity="hard_gate",
-                    penalty=100000.0,
-                    description=f"Triad '{sym}' is missing fifth (PC {fifth})",
-                )
+    # 1. Third is mandatory in every chord, every inversion, including the final one.
+    if counts[third] == 0:
+        _add("CHORD_THIRD_MISSING", f"Chord '{sym}' is missing mandatory third (PC {third})")
+
+    if seventh_match:
+        # 2. Seventh chords: root, third and seventh are mandatory; fifth optional.
+        seventh_pcs = _seventh_pcs(sym, tonic_pc, mode)
+        if counts[root] == 0:
+            _add("CHORD_ROOT_MISSING", f"Seventh chord '{sym}' is missing its root (PC {root})")
+        if not any(counts[pc] > 0 for pc in seventh_pcs):
+            _add(
+                "CHORD_SEVENTH_MISSING",
+                f"Seventh chord '{sym}' is missing its seventh "
+                f"(expected one of PCs {sorted(seventh_pcs)})",
             )
+        return violations
+
+    # 3. Triads: fifth rules.
+    if counts[fifth] == 0:
+        group = triad_match.group(1)
+        inversion = triad_match.group(2) or "53"
+        is_diminished = ((third - root) % 12 == 3) and ((fifth - root) % 12 == 6)
+        allowed = False
+        if inversion == "6" and not is_diminished and counts[third] <= 1:
+            # canon: 5th may be omitted in a non-diminished first inversion,
+            # but not while the bass (third) is doubled: that hollows the chord.
+            allowed = True
+        if (
+            is_final_chord
+            and counts[root] == 3
+            and counts[third] == 1
+            and group.upper() == "T"
+        ):
+            allowed = True  # canonical incomplete final tonic (tripled root)
+        if not allowed:
+            _add("CHORD_FIFTH_MISSING", f"Chord '{sym}' is missing fifth (PC {fifth})")
 
     return violations
 
@@ -190,7 +251,8 @@ def check_main_triad_doubling(
 
     # Check if coming from VII7 resolution: in VII7 -> T, doubling the third of T is mandatory!
     prev_sym = parse_chord_symbol(prev_chord) if prev_chord is not None else ""
-    if sym in ("T", "t") and prev_sym.startswith("VII"):
+    VII7_FAMILY = {"VII7", "vii7", "VII65", "vii65", "VII43", "vii43", "VII2", "vii2"}
+    if sym in ("T", "t") and prev_sym in VII7_FAMILY:
         if counts[third] < 2:
             return [
                 RuleViolation(

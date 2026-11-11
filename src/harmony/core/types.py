@@ -275,7 +275,18 @@ def parse_chord_symbol(chord: Any) -> str:
     if isinstance(chord, str):
         sym = chord
     elif isinstance(chord, Chord):
+        # Preserve the inversion of the core Chord model: Chord("T", inversion=1)
+        # is T6, not a root-position T. Seventh chords use 65/43/2.
         sym = chord.function
+        inv = int(getattr(chord, "inversion", 0) or 0)
+        if getattr(chord, "is_seventh", False):
+            seventh_suffix = {1: "65", 2: "43", 3: "2"}.get(inv)
+            if seventh_suffix:
+                sym = f"{sym}{seventh_suffix}"
+        else:
+            triad_suffix = {1: "6", 2: "64"}.get(inv)
+            if triad_suffix:
+                sym = f"{sym}{triad_suffix}"
     elif hasattr(chord, "function"):
         fn = chord.function
         fn_val = fn.value if hasattr(fn, "value") else str(fn)
@@ -331,6 +342,10 @@ class TimeSignature:
     @property
     def measure_duration_quarters(self) -> float:
         """Total duration of one complete measure in quarter notes."""
+        # Degenerate meters (0 beats, 0 denominator) used to yield 0 and spin
+        # the measure-advance loop forever; clamp to one quarter note instead.
+        if self.beats <= 0 or self.beat_type <= 0:
+            return 1.0
         return self.beats * (4.0 / self.beat_type)
 
     @classmethod
@@ -347,7 +362,16 @@ class TimeSignature:
                 return cls(2, 2)
             if "/" in s:
                 parts = s.split("/")
-                return cls(int(parts[0]), int(parts[1]))
+                try:
+                    beats_val = int(parts[0])
+                    beat_type_val = int(parts[1])
+                except (ValueError, IndexError):
+                    return cls(4, 4)
+                # Reject nonsense meters (0/0, 7/0, negative) before they reach
+                # any division: they used to crash with ZeroDivisionError.
+                if beats_val <= 0 or beats_val > 32 or beat_type_val not in (1, 2, 4, 8, 16, 32):
+                    return cls(4, 4)
+                return cls(beats_val, beat_type_val)
         return cls(4, 4)
 
     def is_downbeat(self, beat_offset_quarters: float) -> bool:
@@ -390,6 +414,9 @@ DURATION_TO_QUARTERS: dict[str, float] = {
     "dotted_sixteenth": 0.375,
     "sixteenth": 0.25,
 }
+
+#: Duration spellings accepted by the public API (numeric strings are validated separately).
+VALID_DURATIONS: frozenset[str] = frozenset(DURATION_TO_QUARTERS)
 
 
 def parse_duration_quarters(dur: Any) -> float:

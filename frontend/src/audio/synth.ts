@@ -23,6 +23,7 @@ export class AudioEngine {
   private preset: InstrumentPreset = "piano";
   private isPlaying: boolean = false;
   private playbackTimer: number | null = null;
+  private activeOscillators: Set<OscillatorNode> = new Set();
 
   public mutes: [boolean, boolean, boolean, boolean] = [false, false, false, false];
   public solos: [boolean, boolean, boolean, boolean] = [false, false, false, false];
@@ -98,7 +99,9 @@ export class AudioEngine {
     if (this.preset === "piano") {
       // Piano: warm percussive attack, rich harmonics
       const osc1 = this.ctx.createOscillator();
+      this.activeOscillators.add(osc1);
       const osc2 = this.ctx.createOscillator();
+      this.activeOscillators.add(osc2);
       const noteGain = this.ctx.createGain();
       const filter = this.ctx.createBiquadFilter();
 
@@ -129,7 +132,9 @@ export class AudioEngine {
     } else if (this.preset === "choir") {
       // Choir Pad: lush detuned triangle/saw with slow vocal formant envelope
       const oscA = this.ctx.createOscillator();
+      this.activeOscillators.add(oscA);
       const oscB = this.ctx.createOscillator();
+      this.activeOscillators.add(oscB);
       const noteGain = this.ctx.createGain();
       const filter = this.ctx.createBiquadFilter();
 
@@ -172,6 +177,7 @@ export class AudioEngine {
 
       freqs.forEach((f, i) => {
         const osc = this.ctx!.createOscillator();
+      this.activeOscillators.add(osc);
         const g = this.ctx!.createGain();
         osc.type = i === 0 ? "triangle" : "sine";
         osc.frequency.setValueAtTime(f, now);
@@ -246,6 +252,19 @@ export class AudioEngine {
       clearTimeout(this.playbackTimer);
       this.playbackTimer = null;
     }
+    // Silence already-scheduled oscillators: clearing the timer alone leaves
+    // the current chord ringing until its scheduled stop time.
+    if (this.ctx) {
+      const now = this.ctx.currentTime;
+      this.activeOscillators.forEach((osc) => {
+        try {
+          osc.stop(now + 0.02);
+        } catch {
+          // already stopped
+        }
+      });
+    }
+    this.activeOscillators.clear();
   }
 
   public getIsPlaying(): boolean {

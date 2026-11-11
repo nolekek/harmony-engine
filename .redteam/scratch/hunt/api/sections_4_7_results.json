@@ -1,0 +1,164 @@
+{
+  "4_export": {
+    "midi_empty_voicings": {
+      "status": 200,
+      "bytes": 125,
+      "media_type": "audio/midi"
+    },
+    "xml_empty_voicings": {
+      "status": 200,
+      "bytes": 482,
+      "media_type": "application/vnd.recordare.musicxml+xml"
+    },
+    "midi_durations_shorter": {
+      "status": 200,
+      "bytes": 197
+    },
+    "midi_durations_longer": {
+      "status": 200,
+      "bytes": 197
+    },
+    "xml_durations_shorter": {
+      "status": 200,
+      "bytes": 5119
+    },
+    "xml_durations_longer": {
+      "status": 200,
+      "bytes": 5119
+    },
+    "xml_foreign_chords": {
+      "status": 200,
+      "bytes": 5275,
+      "contains_chord": true
+    },
+    "midi_ts_abc": {
+      "status": 200,
+      "bytes": 197
+    },
+    "xml_ts_abc": {
+      "status": 200,
+      "bytes": 5119
+    },
+    "midi_ts_4_0": {
+      "status": 500,
+      "body": "{\"detail\":\"Internal Server Error\",\"error_id\":\"b4530f52-ea78-45f4-a07a-b496435afca7\"}"
+    },
+    "xml_ts_4_0": {
+      "status": 500,
+      "body": "{\"detail\":\"Internal Server Error\",\"error_id\":\"00c7d623-70aa-467a-9360-1a197262387e\"}"
+    },
+    "midi_valid_file": {
+      "valid": true,
+      "size": 197
+    },
+    "musicxml_valid_xml": {
+      "valid": true,
+      "has_score_partwise": true
+    }
+  },
+  "5_infrastructure": {
+    "404_/api/nonexistent": {
+      "status": 404,
+      "is_json": true,
+      "body": "{\"detail\":\"Not Found\"}"
+    },
+    "404_/api/v1/invalid": {
+      "status": 404,
+      "is_json": true,
+      "body": "{\"detail\":\"Not Found\"}"
+    },
+    "404_/api/test/123": {
+      "status": 404,
+      "is_json": true,
+      "body": "{\"detail\":\"Not Found\"}"
+    },
+    "500_handler": {
+      "status": 500,
+      "has_traceback_leak": false,
+      "has_error_id": true,
+      "body": "{\"detail\":\"Internal Server Error\",\"error_id\":\"8eb2f210-8204-47d7-ba87-4a7d7de2e517\"}"
+    },
+    "request_id_audit": {
+      "health_200": {
+        "header_request_id": null,
+        "body_request_id": null,
+        "body_error_id": null
+      },
+      "harmonize_400": {
+        "header_request_id": null,
+        "body_request_id": null,
+        "body_error_id": null
+      },
+      "unknown_404": {
+        "header_request_id": null,
+        "body_request_id": null,
+        "body_error_id": null
+      }
+    }
+  },
+  "6_security": {
+    "cors_evil_options": {
+      "status": 400,
+      "allow_origin": null
+    },
+    "cors_evil_post": {
+      "status": 200,
+      "allow_origin": null
+    },
+    "cors_localhost_5173": {
+      "status": 200,
+      "allow_origin": "http://localhost:5173"
+    },
+    "body_size_1mb": {
+      "status": 200,
+      "time_ms": 9662.46
+    },
+    "body_size_5mb": {
+      "status": "ERR",
+      "error": "timed out"
+    },
+    "body_size_20mb": {
+      "status": "ERR",
+      "error": "timed out"
+    },
+    "path_traversal": {
+      "../../../../etc/passwd": {
+        "status": 400,
+        "returned_filename": null,
+        "body": "{\"detail\":\"Неподдерживаемый формат файла. Поддерживаются .musicxml, .xml, .mid, .midi\"}"
+      },
+      "..\\..\\..\\windows\\win.ini": {
+        "status": 400,
+        "returned_filename": null,
+        "body": "{\"detail\":\"Неподдерживаемый формат файла. Поддерживаются .musicxml, .xml, .mid, .midi\"}"
+      },
+      "C:\\Windows\\System32\\drivers\\etc\\hosts": {
+        "status": 400,
+        "returned_filename": null,
+        "body": "{\"detail\":\"Неподдерживаемый формат файла. Поддерживаются .musicxml, .xml, .mid, .midi\"}"
+      },
+      "safe_name.xml\u0000evil.exe": {
+        "status": 400,
+        "returned_filename": null,
+        "body": "{\"detail\":\"Неподдерживаемый формат файла. Поддерживаются .musicxml, .xml, .mid, .midi\"}"
+      }
+    }
+  },
+  "7_performance": {
+    "notes_8": {
+      "http_avg_ms": 1307.21,
+      "server_latency_ms": 986.82
+    },
+    "notes_32": {
+      "http_avg_ms": 1030.45,
+      "server_latency_ms": 622.91
+    },
+    "notes_128": {
+      "http_roundtrip_ms": 1521.48,
+      "server_latency_ms": 1194.99,
+      "status": 200,
+      "is_success": false
+    },
+    "server_healthy_after_128": true
+  }
+}

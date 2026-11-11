@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import io
 import time
-from typing import Any, Self
+from typing import Annotated, Any, Self
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 
-from src.harmony.core.types import Key, Chord, Voicing, PITCH_CLASS_NAMES
+from src.harmony.core.types import Key, Chord, Voicing, PITCH_CLASS_NAMES, VALID_DURATIONS
 from src.harmony.pipeline import Harmonizer
 from src.harmony.syntax.grammar import HarmonicGrammar
 from src.harmony.solver.viterbi import ViterbiSolver
@@ -43,6 +43,43 @@ VALID_MODES = {
     "dur",
     "moll",
 }
+
+
+def _check_time_signature(value: str) -> str:
+    """Validates a meter spelling; malformed meters are rejected with 422."""
+    text = str(value).strip()
+    parts = text.split("/")
+    if len(parts) != 2:
+        raise ValueError(
+            f"Неверный размер: '{value}'. Ожидается формат '<доли>/<знаменатель>', напр. 4/4."
+        )
+    try:
+        beats = int(parts[0])
+        beat_type = int(parts[1])
+    except ValueError as exc:
+        raise ValueError(f"Неверный размер: '{value}'.") from exc
+    if not (1 <= beats <= 32) or beat_type not in (1, 2, 4, 8, 16, 32):
+        raise ValueError(
+            f"Неверный размер: '{value}'. Допустимо: 1..32 долей, знаменатель из 1,2,4,8,16,32."
+        )
+    return f"{beats}/{beat_type}"
+
+
+TimeSignatureStr = Annotated[str, AfterValidator(_check_time_signature)]
+
+
+def _check_duration(value: str) -> str:
+    """Validates a note duration spelling; unknown strings are rejected with 422."""
+    text = str(value).strip().lower()
+    if text in VALID_DURATIONS:
+        return text
+    try:
+        float(text)
+        return text
+    except ValueError as exc:
+        raise ValueError(
+            f"Неизвестная длительность: '{value}'. Допустимые: {sorted(VALID_DURATIONS)}"
+        ) from exc
 
 
 VALID_CHORD_FUNCTIONS = {
@@ -116,11 +153,16 @@ class MelodyNoteItem(BaseModel):
     duration: str = "half"
     name: str | None = None
 
+    @field_validator("duration")
+    @classmethod
+    def validate_duration(cls, v: str) -> str:
+        return _check_duration(v)
+
 
 class HarmonizeRequest(BaseModel):
     melody: list[MelodyNoteItem] = Field(..., min_length=1, max_length=128)
     key: KeyRequest = Field(default_factory=KeyRequest)
-    time_signature: str = "4/4"
+    time_signature: TimeSignatureStr = "4/4"
     allow_extended_ranges: bool = False
     allow_secondary_dominants: bool = True
     max_plans: int = Field(default=50, ge=1, le=100)
@@ -135,14 +177,24 @@ class VoicingItem(BaseModel):
     is_downbeat: bool = False
     duration: str | None = None
 
+    @field_validator("duration")
+    @classmethod
+    def validate_duration(cls, v: str | None) -> str | None:
+        return None if v is None else _check_duration(v)
+
 
 class GradeRequest(BaseModel):
     voicings: list[VoicingItem] = Field(..., min_length=1)
     chords: list[str] = Field(..., min_length=1)
     key: KeyRequest = Field(default_factory=KeyRequest)
-    time_signature: str = "4/4"
+    time_signature: TimeSignatureStr = "4/4"
     durations: list[str] | None = None
     allow_extended_ranges: bool = False
+
+    @field_validator("durations")
+    @classmethod
+    def validate_durations(cls, v: list[str] | None) -> list[str] | None:
+        return None if v is None else [_check_duration(item) for item in v]
 
     @field_validator("chords")
     @classmethod
@@ -164,14 +216,19 @@ class GradeRequest(BaseModel):
 class ParseTextRequest(BaseModel):
     text: str
     key: KeyRequest = Field(default_factory=KeyRequest)
-    time_signature: str = "4/4"
+    time_signature: TimeSignatureStr = "4/4"
 
 
 class ExportMidiRequest(BaseModel):
     voicings: list[VoicingItem]
     bpm: int = 80
-    time_signature: str = "4/4"
+    time_signature: TimeSignatureStr = "4/4"
     durations: list[str] | None = None
+
+    @field_validator("durations")
+    @classmethod
+    def validate_durations(cls, v: list[str] | None) -> list[str] | None:
+        return None if v is None else [_check_duration(item) for item in v]
 
 
 class ExportMusicXmlRequest(BaseModel):
@@ -179,8 +236,13 @@ class ExportMusicXmlRequest(BaseModel):
     chords: list[str] | None = None
     key: KeyRequest = Field(default_factory=KeyRequest)
     title: str = "Harmonization Exercise"
-    time_signature: str = "4/4"
+    time_signature: TimeSignatureStr = "4/4"
     durations: list[str] | None = None
+
+    @field_validator("durations")
+    @classmethod
+    def validate_durations(cls, v: list[str] | None) -> list[str] | None:
+        return None if v is None else [_check_duration(item) for item in v]
 
 
 @router.get("/keys")
@@ -315,25 +377,35 @@ async def api_import_file(
     if filename.endswith((".xml", ".musicxml")):
         xml_text = content.decode("utf-8", errors="ignore")
         res = parse_musicxml_content(xml_text)
+        ts_info = res.get("time_signature") or {}
+        ts_str = f"{ts_info.get('beats', 4)}/{ts_info.get('beat_type', 4)}"
+        durations = [note.get("duration", "half") for note in res["soprano_melody"]]
         return {
             "format": "musicxml",
             "filename": filename,
             "soprano_melody": res["soprano_melody"],
             "satb_voicings": res["satb_voicings"],
             "chords": res["chords"],
+            "key": res["detected_key"],
             "detected_key": res["detected_key"],
+            "time_signature": ts_str,
+            "durations": durations,
         }
     elif filename.endswith((".mid", ".midi")):
         res = parse_midi_file(content)
         # Auto detect key from soprano
         detected_key = detect_key_from_melody(res["soprano_melody"]) if res["soprano_melody"] else CANONICAL_KEYS[0]
+        durations = [note.get("duration", "half") for note in res["soprano_melody"]]
         return {
             "format": "midi",
             "filename": filename,
             "soprano_melody": res["soprano_melody"],
             "satb_voicings": res["satb_voicings"],
             "chords": [],
+            "key": detected_key,
             "detected_key": detected_key,
+            "time_signature": str(res.get("time_signature", "4/4")),
+            "durations": durations,
         }
     else:
         raise HTTPException(
@@ -345,6 +417,8 @@ async def api_import_file(
 @router.post("/export/midi")
 def api_export_midi(req: ExportMidiRequest):
     """Exports SATB voicings to binary MIDI file download."""
+    if not req.voicings:
+        raise HTTPException(status_code=400, detail="Нет аккордов для экспорта.")
     voicings = [
         Voicing(soprano=v.soprano, alto=v.alto, tenor=v.tenor, bass=v.bass)
         for v in req.voicings
@@ -366,6 +440,15 @@ def api_export_midi(req: ExportMidiRequest):
 @router.post("/export/musicxml")
 def api_export_musicxml(req: ExportMusicXmlRequest):
     """Exports SATB voicings to MusicXML file download."""
+    if not req.voicings:
+        raise HTTPException(status_code=400, detail="Нет аккордов для экспорта.")
+    if req.chords:
+        for chord_symbol in req.chords:
+            if str(chord_symbol).strip() not in VALID_CHORD_FUNCTIONS:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Неизвестная функция аккорда: '{chord_symbol}'",
+                )
     voicings = [
         Voicing(soprano=v.soprano, alto=v.alto, tenor=v.tenor, bass=v.bass)
         for v in req.voicings
@@ -385,3 +468,4 @@ def api_export_musicxml(req: ExportMusicXmlRequest):
         media_type="application/vnd.recordare.musicxml+xml",
         headers={"Content-Disposition": 'attachment; filename="harmonization.musicxml"'},
     )
+

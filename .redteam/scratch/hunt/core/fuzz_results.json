@@ -1,0 +1,1284 @@
+{
+  "total": 360,
+  "success": 191,
+  "failed": 169,
+  "violations": [
+    {
+      "index": 11,
+      "key": "C Major",
+      "meter": "6/8",
+      "notes": [
+        71,
+        67
+      ],
+      "chords": [
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 12,
+      "key": "C Major",
+      "meter": "4/4",
+      "notes": [
+        74,
+        62,
+        67
+      ],
+      "chords": [
+        "II6",
+        "D7",
+        "D7"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 0 (II6): fifth PC 9 not in [2, 2, 5, 5]"
+      ]
+    },
+    {
+      "index": 17,
+      "key": "C Major",
+      "meter": "3/4",
+      "notes": [
+        65,
+        69,
+        62,
+        69,
+        60,
+        64,
+        60,
+        67
+      ],
+      "chords": [
+        "S6",
+        "VI",
+        "II6",
+        "II6",
+        "T6",
+        "T6",
+        "T6",
+        "T6"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 5 (T6): fifth PC 7 not in [4, 0, 0, 4]"
+      ]
+    },
+    {
+      "index": 18,
+      "key": "C Major",
+      "meter": "2/4",
+      "notes": [
+        71,
+        62,
+        60,
+        64,
+        64,
+        64,
+        62,
+        65,
+        60
+      ],
+      "chords": [
+        "D",
+        "D7",
+        "T",
+        "III6",
+        "VI",
+        "III",
+        "II6",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 3 (III6): fifth PC 11 not in [4, 7, 4, 7]",
+        "CHORD_FIFTH_MISSING at step 7 (S6): fifth PC 0 not in [5, 9, 5, 9]"
+      ]
+    },
+    {
+      "index": 24,
+      "key": "C Major",
+      "meter": "4/4",
+      "notes": [
+        60,
+        64,
+        60,
+        60
+      ],
+      "chords": [
+        "T",
+        "III6",
+        "T",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (III6): fifth PC 11 not in [4, 7, 4, 7]"
+      ]
+    },
+    {
+      "index": 30,
+      "key": "G Major",
+      "meter": "4/4",
+      "notes": [
+        78,
+        74
+      ],
+      "chords": [
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 31,
+      "key": "G Major",
+      "meter": "3/4",
+      "notes": [
+        72,
+        67,
+        74
+      ],
+      "chords": [
+        "S6",
+        "T",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 0 (S6): fifth PC 7 not in [0, 4, 0, 4]"
+      ]
+    },
+    {
+      "index": 38,
+      "key": "G Major",
+      "meter": "4/4",
+      "notes": [
+        71,
+        72,
+        71,
+        69,
+        72,
+        69,
+        67,
+        69,
+        72,
+        74
+      ],
+      "chords": [
+        "T",
+        "S6",
+        "III6",
+        "II6",
+        "II",
+        "D65",
+        "T",
+        "II6",
+        "VII7",
+        "T6"
+      ],
+      "violations": [
+        "NON_CHORD_TONE in lower voice Alto at step 8 (VII7): pitch 63 (PC 3) not in {0, 9, 4, 6}"
+      ]
+    },
+    {
+      "index": 48,
+      "key": "G Major",
+      "meter": "2/4",
+      "notes": [
+        71,
+        69,
+        71,
+        71,
+        72,
+        72,
+        72,
+        72,
+        74
+      ],
+      "chords": [
+        "T",
+        "II6",
+        "III6",
+        "VI",
+        "II6",
+        "II6",
+        "II6",
+        "II6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 4 (II6): fifth PC 4 not in [0, 9, 9, 0]",
+        "CHORD_FIFTH_MISSING at step 5 (II6): fifth PC 4 not in [0, 9, 9, 0]",
+        "CHORD_FIFTH_MISSING at step 6 (II6): fifth PC 4 not in [0, 9, 9, 0]",
+        "CHORD_FIFTH_MISSING at step 7 (II6): fifth PC 4 not in [0, 9, 9, 0]"
+      ]
+    },
+    {
+      "index": 58,
+      "key": "G Major",
+      "meter": "4/4",
+      "notes": [
+        71,
+        72,
+        69,
+        67,
+        71,
+        74,
+        76,
+        67
+      ],
+      "chords": [
+        "T",
+        "S6",
+        "D2",
+        "T6",
+        "T6",
+        "T6",
+        "S6",
+        "T6"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 4 (T6): fifth PC 2 not in [11, 7, 7, 11]"
+      ]
+    },
+    {
+      "index": 61,
+      "key": "D Major",
+      "meter": "3/4",
+      "notes": [
+        67,
+        62,
+        62
+      ],
+      "chords": [
+        "S6",
+        "VI",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 0 (S6): fifth PC 2 not in [7, 11, 7, 11]"
+      ]
+    },
+    {
+      "index": 68,
+      "key": "D Major",
+      "meter": "4/4",
+      "notes": [
+        66,
+        69,
+        71,
+        69,
+        71,
+        62,
+        74,
+        73,
+        64,
+        62
+      ],
+      "chords": [
+        "T",
+        "III",
+        "S6",
+        "T",
+        "S6",
+        "T6",
+        "T6",
+        "D7",
+        "D7",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 6 (T6): fifth PC 9 not in [2, 2, 2, 6]"
+      ]
+    },
+    {
+      "index": 73,
+      "key": "D Major",
+      "meter": "3/4",
+      "notes": [
+        69,
+        62,
+        66,
+        62
+      ],
+      "chords": [
+        "T6",
+        "T",
+        "III6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 2 (III6): fifth PC 1 not in [6, 9, 6, 9]"
+      ]
+    },
+    {
+      "index": 76,
+      "key": "D Major",
+      "meter": "4/4",
+      "notes": [
+        64,
+        64,
+        66,
+        67,
+        66,
+        62,
+        69
+      ],
+      "chords": [
+        "II",
+        "II",
+        "III6",
+        "S6",
+        "T6",
+        "S6",
+        "T6"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 4 (T6): fifth PC 9 not in [6, 2, 2, 6]"
+      ]
+    },
+    {
+      "index": 78,
+      "key": "D Major",
+      "meter": "2/4",
+      "notes": [
+        64,
+        67,
+        67,
+        66,
+        66,
+        66,
+        66,
+        64,
+        69
+      ],
+      "chords": [
+        "II",
+        "S6",
+        "D7",
+        "T",
+        "T6",
+        "T6",
+        "T6",
+        "D7",
+        "D7"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (S6): fifth PC 2 not in [7, 11, 7, 11]",
+        "CHORD_FIFTH_MISSING at step 4 (T6): fifth PC 9 not in [6, 2, 2, 6]",
+        "CHORD_FIFTH_MISSING at step 5 (T6): fifth PC 9 not in [6, 2, 2, 6]",
+        "CHORD_FIFTH_MISSING at step 6 (T6): fifth PC 9 not in [6, 2, 2, 6]"
+      ]
+    },
+    {
+      "index": 84,
+      "key": "D Major",
+      "meter": "4/4",
+      "notes": [
+        62,
+        64,
+        73,
+        69
+      ],
+      "chords": [
+        "T",
+        "II6",
+        "D7",
+        "D65"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D65 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 86,
+      "key": "D Major",
+      "meter": "2/4",
+      "notes": [
+        64,
+        67,
+        67,
+        66,
+        66,
+        62
+      ],
+      "chords": [
+        "II6",
+        "II",
+        "II",
+        "III6",
+        "III6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 3 (III6): fifth PC 1 not in [6, 9, 6, 9]",
+        "CHORD_FIFTH_MISSING at step 4 (III6): fifth PC 1 not in [6, 9, 6, 9]"
+      ]
+    },
+    {
+      "index": 89,
+      "key": "D Major",
+      "meter": "3/4",
+      "notes": [
+        71,
+        66,
+        73,
+        64,
+        69,
+        62,
+        69,
+        66,
+        69
+      ],
+      "chords": [
+        "VI",
+        "T",
+        "III",
+        "D2",
+        "T6",
+        "T6",
+        "T6",
+        "T6",
+        "T6"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 7 (T6): fifth PC 9 not in [6, 2, 2, 6]"
+      ]
+    },
+    {
+      "index": 90,
+      "key": "A Major",
+      "meter": "4/4",
+      "notes": [
+        80,
+        76
+      ],
+      "chords": [
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 98,
+      "key": "A Major",
+      "meter": "4/4",
+      "notes": [
+        73,
+        73,
+        74,
+        73,
+        74,
+        73,
+        71,
+        74,
+        78,
+        69
+      ],
+      "chords": [
+        "T",
+        "III6",
+        "II6",
+        "III6",
+        "II6",
+        "III6",
+        "II6",
+        "S6",
+        "II6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 5 (III6): fifth PC 8 not in [1, 4, 1, 4]",
+        "CHORD_FIFTH_MISSING at step 7 (S6): fifth PC 9 not in [2, 6, 2, 6]"
+      ]
+    },
+    {
+      "index": 101,
+      "key": "A Major",
+      "meter": "6/8",
+      "notes": [
+        80,
+        76
+      ],
+      "chords": [
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 107,
+      "key": "A Major",
+      "meter": "3/4",
+      "notes": [
+        73,
+        76,
+        71,
+        74,
+        69,
+        76,
+        71,
+        76
+      ],
+      "chords": [
+        "T",
+        "III",
+        "II6",
+        "VII7",
+        "T6",
+        "D6",
+        "D7",
+        "T"
+      ],
+      "violations": [
+        "NON_CHORD_TONE in lower voice Alto at step 3 (VII7): pitch 65 (PC 5) not in {8, 2, 11, 6}",
+        "CHORD_FIFTH_MISSING at step 4 (T6): fifth PC 4 not in [9, 1, 9, 1]"
+      ]
+    },
+    {
+      "index": 110,
+      "key": "A Major",
+      "meter": "4/4",
+      "notes": [
+        73,
+        71,
+        69,
+        71,
+        74,
+        73,
+        76,
+        78,
+        80,
+        71,
+        76
+      ],
+      "chords": [
+        "T",
+        "II6",
+        "T",
+        "II6",
+        "D65",
+        "T",
+        "III",
+        "S6",
+        "III6",
+        "D7",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (II6): fifth PC 6 not in [11, 2, 11, 2]",
+        "CHORD_FIFTH_MISSING at step 3 (II6): fifth PC 6 not in [11, 2, 11, 2]"
+      ]
+    },
+    {
+      "index": 115,
+      "key": "A Major",
+      "meter": "3/4",
+      "notes": [
+        74,
+        80,
+        73,
+        80,
+        76
+      ],
+      "chords": [
+        "S6",
+        "III6",
+        "T6",
+        "D7",
+        "D7"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 0 (S6): fifth PC 9 not in [2, 6, 2, 6]",
+        "CHORD_FIFTH_MISSING at step 2 (T6): fifth PC 4 not in [1, 9, 9, 1]"
+      ]
+    },
+    {
+      "index": 117,
+      "key": "A Major",
+      "meter": "6/8",
+      "notes": [
+        71,
+        73,
+        71,
+        69,
+        71,
+        73,
+        69
+      ],
+      "chords": [
+        "II",
+        "III6",
+        "II6",
+        "S6",
+        "II6",
+        "III6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (III6): fifth PC 8 not in [1, 4, 1, 4]",
+        "CHORD_FIFTH_MISSING at step 5 (III6): fifth PC 8 not in [1, 4, 1, 4]"
+      ]
+    },
+    {
+      "index": 133,
+      "key": "E Major",
+      "meter": "3/4",
+      "notes": [
+        73,
+        69,
+        64,
+        64
+      ],
+      "chords": [
+        "II6",
+        "S6",
+        "T",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (S6): fifth PC 4 not in [9, 1, 9, 1]"
+      ]
+    },
+    {
+      "index": 154,
+      "key": "F Major",
+      "meter": "4/4",
+      "notes": [
+        79,
+        67,
+        76,
+        74,
+        65,
+        65
+      ],
+      "chords": [
+        "II6",
+        "II",
+        "III6",
+        "S6",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 0 (II6): fifth PC 2 not in [7, 7, 10, 10]"
+      ]
+    },
+    {
+      "index": 161,
+      "key": "F Major",
+      "meter": "6/8",
+      "notes": [
+        76,
+        72
+      ],
+      "chords": [
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 164,
+      "key": "F Major",
+      "meter": "2/4",
+      "notes": [
+        67,
+        65,
+        69,
+        69,
+        72
+      ],
+      "chords": [
+        "II6",
+        "S6",
+        "T6",
+        "T6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 2 (T6): fifth PC 0 not in [9, 5, 5, 9]",
+        "CHORD_FIFTH_MISSING at step 3 (T6): fifth PC 0 not in [9, 5, 5, 9]"
+      ]
+    },
+    {
+      "index": 167,
+      "key": "F Major",
+      "meter": "3/4",
+      "notes": [
+        74,
+        69,
+        72,
+        67,
+        70,
+        76,
+        70,
+        72
+      ],
+      "chords": [
+        "S",
+        "T",
+        "T",
+        "II",
+        "S6",
+        "D7",
+        "D7",
+        "D7"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 4 (S6): fifth PC 5 not in [10, 2, 10, 2]"
+      ]
+    },
+    {
+      "index": 174,
+      "key": "F Major",
+      "meter": "4/4",
+      "notes": [
+        67,
+        70,
+        72,
+        72
+      ],
+      "chords": [
+        "II",
+        "S6",
+        "D7",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (S6): fifth PC 5 not in [10, 2, 10, 2]"
+      ]
+    },
+    {
+      "index": 182,
+      "key": "Bb Major",
+      "meter": "2/4",
+      "notes": [
+        72,
+        75,
+        75,
+        70
+      ],
+      "chords": [
+        "II",
+        "S6",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (S6): fifth PC 10 not in [3, 3, 7, 7]",
+        "CHORD_FIFTH_MISSING at step 2 (S6): fifth PC 10 not in [3, 3, 7, 7]"
+      ]
+    },
+    {
+      "index": 185,
+      "key": "Bb Major",
+      "meter": "3/4",
+      "notes": [
+        77,
+        74,
+        77,
+        69,
+        77,
+        74,
+        77
+      ],
+      "chords": [
+        "T",
+        "T6",
+        "D6",
+        "D7",
+        "D43",
+        "T6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (T6): fifth PC 5 not in [2, 10, 10, 2]",
+        "CHORD_FIFTH_MISSING at step 5 (T6): fifth PC 5 not in [2, 10, 2, 2]"
+      ]
+    },
+    {
+      "index": 187,
+      "key": "Bb Major",
+      "meter": "6/8",
+      "notes": [
+        72,
+        70,
+        72,
+        74,
+        72,
+        74,
+        75,
+        74,
+        70
+      ],
+      "chords": [
+        "II",
+        "S6",
+        "II6",
+        "III6",
+        "II6",
+        "III6",
+        "II6",
+        "III6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 3 (III6): fifth PC 9 not in [2, 5, 2, 5]",
+        "CHORD_FIFTH_MISSING at step 5 (III6): fifth PC 9 not in [2, 5, 2, 5]",
+        "CHORD_FIFTH_MISSING at step 7 (III6): fifth PC 9 not in [2, 5, 2, 5]"
+      ]
+    },
+    {
+      "index": 198,
+      "key": "Bb Major",
+      "meter": "2/4",
+      "notes": [
+        74,
+        74,
+        72,
+        72,
+        75,
+        75,
+        75,
+        75,
+        70
+      ],
+      "chords": [
+        "T",
+        "T",
+        "II6",
+        "II6",
+        "S6",
+        "S6",
+        "S6",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 4 (S6): fifth PC 10 not in [3, 3, 7, 7]",
+        "CHORD_FIFTH_MISSING at step 5 (S6): fifth PC 10 not in [3, 3, 7, 7]",
+        "CHORD_FIFTH_MISSING at step 6 (S6): fifth PC 10 not in [3, 3, 7, 7]",
+        "CHORD_FIFTH_MISSING at step 7 (S6): fifth PC 10 not in [3, 3, 7, 7]"
+      ]
+    },
+    {
+      "index": 205,
+      "key": "Bb Major",
+      "meter": "3/4",
+      "notes": [
+        75,
+        70,
+        74,
+        79,
+        70
+      ],
+      "chords": [
+        "S6",
+        "T",
+        "III6",
+        "II6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 0 (S6): fifth PC 10 not in [3, 7, 3, 7]",
+        "CHORD_FIFTH_MISSING at step 2 (III6): fifth PC 9 not in [2, 5, 2, 5]"
+      ]
+    },
+    {
+      "index": 210,
+      "key": "Eb Major",
+      "meter": "4/4",
+      "notes": [
+        65,
+        70
+      ],
+      "chords": [
+        "D7",
+        "D43"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D43 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 211,
+      "key": "Eb Major",
+      "meter": "3/4",
+      "notes": [
+        67,
+        74,
+        70
+      ],
+      "chords": [
+        "T",
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 224,
+      "key": "Eb Major",
+      "meter": "2/4",
+      "notes": [
+        65,
+        65,
+        65,
+        68,
+        63
+      ],
+      "chords": [
+        "II",
+        "II",
+        "II",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 3 (S6): fifth PC 3 not in [8, 0, 8, 0]"
+      ]
+    },
+    {
+      "index": 236,
+      "key": "Eb Major",
+      "meter": "2/4",
+      "notes": [
+        74,
+        74,
+        74,
+        74,
+        74,
+        70
+      ],
+      "chords": [
+        "D",
+        "D",
+        "D",
+        "D",
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 251,
+      "key": "A MinorHarmonic",
+      "meter": "6/8",
+      "notes": [
+        80,
+        76
+      ],
+      "chords": [
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 254,
+      "key": "A MinorHarmonic",
+      "meter": "2/4",
+      "notes": [
+        71,
+        71,
+        72,
+        72,
+        76
+      ],
+      "chords": [
+        "II6",
+        "II6",
+        "T6",
+        "T6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 2 (T6): fifth PC 4 not in [0, 9, 9, 0]",
+        "CHORD_FIFTH_MISSING at step 3 (T6): fifth PC 4 not in [0, 9, 9, 0]"
+      ]
+    },
+    {
+      "index": 256,
+      "key": "A MinorHarmonic",
+      "meter": "4/4",
+      "notes": [
+        71,
+        72,
+        71,
+        69,
+        71,
+        71,
+        76
+      ],
+      "chords": [
+        "II",
+        "III6",
+        "II6",
+        "T",
+        "D6",
+        "D7",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 1 (III6): fifth PC 7 not in [0, 4, 0, 4]"
+      ]
+    },
+    {
+      "index": 266,
+      "key": "A MinorHarmonic",
+      "meter": "2/4",
+      "notes": [
+        71,
+        71,
+        71,
+        74,
+        74,
+        69
+      ],
+      "chords": [
+        "II",
+        "II",
+        "II",
+        "S6",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 3 (S6): fifth PC 9 not in [2, 5, 2, 5]",
+        "CHORD_FIFTH_MISSING at step 4 (S6): fifth PC 9 not in [2, 5, 2, 5]"
+      ]
+    },
+    {
+      "index": 271,
+      "key": "E MinorHarmonic",
+      "meter": "3/4",
+      "notes": [
+        67,
+        75,
+        71
+      ],
+      "chords": [
+        "T",
+        "D7",
+        "D65"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D65 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 278,
+      "key": "E MinorHarmonic",
+      "meter": "4/4",
+      "notes": [
+        72,
+        69,
+        67,
+        67,
+        66,
+        66,
+        69,
+        71,
+        69,
+        64
+      ],
+      "chords": [
+        "VI",
+        "II",
+        "III6",
+        "III6",
+        "II6",
+        "II6",
+        "S6",
+        "III6",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 2 (III6): fifth PC 2 not in [7, 11, 7, 11]",
+        "CHORD_FIFTH_MISSING at step 3 (III6): fifth PC 2 not in [7, 11, 7, 11]",
+        "CHORD_FIFTH_MISSING at step 6 (S6): fifth PC 4 not in [9, 0, 9, 0]",
+        "CHORD_FIFTH_MISSING at step 8 (S6): fifth PC 4 not in [9, 0, 9, 0]"
+      ]
+    },
+    {
+      "index": 280,
+      "key": "E MinorHarmonic",
+      "meter": "2/4",
+      "notes": [
+        66,
+        66,
+        67,
+        67,
+        66,
+        66,
+        66,
+        69,
+        69,
+        72,
+        72,
+        71
+      ],
+      "chords": [
+        "II",
+        "II",
+        "III6",
+        "VI",
+        "II6",
+        "II6",
+        "II6",
+        "S6",
+        "S6",
+        "II6",
+        "II6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 7 (S6): fifth PC 4 not in [9, 0, 9, 0]",
+        "CHORD_FIFTH_MISSING at step 8 (S6): fifth PC 4 not in [9, 0, 9, 0]"
+      ]
+    },
+    {
+      "index": 281,
+      "key": "E MinorHarmonic",
+      "meter": "6/8",
+      "notes": [
+        75,
+        71
+      ],
+      "chords": [
+        "D",
+        "D6"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D6 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 284,
+      "key": "E MinorHarmonic",
+      "meter": "2/4",
+      "notes": [
+        66,
+        66,
+        67,
+        67,
+        71
+      ],
+      "chords": [
+        "II6",
+        "II6",
+        "T6",
+        "T6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 2 (T6): fifth PC 11 not in [7, 4, 4, 7]",
+        "CHORD_FIFTH_MISSING at step 3 (T6): fifth PC 11 not in [7, 4, 4, 7]"
+      ]
+    },
+    {
+      "index": 299,
+      "key": "E MinorHarmonic",
+      "meter": "3/4",
+      "notes": [
+        69,
+        64,
+        67,
+        75,
+        67,
+        75,
+        69,
+        75,
+        71
+      ],
+      "chords": [
+        "S",
+        "S6",
+        "T",
+        "VII6",
+        "T6",
+        "D7",
+        "D7",
+        "D7",
+        "D7"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 4 (T6): fifth PC 11 not in [7, 4, 4, 7]"
+      ]
+    },
+    {
+      "index": 300,
+      "key": "D MinorHarmonic",
+      "meter": "4/4",
+      "notes": [
+        64,
+        69
+      ],
+      "chords": [
+        "D7",
+        "D43"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D43 is not T or D cadence"
+      ]
+    },
+    {
+      "index": 332,
+      "key": "C MinorHarmonic",
+      "meter": "2/4",
+      "notes": [
+        62,
+        62,
+        65,
+        60
+      ],
+      "chords": [
+        "II",
+        "II",
+        "S6",
+        "T"
+      ],
+      "violations": [
+        "CHORD_FIFTH_MISSING at step 2 (S6): fifth PC 0 not in [5, 8, 5, 8]"
+      ]
+    },
+    {
+      "index": 355,
+      "key": "C MinorHarmonic",
+      "meter": "3/4",
+      "notes": [
+        63,
+        68,
+        65,
+        71,
+        67
+      ],
+      "chords": [
+        "T",
+        "S",
+        "II",
+        "D7",
+        "D65"
+      ],
+      "violations": [
+        "INVALID_FINAL_CHORD: final chord D65 is not T or D cadence"
+      ]
+    }
+  ]
+}
