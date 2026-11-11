@@ -124,6 +124,16 @@ bounded replanning. Главный архитектурный долг — ди�
 | 7 | Незастаженный хак в рабочей копии | **CLOSED** — дерево чистое, всё в коммитах |
 | 8 | `chromatic 5` `[60,63,64,62,60]` → FAILED (`FALSE_RELATION_PERECHENIE`, тенор E3 vs альтерированное сопрано Eb4) | **OPEN** — вне скоупа P2-фиксов, нужен отдельный разбор |
 
+## 5.1 Статус фиче-флагов (проверено в `cad006b`)
+
+| Флаг | Дефолт | Где реализован | Семантика |
+|---|---|---|---|
+| `allow_adjacent_unisons` | `False` | `viterbi.py:72`, `pipeline.py:115,279`, `backend/service.py:68`, `backend/api.py:178` | thread-local `set_unisons_allowed`, снимает hard-`VOICE_UNISON` в state_generator; в API — opt-in |
+| `relax_hard_gates` | `False` | `viterbi.py:73`, `pipeline.py:116,280`, `backend/service.py:69`, `backend/api.py:179` | last-resort escape hatch: hard-нарушение получает штраф 10000, метаданные `relaxed_rule_ids` / `had_relaxed_violations`; **строгий план всегда предпочтительнее релаксации** — повторный strict-прогон в `Harmonizer.harmonize` и `HarmonizationService` (`service.py:160` принудительно ставит `relax_hard_gates=False` для strict-прохода) |
+
+Оба флага прокинуты до API и не включаются молча; `allow_extended_ranges` тоже `False` по умолчанию,
+но с P2-фикса автоматически включается для мелодий вне `[60,81]` (факт виден в `auto_extended_ranges`).
+
 ## 6. Известные ограничения (не блокеры)
 
 - Хроматика (N/bVI/альтерации) абсорбируется не полностью: `[60,63,64,62,60]` → отказ.
