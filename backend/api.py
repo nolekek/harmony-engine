@@ -114,6 +114,15 @@ VALID_CHORD_FUNCTIONS = {
     "D7V", "DV", "D7/V", "D/V", "d7v", "dv", "d7/v", "d/v",
     # Secondary dominants
     "D7II", "D/II", "D7/II", "D7VI", "D/VI", "D7/VI", "D7IV", "D/IV", "D7/IV",
+    # Neapolitan chord (bII)
+    "N", "N6", "N53", "N64", "N-6",
+    "n", "n6", "n53", "n64", "n-6",
+    "bII", "bII6", "bII53", "bII-6",
+    "bii", "bii6", "bii53", "bii-6",
+    # Chromatic submediant (bVI)
+    "bVI", "bVI6", "bVI53", "bVI64", "bVI-6",
+    "bvi", "bvi6", "bvi53", "bvi64", "bvi-6",
+    "BVI", "BVI6", "BVI53", "BVI64", "BVI-6",
 }
 
 

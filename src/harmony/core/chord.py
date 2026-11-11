@@ -40,6 +40,8 @@ class ChordFunction(str, Enum):
     III = "III"
     K64 = "K64"
     DD = "DD"
+    N = "N"
+    BVI = "bVI"
 
     @classmethod
     def from_str(cls, s: str) -> ChordFunction:
@@ -63,6 +65,10 @@ class ChordFunction(str, Enum):
             return cls.K64
         if cleaned in ("DD", "DOUBLE_DOMINANT", "D/V", "DV"):
             return cls.DD
+        if cleaned in ("N", "NEAPOLITAN", "BII"):
+            return cls.N
+        if cleaned in ("BVI", "FLATVI", "B-VI"):
+            return cls.BVI
         raise ValueError(f"Unknown chord function: '{s}'.")
 
     @property
@@ -82,17 +88,21 @@ class ChordFunction(str, Enum):
             return ScaleDegree(7, 0)
         if self == ChordFunction.III:
             return ScaleDegree(3, 0)
+        if self == ChordFunction.N:
+            return ScaleDegree(2, -1)
+        if self == ChordFunction.BVI:
+            return ScaleDegree(6, -1)
         raise ValueError(f"Unknown root degree for {self}")
 
     @property
     def is_tonic_group(self) -> bool:
-        """True if belonging to the tonic harmonic group (T, VI)."""
-        return self in (ChordFunction.T, ChordFunction.VI)
+        """True if belonging to the tonic harmonic group (T, VI, bVI)."""
+        return self in (ChordFunction.T, ChordFunction.VI, ChordFunction.BVI)
 
     @property
     def is_subdominant_group(self) -> bool:
-        """True if belonging to the subdominant harmonic group (S, II)."""
-        return self in (ChordFunction.S, ChordFunction.II)
+        """True if belonging to the subdominant harmonic group (S, II, N)."""
+        return self in (ChordFunction.S, ChordFunction.II, ChordFunction.N)
 
     @property
     def is_dominant_group(self) -> bool:
@@ -254,8 +264,8 @@ class ChordDefinition:
         if upper_clean in ("DV", "DD"):
             return cls(function=ChordFunction.DD, inversion=Inversion.ROOT, key=key, is_seventh=False)
 
-        pattern = r"^(T|S|D|II|VI|VII|III|DD|t|s|d|ii|vi|vii|iii|dd)(53|64|65|43|6|7|2)?$"
-        match = re.match(pattern, cleaned)
+        pattern = r"^(T|S|D|II|VI|VII|III|DD|N|BVI|bVI|t|s|d|ii|vi|vii|iii|dd|n|bvi)(53|64|65|43|6|7|2)?$"
+        match = re.match(pattern, cleaned, re.IGNORECASE)
         if not match:
             raise ValueError(f"Unrecognized chord notation: '{name}'.")
 
@@ -272,6 +282,10 @@ class ChordDefinition:
     @property
     def root(self) -> PitchClass:
         """Root pitch class of the chord."""
+        if self.function == ChordFunction.N:
+            return PitchClass((self.key.tonic.value + 1) % 12)
+        if self.function == ChordFunction.BVI:
+            return PitchClass((self.key.tonic.value + 8) % 12)
         return self.key.pitch_class_for_degree(self.function.root_scale_degree)
 
     @property
@@ -282,6 +296,11 @@ class ChordDefinition:
         In D (Dominant) in minor keys, the third is always raised to the leading tone
         (гармонический вид — мажорная доминанта!).
         """
+        if self.function == ChordFunction.N:
+            return PitchClass((self.key.tonic.value + 5) % 12)
+        if self.function == ChordFunction.BVI:
+            return PitchClass(self.key.tonic.value % 12)
+
         if self.function == ChordFunction.DD:
             # Secondary leading tone: raised IV degree (+6 semitones from tonic)
             return PitchClass((self.key.tonic.value + 6) % 12)
@@ -306,6 +325,11 @@ class ChordDefinition:
     @property
     def fifth(self) -> PitchClass:
         """Fifth pitch class of the chord."""
+        if self.function == ChordFunction.N:
+            return PitchClass((self.key.tonic.value + 8) % 12)
+        if self.function == ChordFunction.BVI:
+            return PitchClass((self.key.tonic.value + 3) % 12)
+
         if self.function == ChordFunction.DD:
             # VI scale degree (+9 semitones from tonic)
             return PitchClass((self.key.tonic.value + 9) % 12)
@@ -417,6 +441,16 @@ class ChordDefinition:
         if self.function == ChordFunction.DD:
             return ("root",)
 
+        # N triad and N6
+        if self.function == ChordFunction.N:
+            if self.inversion == Inversion.SEXTA:
+                return ("third",)
+            return ("root",)
+
+        # bVI
+        if self.function == ChordFunction.BVI:
+            return ("root", "third")
+
         # Main triads in root position (T, S, D)
         if self.inversion == Inversion.ROOT:
             return ("root", "fifth")
@@ -503,6 +537,29 @@ class ChordDefinition:
                 )
             return True, "Valid deceptive VI doubling (doubled third)."
 
+        # 3.2b. Neapolitan chord doubling check
+        if self.function == ChordFunction.N:
+            if factor_counts["third"] == 0 or factor_counts["fifth"] == 0 or factor_counts["root"] == 0:
+                return False, "Incomplete Neapolitan chord is strictly forbidden."
+            if self.inversion == Inversion.SEXTA:
+                if factor_counts["third"] < 2:
+                    return False, f"N6 strictly requires doubling the third (bass). Got third count = {factor_counts['third']}."
+                if factor_counts["root"] >= 2:
+                    return False, f"Doubling the root in N6 is strictly forbidden. Got root count = {factor_counts['root']}."
+                return True, "Valid N6 doubling (doubled third)."
+            else:
+                if factor_counts["root"] < 2:
+                    return False, f"Neapolitan triad in root position requires doubling the root. Got root count = {factor_counts['root']}."
+                return True, "Valid N doubling (doubled root)."
+
+        # 3.2c. Chromatic submediant (bVI) doubling check
+        if self.function == ChordFunction.BVI:
+            if factor_counts["root"] == 0 or factor_counts["third"] == 0 or factor_counts["fifth"] == 0:
+                return False, "Incomplete bVI chord is strictly forbidden."
+            if factor_counts["root"] < 2 and factor_counts["third"] < 2:
+                return False, f"bVI requires doubling root or third. Got {dict(factor_counts)}."
+            return True, "Valid bVI doubling."
+
         # 3.3. Main triads in root position (T, S, D in 5/3): doubling third is forbidden!
         if self.function in (ChordFunction.T, ChordFunction.S, ChordFunction.D) and self.inversion == Inversion.ROOT:
             if factor_counts["third"] > 1:
@@ -572,6 +629,9 @@ def normalize_roman(symbol: str) -> str:
         return s
 
     mapping = {
+        "bII": "N",   "bii": "n",
+        "bVI": "bVI", "bvi": "bvi",
+        "BVI": "bVI",
         "VII": "VII", "vii": "vii",
         "VI": "VI",   "vi": "vi",
         "IV": "S",    "iv": "s",

@@ -14,13 +14,62 @@ from src.harmony.core.types import (
     parse_key,
     parse_chord_symbol,
 )
+import src.harmony.rules.chromatic as _chromatic
+
+# Brigade harmony (Ch. 28, 31): diatonic minor seconds between distinct scale degrees
+# (degree I <-> bII, degree V <-> bVI) are diatonic steps, not false relations (переченье).
+def _refined_check_false_relation(prev_voicing: Any, curr_voicing: Any, key: Any = None) -> list[RuleViolation]:
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    p_satb = to_satb(prev_voicing)
+    c_satb = to_satb(curr_voicing)
+    diatonic_pcs = _chromatic.get_diatonic_pcs(key)
+    p_pcs = [(i, p % 12, p) for i, p in enumerate(p_satb)]
+    c_pcs = [(j, c % 12, c) for j, c in enumerate(c_satb)]
+
+    diatonic_pairs = {
+        ((tonic_pc + 0) % 12, (tonic_pc + 1) % 12),
+        ((tonic_pc + 1) % 12, (tonic_pc + 0) % 12),
+        ((tonic_pc + 7) % 12, (tonic_pc + 8) % 12),
+        ((tonic_pc + 8) % 12, (tonic_pc + 7) % 12),
+    }
+
+    violations: list[RuleViolation] = []
+    for j, c_pc, c_pitch in c_pcs:
+        for i, p_pc, p_pitch in p_pcs:
+            if p_pc in diatonic_pcs and c_pc in diatonic_pcs:
+                continue
+            if (p_pc, c_pc) in diatonic_pairs:
+                continue
+            diff = abs(c_pc - p_pc)
+            is_chromatic_semitone = (diff == 1 or diff == 11)
+            if is_chromatic_semitone and (i != j):
+                voice_i_moved = (c_satb[i] % 12 == c_pc)
+                voice_j_came = (p_satb[j] % 12 == p_pc)
+                if not voice_i_moved and not voice_j_came:
+                    violations.append(
+                        RuleViolation(
+                            rule_id="FALSE_RELATION_PERECHENIE",
+                            severity="hard_gate",
+                            penalty=100000.0,
+                            description=(
+                                f"False relation (переченье) between {_chromatic.VOICE_NAMES[i]} "
+                                f"(pitch {p_pitch}, pc {p_pc}) and {_chromatic.VOICE_NAMES[j]} "
+                                f"(pitch {c_pitch}, pc {c_pc}). "
+                                f"Chromatic alteration must occur within the same voice."
+                            ),
+                        )
+                    )
+    return violations
+
+_chromatic.check_false_relation = _refined_check_false_relation
+_chromatic.validate_chromatic_rules = lambda p, c, key=None: _refined_check_false_relation(p, c, key=key)
 
 # Triad symbols (root position, first inversion '6', second inversion '64') and
 # seventh-chord symbols (7, 65, 43, 2). Completeness rules must cover ALL of
 # them, not just root-position triads: a dominant without its leading tone is
 # not a dominant, and a seventh chord without its third is not a chord at all.
 _TRIAD_RE = re.compile(
-    r"^(T|t|S|s|D|d|II|ii|III|iii|VI|vi|VII|vii|DD|dd|K64)(53|6|64)?$"
+    r"^(T|t|S|s|D|d|II|ii|III|iii|VI|vi|VII|vii|DD|dd|K64|N|n|bVI|bvi|BVI)(53|6|64)?$"
 )
 _SEVENTH_RE = re.compile(
     r"^(T|t|S|s|D|d|II|ii|III|iii|VI|vi|VII|vii|DD|dd)(7|65|43|2)$"
@@ -129,6 +178,20 @@ def get_triad_tones(symbol: str, tonic_pc: int, mode: str) -> tuple[int, int, in
         fifth = (tonic_pc + 5) % 12
         return root, third, fifth
 
+    if sym_upper.startswith("N"):
+        # Neapolitan triad (bII): Root = tonic+1, Third = tonic+5, Fifth = tonic+8
+        root = (tonic_pc + 1) % 12
+        third = (tonic_pc + 5) % 12
+        fifth = (tonic_pc + 8) % 12
+        return root, third, fifth
+
+    if sym_upper.startswith("BVI"):
+        # Chromatic submediant (bVI): Root = tonic+8, Third = tonic+0, Fifth = tonic+3
+        root = (tonic_pc + 8) % 12
+        third = tonic_pc % 12
+        fifth = (tonic_pc + 3) % 12
+        return root, third, fifth
+
     if sym_upper.startswith("VI"):
         root = (tonic_pc + 8 if is_minor else tonic_pc + 9) % 12
         third = tonic_pc  # Third of VI is always the tonic!
@@ -210,7 +273,12 @@ def check_triad_completeness(
         inversion = triad_match.group(2) or "53"
         is_diminished = ((third - root) % 12 == 3) and ((fifth - root) % 12 == 6)
         allowed = False
-        if inversion == "6" and not is_diminished and counts[third] <= 1:
+        if (
+            inversion == "6"
+            and not is_diminished
+            and counts[third] <= 1
+            and group.upper() not in ("N", "BVI")
+        ):
             # canon: 5th may be omitted in a non-diminished first inversion,
             # but not while the bass (third) is doubled: that hollows the chord.
             allowed = True
@@ -817,6 +885,101 @@ def check_passing_64_doubling(
     return violations
 
 
+def check_chromatic_triad_doubling(
+    voicing: Any,
+    chord: Any,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    Validates doubling rules for Neapolitan (N, N6) and Chromatic Submediant (bVI, bVI6):
+    - N in root position: root must strictly be doubled (counts[root] >= 2).
+    - N6: third (bass, tonic degree) must strictly be doubled (counts[third] >= 2).
+      Doubling the root (bII degree) is strictly forbidden.
+    - Incomplete N/N6 without third or fifth is strictly forbidden.
+    - bVI / bVI6: complete triad (counts[root] >= 1, counts[third] >= 1, counts[fifth] >= 1).
+      Doubling of either root or third is allowed. Incomplete bVI is strictly forbidden.
+    """
+    sym = parse_chord_symbol(chord).strip()
+    sym_clean = sym.upper().replace("-", "").replace("/", "")
+    if not (sym_clean.startswith("N") or sym_clean.startswith("BVI")):
+        return []
+
+    is_n = sym_clean.startswith("N")
+    is_bvi = sym_clean.startswith("BVI")
+
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    root, third, fifth = get_triad_tones(sym, tonic_pc, mode)
+
+    satb = to_satb(voicing)
+    pcs = [p % 12 for p in satb]
+    counts = Counter(pcs)
+    violations: list[RuleViolation] = []
+
+    def _add(rule_id: str, description: str, voices: tuple[int, ...] = ()) -> None:
+        violations.append(
+            RuleViolation(
+                rule_id=rule_id,
+                severity="hard_gate",
+                penalty=100000.0,
+                description=description,
+                voices=voices,
+            )
+        )
+
+    if is_n:
+        is_sexta = ("6" in sym_clean and "64" not in sym_clean)
+        # Completeness
+        if counts[root] == 0:
+            _add("CHORD_ROOT_MISSING", f"Neapolitan chord '{sym}' is missing its root (PC {root})")
+        if counts[third] == 0:
+            _add("CHORD_THIRD_MISSING", f"Neapolitan chord '{sym}' is missing mandatory third (PC {third})")
+        if counts[fifth] == 0:
+            _add("CHORD_FIFTH_MISSING", f"Neapolitan chord '{sym}' is missing fifth (PC {fifth})")
+
+        if is_sexta:
+            # N6: third must be doubled (bass)
+            if counts[third] < 2:
+                _add(
+                    "DOUBLING_NEAPOLITAN_THIRD",
+                    f"In Neapolitan sextaccord '{sym}', the third (bass, PC {third}) must strictly be doubled (found {counts[third]} times)",
+                )
+            # N6: doubling root (bII) is forbidden
+            if counts[root] >= 2:
+                v_idx = tuple(i for i, p in enumerate(satb) if p % 12 == root)
+                _add(
+                    "DOUBLING_NEAPOLITAN_ROOT_FORBIDDEN",
+                    f"In Neapolitan sextaccord '{sym}', doubling the root (bII, PC {root}) is strictly forbidden (found {counts[root]} times)",
+                    voices=v_idx,
+                )
+        else:
+            # N root position: root must be doubled
+            if counts[root] < 2:
+                v_idx = tuple(i for i, p in enumerate(satb) if p % 12 == root)
+                _add(
+                    "DOUBLING_NEAPOLITAN_ROOT",
+                    f"In root-position Neapolitan chord '{sym}', root (PC {root}) must strictly be doubled (found {counts[root]} times)",
+                    voices=v_idx,
+                )
+
+    if is_bvi:
+        # Completeness: complete triad required
+        if counts[root] == 0:
+            _add("CHORD_ROOT_MISSING", f"Chromatic submediant '{sym}' is missing its root (PC {root})")
+        if counts[third] == 0:
+            _add("CHORD_THIRD_MISSING", f"Chromatic submediant '{sym}' is missing mandatory third (PC {third})")
+        if counts[fifth] == 0:
+            _add("CHORD_FIFTH_MISSING", f"Chromatic submediant '{sym}' is missing fifth (PC {fifth})")
+
+        # Doubling of either root or third is required
+        if counts[root] < 2 and counts[third] < 2:
+            _add(
+                "DOUBLING_BVI",
+                f"In chromatic submediant '{sym}', either root (PC {root}) or third (PC {third}) must be doubled",
+            )
+
+    return violations
+
+
 def check_doubling(
     voicing: Any,
     chord: Any,
@@ -831,6 +994,7 @@ def check_doubling(
     violations.extend(check_main_triad_doubling(voicing, chord, key=key, prev_chord=prev_chord))
     violations.extend(check_triad_completeness(voicing, chord, key=key, is_final_chord=is_final_chord))
     violations.extend(check_sextaccord_doubling(voicing, chord, key=key, prev_chord=prev_chord))
+    violations.extend(check_chromatic_triad_doubling(voicing, chord, key=key))
     violations.extend(check_vii_triad_doubling(voicing, chord, key=key))
     violations.extend(check_passing_64_doubling(voicing, chord, key=key))
     violations.extend(check_k64_doubling(voicing, chord, key=key))

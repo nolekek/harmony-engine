@@ -21,6 +21,8 @@ ALL_FUNCTIONS = [
     "VII", "VII6", "VII7",
     "III", "III6",
     "DD", "DD7",
+    "N", "N6",
+    "bVI", "bVI6",
 ]
 
 DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2", "VII", "VII6", "VII7"}
@@ -28,6 +30,8 @@ PRIMARY_DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2"}
 LEADING_TONE_GROUP = {"VII", "VII6", "VII7"}
 SUBDOMINANT_GROUP = {"S", "S6", "S64", "II", "II6", "II65", "II7"}
 SECONDARY_DOMINANT_GROUP = {"DD", "DD7", "DD65", "DD43", "DD2"}
+NEAPOLITAN_GROUP = {"N", "N6"}
+CHROMATIC_SUBMEDIANT_GROUP = {"bVI", "bVI6"}
 
 
 @dataclass
@@ -282,6 +286,35 @@ class HarmonicGrammar:
         if prev_upper == "D7" and curr_upper == "T6":
             return False
 
+        # Neapolitan chord transitions:
+        # N/N6 -> K64/D/D7/D6/T/T6 (and intra-functional N, N6, or chromatic bVI, bVI6)
+        # N -> S is strictly forbidden
+        if prev_upper in ("N", "N6"):
+            if curr_upper in SUBDOMINANT_GROUP or curr_upper.startswith("S") or curr_upper.startswith("II"):
+                return False
+            if curr_upper not in (
+                "K64", "D", "D7", "D6", "T", "T6", "N", "N6",
+                "BVI", "BVI6", "D53", "T53", "T-6",
+            ):
+                return False
+
+        # Approach to N/N6: can be approached from S, II, T, T6, VI, bVI, N, N6
+        # D -> N is a forbidden regression inside a phrase
+        if curr_upper in ("N", "N6"):
+            if not phrase_boundary and prev_upper in DOMINANT_GROUP:
+                return False
+            if prev_upper in SECONDARY_DOMINANT_GROUP:
+                return False
+            if prev_upper in ("III", "III6"):
+                return False
+
+        # Chromatic submediant transitions:
+        # bVI/bVI6 -> D/D7/S/T (and VI-zone)
+        # Cannot move to mediant III, secondary dominant DD, or leading tone VII
+        if prev_upper in ("BVI", "BVI6"):
+            if curr_upper in ("III", "III6", "DD", "DD7", "VII", "VII6", "VII7"):
+                return False
+
         return True
 
     _CADENCE_TEMPLATES: tuple[tuple[str, ...], ...] = (
@@ -293,6 +326,10 @@ class HarmonicGrammar:
         ("II6", "K64", "D7"),
         ("D7",),
         ("D",),
+        ("N6", "K64", "D7"),
+        ("N6", "D7"),
+        ("N", "K64", "D7"),
+        ("N", "D7"),
     )
 
     _HALF_CADENCE_TEMPLATES: tuple[tuple[str, ...], ...] = (
@@ -538,6 +575,61 @@ class HarmonicGrammar:
                                 trans_score += 1.0
 
                         is_chromatic_note = (notes[i].pitch % 12) == (tonic_pc + 6) % 12
+                        is_db_pc = (notes[i].pitch % 12) == (tonic_pc + 1) % 12
+                        is_ab_pc = (notes[i].pitch % 12) == (tonic_pc + 8) % 12
+                        is_eb_pc = (notes[i].pitch % 12) == (tonic_pc + 3) % 12
+                        is_chromatic_cand = cand in ("N", "N6", "bVI", "bVI6")
+                        has_chromatic_context = (
+                            (notes[i].pitch % 12) not in scale_pcs
+                            or (i + 1 < n and (notes[i + 1].pitch % 12) not in scale_pcs)
+                            or (i > 0 and (notes[i - 1].pitch % 12) not in scale_pcs)
+                        )
+                        if is_chromatic_cand and not has_chromatic_context:
+                            trans_score -= 30.0
+
+                        if cand in ("N", "N6"):
+                            if is_db_pc:
+                                trans_score += 6.0
+                            elif is_ab_pc:
+                                trans_score += 4.0
+
+                        if cand in ("bVI", "bVI6"):
+                            if is_ab_pc:
+                                trans_score += 6.0
+                            elif is_eb_pc and not is_minor:
+                                trans_score += 5.0
+
+                        if prev_fn in ("N", "N6"):
+                            if cand in ("K64", "D", "D7", "D6"):
+                                trans_score += 4.0
+                            elif cand in ("T", "T6"):
+                                trans_score += 2.5
+                            elif cand in ("N", "N6"):
+                                trans_score += 1.0
+                        elif prev_fn in ("bVI", "bVI6"):
+                            if cand in ("D", "D7", "K64"):
+                                trans_score += 4.0
+                            elif cand in ("N", "N6"):
+                                trans_score += 3.5
+                            elif cand in ("S", "S6", "II", "II6"):
+                                trans_score += 3.0
+                            elif cand in ("T", "T6"):
+                                trans_score += 2.5
+                            elif cand in ("VI", "vi", "bVI", "bVI6"):
+                                trans_score += 2.0
+                        elif cand in ("N", "N6"):
+                            if prev_fn in SUBDOMINANT_GROUP:
+                                trans_score += 2.5
+                            elif prev_fn in ("T", "T6"):
+                                trans_score += 2.0
+                        elif cand in ("bVI", "bVI6"):
+                            if prev_fn in ("T", "T6"):
+                                trans_score += 2.5
+                            elif prev_fn in ("VI", "vi"):
+                                trans_score += 2.0
+                            elif prev_fn in SUBDOMINANT_GROUP:
+                                trans_score += 1.5
+
                         if prev_fn == "K64" and cand in ("D", "D7"):
                             trans_score += 3.0
                         elif prev_fn in SUBDOMINANT_GROUP and cand in PRIMARY_DOMINANT_GROUP:
@@ -592,7 +684,10 @@ class HarmonicGrammar:
                         if (notes[i].pitch % 12) not in scale_pcs and not is_downbeat and cand == prev_fn:
                             trans_score += 4.0
                     else:
-                        if cand in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7"):
+                        if cand in (
+                            "III", "III6", "VII", "VII6", "VII7", "II7", "II65",
+                            "K64", "D2", "DD", "DD7", "bVI", "bVI6", "BVI", "BVI6", "N", "N6",
+                        ):
                             continue
                         if (notes[0].pitch % 12) in tonic_tones:
                             if cand in ("T", "t"):
@@ -635,7 +730,10 @@ class HarmonicGrammar:
                                 continue
                             new_beams.append((score - 10.0, path + [cand]))
                         else:
-                            if cand in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7"):
+                            if cand in (
+                                "III", "III6", "VII", "VII6", "VII7", "II7", "II65",
+                                "K64", "D2", "DD", "DD7", "bVI", "bVI6", "BVI", "BVI6", "N", "N6",
+                            ):
                                 continue
                             if (notes[0].pitch % 12) in tonic_tones and cand not in ("T", "t", "T6", "t6"):
                                 continue
@@ -666,7 +764,10 @@ class HarmonicGrammar:
                                     new_beams.append((score - 20.0, path + [fn]))
                     else:
                         for fn in ALL_FUNCTIONS:
-                            if fn in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7"):
+                            if fn in (
+                                "III", "III6", "VII", "VII6", "VII7", "II7", "II65",
+                                "K64", "D2", "DD", "DD7", "bVI", "bVI6", "BVI", "BVI6", "N", "N6",
+                            ):
                                 continue
                             if (notes[0].pitch % 12) in tonic_tones and fn not in ("T", "t", "T6", "t6"):
                                 continue
@@ -808,7 +909,7 @@ class HarmonicGrammar:
                         if not path:
                             if cand in (
                                 "III", "III6", "VII", "VII6", "VII7", "II7", "II65",
-                                "K64", "D2", "DD", "DD7",
+                                "K64", "D2", "DD", "DD7", "bVI", "bVI6", "BVI", "BVI6", "N", "N6",
                             ):
                                 continue
                             if (notes[i].pitch % 12) in tonic_tones:
