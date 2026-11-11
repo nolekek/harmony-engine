@@ -211,13 +211,15 @@ def export_to_musicxml(
     root = ET.Element("score-partwise", version="3.1")
 
     # Header: Work / Identification
-    work = ET.SubElement(root, "work")
-    work_title = ET.SubElement(work, "work-title")
-    work_title.text = title
+    if title:
+        work = ET.SubElement(root, "work")
+        work_title = ET.SubElement(work, "work-title")
+        work_title.text = title
 
-    identification = ET.SubElement(root, "identification")
-    creator = ET.SubElement(identification, "creator", type="composer")
-    creator.text = composer
+    if composer:
+        identification = ET.SubElement(root, "identification")
+        creator = ET.SubElement(identification, "creator", type="composer")
+        creator.text = composer
 
     # Part-list
     part_list = ET.SubElement(root, "part-list")

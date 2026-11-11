@@ -179,6 +179,7 @@ class ViterbiSolver:
                     curr_chord=parsed_chords[0],
                     key=parsed_key,
                     is_downbeat=downbeats[0],
+                    is_final_chord=(n == 1),
                     phrase_boundary=phrase_boundaries[0],
                 )
                 if res.is_valid and not res.has_hard_violations:
@@ -232,6 +233,7 @@ class ViterbiSolver:
                             curr_chord=curr_chord,
                             key=parsed_key,
                             is_downbeat=is_downbeat,
+                            is_final_chord=(t == n - 1),
                             phrase_boundary=phrase_boundaries[t],
                         )
 

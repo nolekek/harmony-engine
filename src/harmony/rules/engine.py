@@ -188,6 +188,16 @@ class RuleEngine:
             phrase_boundary=phrase_boundary,
         )
 
+    _OPENING_PENALTY: dict[str, float] = {
+        "T": 0.0, "t": 0.0,
+        "T6": 1.0, "t6": 1.0,
+        "VI": 2.0, "vi": 2.0,
+        "S": 3.0, "S6": 3.0, "s": 3.0, "s6": 3.0,
+        "II": 3.0, "II6": 3.0,
+        "III": 4.0, "III6": 4.0,
+        "D": 5.0, "D6": 5.0, "D7": 5.0,
+    }
+
     def compute_initial_cost(
         self,
         voicing: Any,
@@ -197,10 +207,16 @@ class RuleEngine:
         """
         Computes heuristic cost for the starting state (step 0).
         Penalizes extreme vocal registers, wide spacing gaps, and adjacent unisons,
-        guaranteeing step 0 cost >= 0.0.
+        and prefers a tonic opening (T > T6 > VI...). Guarantees step 0 cost >= 0.0.
         """
         satb = to_satb(voicing)
         cost = 1.0
+
+        # Functional opening preference: classical exercises open on the tonic,
+        # not on a mediant/submediant wandering chord.
+        if chord is not None:
+            sym = parse_chord_symbol(chord)
+            cost += self._OPENING_PENALTY.get(sym, 6.0)
 
         # Distance from center of comfortable vocal tessitura:
         # S ~ 69 (A4), A ~ 62 (D4), T ~ 55 (G3), B ~ 47 (B2)
@@ -274,6 +290,48 @@ class RuleEngine:
 
         return max(0.0, cost)
 
+    _DOMINANT_FAMILY = {
+        "D", "d", "D6", "d6", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2",
+        "K64", "k64",
+    }
+
+    def compute_functional_cost(
+        self,
+        prev_chord: Any | None,
+        curr_chord: Any | None,
+        is_final_chord: bool = False,
+    ) -> float:
+        """Non-negative harmonic-quality cost.
+
+        Cadences must be prepared by a dominant (authentic cadence); wandering
+        mediant/submediant chords outside a deceptive resolution are penalized.
+        """
+        if prev_chord is None or curr_chord is None:
+            return 0.0
+        prev_sym = parse_chord_symbol(prev_chord)
+        curr_sym = parse_chord_symbol(curr_chord)
+        cost = 0.0
+
+        if is_final_chord:
+            if curr_sym in ("T", "t", "T6", "t6"):
+                if prev_sym in self._DOMINANT_FAMILY:
+                    cost += 0.0
+                elif prev_sym in ("VI", "vi"):
+                    cost += 1.5  # deceptive cadence as the final is weak
+                else:
+                    cost += 4.0  # plagal / unprepared final tonic
+            elif curr_sym in ("D", "d", "D7", "d7"):
+                cost += 0.5  # half cadence is legitimate but less conclusive
+            return cost
+
+        if curr_sym in ("III", "iii", "III6", "iii6"):
+            cost += 2.5
+        if curr_sym in ("VI", "vi") and prev_sym not in self._DOMINANT_FAMILY:
+            cost += 2.0
+        if prev_sym in self._DOMINANT_FAMILY and curr_sym in ("VI", "vi"):
+            cost += 0.5
+        return cost
+
     def validate(
         self,
         prev_voicing: Any | None,
@@ -340,6 +398,9 @@ class RuleEngine:
                 validate_chromatic_rules(prev_voicing, curr_voicing, key=key)
             )
             soft_cost = self.compute_soft_cost(prev_voicing, curr_voicing)
+            soft_cost += self.compute_functional_cost(
+                prev_chord, curr_chord, is_final_chord=is_final_chord
+            )
         else:
             soft_cost = self.compute_initial_cost(curr_voicing, chord=curr_chord, key=key)
 
@@ -355,22 +416,7 @@ class RuleEngine:
         return ValidationResult(
             is_valid=True,
             violations=violations,
-            cost=soft_cost,
-        )
-
-        # 4. Determine validity and final cost
-        has_hard = any(v.is_hard for v in violations)
-        if has_hard:
-            return ValidationResult(
-                is_valid=False,
-                violations=violations,
-                cost=float("inf"),
-            )
-
-        return ValidationResult(
-            is_valid=True,
-            violations=violations,
-            cost=soft_cost,
+            cost=max(0.0, soft_cost),
         )
 
     def validate_voicing(

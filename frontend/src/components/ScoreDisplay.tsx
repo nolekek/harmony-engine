@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 
 interface ScoreDisplayProps {
@@ -27,9 +27,9 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     if (!osmdRef.current) {
       osmdRef.current = new OpenSheetMusicDisplay(containerRef.current, {
         autoResize: true,
-        drawTitle: true,
+        drawTitle: false,
         drawSubtitle: false,
-        drawComposer: true,
+        drawComposer: false,
         drawCredits: false,
         drawPartNames: true,
         drawMetronomeMarks: false,
@@ -220,3 +220,4 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     </div>
   );
 };
+

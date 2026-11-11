@@ -1,4 +1,4 @@
-"""
+﻿"""
 Service layer for Brigade Classical Harmony harmonization requests.
 Encapsulates plan generation, DD filtering, Viterbi optimization, candidate selection,
 scoring, MusicXML/ASCII formatting, and structured error reporting.
@@ -96,7 +96,7 @@ class HarmonizationService:
                 voicings=sol.voicings,
                 chords=sol.chords,
                 key=parsed_key,
-                title=f"Гармонизация в {parsed_key.tonic} {parsed_key.mode}",
+                title="",
                 durations=durations_list,
                 time_signature=str(time_sig),
             )
@@ -308,7 +308,7 @@ class HarmonizationService:
                     voicings=res.voicings,
                     chords=plan,
                     key=parsed_key,
-                    title=f"Гармонизация в {parsed_key.tonic} {parsed_key.mode}",
+                    title="",
                     durations=durations_list,
                     time_signature=str(time_sig),
                 )
@@ -394,3 +394,4 @@ class HarmonizationService:
             "latency_ms": latency,
             "error": None,
         }
+

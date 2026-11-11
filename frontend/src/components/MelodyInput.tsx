@@ -31,13 +31,13 @@ interface MelodyInputProps {
 }
 
 const DURATIONS = [
-  { id: "whole", label: "Целая (𝅝)", beats: 4 },
-  { id: "dotted_half", label: "Половинная с точкой (𝅗𝅥.)", beats: 3 },
-  { id: "half", label: "Половинная (𝅗𝅥)", beats: 2 },
-  { id: "dotted_quarter", label: "Четверть с точкой (𝅘𝅥.)", beats: 1.5 },
-  { id: "quarter", label: "Четверть (𝅘𝅥)", beats: 1 },
-  { id: "dotted_eighth", label: "Восьмая с точкой (𝅘𝅥𝅮.)", beats: 0.75 },
-  { id: "eighth", label: "Восьмая (𝅘𝅥𝅮)", beats: 0.5 },
+  { id: "whole", label: "1", hint: "Целая", beats: 4 },
+  { id: "dotted_half", label: "3/4", hint: "Половинная с точкой", beats: 3 },
+  { id: "half", label: "1/2", hint: "Половинная", beats: 2 },
+  { id: "dotted_quarter", label: "3/8", hint: "Четверть с точкой", beats: 1.5 },
+  { id: "quarter", label: "1/4", hint: "Четверть", beats: 1 },
+  { id: "dotted_eighth", label: "3/16", hint: "Восьмая с точкой", beats: 0.75 },
+  { id: "eighth", label: "1/8", hint: "Восьмая", beats: 0.5 },
 ];
 
 const DURATION_BEATS_MAP: Record<string, number> = {
@@ -68,12 +68,9 @@ export function recalculateDownbeats(
       currentOffset = 0.0;
     }
 
-    let isDownbeat = currentOffset === 0.0;
-    if (beats === 4 && beatType === 4 && Math.abs(currentOffset - 2.0) < 1e-4) {
-      isDownbeat = true;
-    } else if (beats === 6 && beatType === 8 && Math.abs(currentOffset - 1.5) < 1e-4) {
-      isDownbeat = true;
-    }
+    // Only a measure start is a harmonization downbeat; secondary accents
+    // (beat 3 in 4/4, beat 4 in 6/8) stay weak so passing tones can be NCTs.
+    const isDownbeat = Math.abs(currentOffset) < 1e-4;
 
     const dur = DURATION_BEATS_MAP[note.duration] ?? 2;
     currentOffset += dur;
@@ -359,12 +356,13 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
             <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Clock className="w-4 h-4 text-slate-400" />
               <span>Длительность:</span>
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
+              <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
                 {DURATIONS.map((dur) => (
                   <button
                     key={dur.id}
                     onClick={() => setSelectedDuration(dur.id)}
-                    className={`px-2.5 py-1 rounded text-xs transition ${
+                    title={dur.hint}
+                    className={`px-2 py-1 rounded text-[11px] font-mono min-w-[2rem] text-center transition ${
                       selectedDuration === dur.id
                         ? "bg-indigo-600 text-white font-semibold shadow-sm"
                         : "text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
@@ -644,11 +642,15 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
                   className={`text-[9px] px-1 py-0.2 rounded font-sans transition ${
                     note.is_downbeat
                       ? "bg-indigo-600 text-white font-bold"
-                      : "bg-slate-200 dark:bg-slate-700 text-slate-500"
+                      : "bg-transparent text-slate-400 dark:text-slate-500"
                   }`}
-                  title="Кликните для переключения признака сильной доли (downbeat)"
+                  title={
+                    note.is_downbeat
+                      ? "Сильная доля (такт). Клик — сделать слабой"
+                      : "Слабая доля. Клик — сделать сильной"
+                  }
                 >
-                  {note.is_downbeat ? "Сильная" : "Слабая"}
+                  {note.is_downbeat ? "сильная" : "·"}
                 </button>
 
                 <button
