@@ -15,78 +15,41 @@
   },
   "2_canonical_minors": {
     "total": 42,
-    "passed": 18,
-    "failed": 24,
-    "failure_types": {
-      "LATTICE_BLOCKED_BY_HARD_RULES": 24
-    },
-    "reasons": {
-      "Step 5 (S6): all 6 candidates blocked by hard-rule violations from step 4.": 2,
-      "Step 2 (VII7): all 2 candidates blocked by hard-rule violations from step 1.": 7,
-      "Step 5 (S6): all 5 candidates blocked by hard-rule violations from step 4.": 5,
-      "Step 5 (S6): all 4 candidates blocked by hard-rule violations from step 4.": 3,
-      "Step 2 (VII7): all 3 candidates blocked by hard-rule violations from step 1.": 3,
-      "Step 3 (S): all 4 candidates blocked by hard-rule violations from step 2.": 2,
-      "Step 3 (S): all 2 candidates blocked by hard-rule violations from step 2.": 1,
-      "Step 2 (III): all 2 candidates blocked by hard-rule violations from step 1.": 1
-    }
+    "passed": 42,
+    "failed": 0,
+    "failure_types": {},
+    "reasons": {}
   },
   "3_random_diatonic": {
     "total": 120,
-    "passed": 68,
-    "failed": 52,
+    "passed": 99,
+    "failed": 21,
     "failure_types": {
-      "LATTICE_BLOCKED_BY_HARD_RULES": 31,
-      "NO_CANDIDATES_AT_STEP": 21
+      "NO_CANDIDATES_AT_STEP": 14,
+      "LATTICE_BLOCKED_BY_HARD_RULES": 7
     },
     "reasons": {
-      "Step 6 (T): all 1 candidates blocked by hard-rule violations from step 5.": 1,
-      "Step 9 (T): all 3 candidates blocked by hard-rule violations from step 8.": 3,
       "Step 3 (VI): no candidate voicings found for soprano pitch 73": 1,
       "Step 10 (VI): no candidate voicings found for soprano pitch 70": 1,
       "Step 10 (VI): no candidate voicings found for soprano pitch 65": 1,
       "Step 3 (S6): all 2 candidates blocked by hard-rule violations from step 2.": 1,
-      "Step 2 (II): all 1 candidates blocked by hard-rule violations from step 1.": 1,
-      "Step 3 (T): no candidate voicings found for soprano pitch 69": 1,
       "Step 9 (T): no candidate voicings found for soprano pitch 62": 1,
-      "Step 4 (T6): all 8 candidates blocked by hard-rule violations from step 3.": 1,
-      "Step 2 (D): all 2 candidates blocked by hard-rule violations from step 1.": 1,
-      "Step 2 (T): no candidate voicings found for soprano pitch 69": 1,
-      "Step 3 (II): all 3 candidates blocked by hard-rule violations from step 2.": 1,
-      "Step 1 (S6): no candidate voicings found for soprano pitch 60": 2,
-      "Step 2 (T): all 2 candidates blocked by hard-rule violations from step 1.": 1,
+      "Step 1 (S6): no candidate voicings found for soprano pitch 60": 1,
       "Step 5 (T): all 1 candidates blocked by hard-rule violations from step 4.": 1,
-      "Step 2 (D): all 1 candidates blocked by hard-rule violations from step 1.": 1,
       "Step 5 (D): all 1 candidates blocked by hard-rule violations from step 4.": 1,
-      "Step 4 (D6): all 2 candidates blocked by hard-rule violations from step 3.": 1,
       "Step 4 (S): all 1 candidates blocked by hard-rule violations from step 3.": 1,
       "Step 2 (T): all 3 candidates blocked by hard-rule violations from step 1.": 1,
       "Step 9 (VI): no candidate voicings found for soprano pitch 70": 1,
       "Step 11 (T): no candidate voicings found for soprano pitch 67": 1,
-      "Step 7 (T): all 3 candidates blocked by hard-rule violations from step 6.": 2,
       "Step 4 (VI): no candidate voicings found for soprano pitch 70": 1,
-      "Step 5 (T): no candidate voicings found for soprano pitch 62": 1,
-      "Step 9 (T): all 4 candidates blocked by hard-rule violations from step 8.": 1,
-      "Step 8 (T): all 2 candidates blocked by hard-rule violations from step 7.": 1,
       "Step 4 (T): all 2 candidates blocked by hard-rule violations from step 3.": 1,
-      "Step 4 (T): no candidate voicings found for soprano pitch 62": 1,
       "Step 5 (VI): no candidate voicings found for soprano pitch 68": 1,
-      "Step 2 (D): all 3 candidates blocked by hard-rule violations from step 1.": 1,
-      "Step 3 (S6): all 4 candidates blocked by hard-rule violations from step 2.": 1,
-      "Step 4 (D6): all 1 candidates blocked by hard-rule violations from step 3.": 1,
       "Step 3 (T): all 1 candidates blocked by hard-rule violations from step 2.": 1,
       "Step 3 (VI): no candidate voicings found for soprano pitch 68": 1,
-      "Step 8 (III6): all 15 candidates blocked by hard-rule violations from step 7.": 1,
       "Step 5 (VI): no candidate voicings found for soprano pitch 65": 1,
       "Step 9 (T): no candidate voicings found for soprano pitch 67": 1,
       "Step 11 (T): no candidate voicings found for soprano pitch 60": 1,
-      "Step 5 (T): all 3 candidates blocked by hard-rule violations from step 4.": 2,
-      "Step 3 (II): all 2 candidates blocked by hard-rule violations from step 2.": 1,
-      "Step 8 (VI): no candidate voicings found for soprano pitch 78": 1,
-      "Step 2 (VI): no candidate voicings found for soprano pitch 70": 1,
-      "Step 7 (T): all 2 candidates blocked by hard-rule violations from step 6.": 1,
-      "Step 11 (T): all 3 candidates blocked by hard-rule violations from step 10.": 1,
-      "Step 7 (T): no candidate voicings found for soprano pitch 79": 1
+      "Step 2 (VI): no candidate voicings found for soprano pitch 70": 1
     }
   },
   "4_non_chord_tones": {
