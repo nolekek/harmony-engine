@@ -11,6 +11,13 @@
       "description": "Выход голоса за пределы допустимого диапазона (S: 60-81, A: 55-74, T: 48-67, B: 40-60 MIDI)."
     },
     {
+      "id": "VOICE_UNISON",
+      "category": "spacing",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Унисон между соседними голосами в тесном или широком расположении разрушает четырехголосную фактуру."
+    },
+    {
       "id": "VOICE_CROSSING",
       "category": "spacing",
       "severity": "hard_gate",
@@ -37,6 +44,13 @@
       "severity": "hard_gate",
       "penalty": 100000.0,
       "description": "Параллельные чистые квинты между любой парой голосов в прямом движении."
+    },
+    {
+      "id": "PARALLEL_DIM5_P5",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Переход с уменьшенной квинты на чистую квинту в прямом движении воспрещается."
     },
     {
       "id": "PARALLEL_OCTAVES",
@@ -196,7 +210,7 @@
       "id": "SOFT_CONTRARY_BASS_MOTION",
       "category": "voice_leading",
       "severity": "soft_penalty",
-      "penalty": -5.0,
+      "penalty": 0.0,
       "description": "Поощрение (бонус): противоположное движение баса относительно сопрано."
     },
     {

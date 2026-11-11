@@ -621,7 +621,9 @@ def check_seventh_chord_doubling(
             )
     else:
         is_complete = counts[root] == 1 and counts[third] == 1 and counts[fifth] == 1 and has_seventh
-        is_incomplete = counts[root] == 2 and counts[third] == 1 and has_seventh and counts[fifth] == 0
+        # Leading-tone seventh chord VII7 MUST strictly be complete; doubling leading tone (root) in incomplete VII7 is forbidden
+        is_vii = sym.startswith("VII")
+        is_incomplete = (not is_vii) and (counts[root] == 2 and counts[third] == 1 and has_seventh and counts[fifth] == 0)
         if not (is_complete or is_incomplete):
             violations.append(
                 RuleViolation(
@@ -630,7 +632,7 @@ def check_seventh_chord_doubling(
                     penalty=100000.0,
                     description=(
                         f"Root-position seventh chord '{sym}' must be complete (1 root, 1 third, 1 fifth, 1 seventh) "
-                        f"or incomplete (2 roots, 1 third, 1 seventh, no fifth). Got: root={counts[root]}, "
+                        f"or incomplete (2 roots, 1 third, 1 seventh, no fifth, strictly forbidden for VII7). Got: root={counts[root]}, "
                         f"third={counts[third]}, fifth={counts[fifth]}, seventh={counts[seventh]}"
                     ),
                 )

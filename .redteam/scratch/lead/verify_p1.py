@@ -214,7 +214,105 @@ WAVE_A = [
     ("A", "P0 CORS", r_cors),
 ]
 
-WAVE_B: list[tuple[str, str, object]] = []  # filled after P1-β lands
+WAVE_B: list[tuple[str, str, object]] = []
+
+
+def b_metric_34(wave: str, name: str) -> None:
+    data = harmonize(melody([64, 65, 67, 64, 62, 60], durations=["quarter"] * 6), ts="3/4").json()
+    cands = data.get("candidates") or []
+    if not cands:
+        check(wave, name, False, f"no candidates: {str(data.get('message'))[:80]}")
+        return
+    root = ET.fromstring(cands[0].get("musicxml") or "")
+    divisions = 4
+    for div in root.iter("divisions"):
+        divisions = int(div.text or 4)
+        break
+    expected = 3 * divisions  # 3/4 in divisions (division == 4 -> 12)
+    bad = []
+    for measure in root.iter("measure"):
+        acc = 0
+        for child in measure:
+            if child.tag == "backup":
+                break
+            if child.tag == "note" and child.find("duration") is not None:
+                acc += int(child.find("duration").text or 0)
+        if acc != expected:
+            bad.append(f"m{measure.get('number')}:{acc}!={expected}")
+    check(wave, name, not bad, f"divisions={divisions} bad={bad[:6]}")
+
+
+def b_d_to_s(wave: str, name: str) -> None:
+    eng = RuleEngine()
+    d = Chord(function="D")
+    s = Chord(function="S")
+    hard_ban = [v.rule_id for v in eng.check_syntax(d, s, phrase_boundary=False) if v.is_hard]
+    at_boundary = [v.rule_id for v in eng.check_syntax(d, s, phrase_boundary=True) if v.is_hard]
+    ok = bool([r for r in hard_ban if "D_TO_S" in r.upper() or "D-S" in r.upper()]) and not [
+        r for r in at_boundary if "D_TO_S" in r.upper() or "D-S" in r.upper()]
+    check(wave, name, ok, f"inside={hard_ban} boundary={at_boundary}")
+
+
+def b_catalog(wave: str, name: str) -> None:
+    eng = RuleEngine()
+    desc = eng.get_rule_description("VOICE_UNISON") or eng.get_rule_description("DIRECT_UNISON")
+    check(wave, name, bool(desc), f"desc={str(desc)[:80]!r}")
+
+
+def b_seventh_hold(wave: str, name: str) -> None:
+    from src.harmony.rules.resolutions import check_seventh_resolution
+    c_d7 = Chord(function="D7")
+    c_d65 = Chord(function="D65")
+    k = Key(tonic="C", mode="Major")
+    v_d7 = Voicing(soprano=67, alto=65, tenor=62, bass=43)   # G F D G -> D7, 7th F in alto
+    v_d65 = Voicing(soprano=67, alto=65, tenor=62, bass=47)  # same upper voices, bass B (D65)
+    viol = check_seventh_resolution(v_d7, v_d65, c_d7, c_d65, key=k)
+    ids = [v.rule_id for v in viol if v.is_hard]
+    check(wave, name, not ids, f"hard={ids}")
+
+
+def b_dim5_to_p5(wave: str, name: str) -> None:
+    from src.harmony.rules.voice_leading import check_parallel_fifths_and_octaves
+    prev = Voicing(soprano=72, alto=67, tenor=59, bass=54)  # S=C5, B=F#3 -> dim5 (18 % 12 = 6)
+    curr = Voicing(soprano=74, alto=69, tenor=62, bass=55)  # S=D5, B=G3  -> P5 (19 % 12 = 7)
+    viol = check_parallel_fifths_and_octaves(prev, curr)
+    ids = [v.rule_id for v in viol]
+    check(wave, name, bool(ids), f"ids={ids}")
+
+
+def b_costs(wave: str, name: str) -> None:
+    data = harmonize(melody([64, 65, 67, 64, 62, 60], durations=["half"] * 5 + ["whole"])).json()
+    cands = data.get("candidates") or []
+    costs = [c.get("cost") for c in cands]
+    check(wave, name, bool(cands) and all(c >= 0 for c in costs), f"costs={costs}")
+
+
+def b_api_404(wave: str, name: str) -> None:
+    r = client.get("/api/definitely-not-a-route")
+    ctype = r.headers.get("content-type", "")
+    ok = r.status_code == 404 and "application/json" in ctype
+    check(wave, name, ok, f"status={r.status_code} ctype={ctype!r}")
+
+
+def b_deterministic(wave: str, name: str) -> None:
+    a = harmonize(melody([64, 65, 67, 64, 62, 60], durations=["half"] * 5 + ["whole"])).json()
+    b = harmonize(melody([64, 65, 67, 64, 62, 60], durations=["half"] * 5 + ["whole"])).json()
+    ca = [c.get("chords") for c in a.get("candidates") or []]
+    cb = [c.get("chords") for c in b.get("candidates") or []]
+    check(wave, name, bool(ca) and ca == cb, f"a={ca[:1]} b={cb[:1]}")
+
+
+WAVE_B.extend([
+    ("B", "T14 metric grid 3/4 measures", b_metric_34),
+    ("B", "T17 D->S only at phrase boundary", b_d_to_s),
+    ("B", "T17 rule catalog is live", b_catalog),
+    ("B", "T18 D7->D65 seventh hold allowed", b_seventh_hold),
+    ("B", "T18 dim5->P5 parallel caught", b_dim5_to_p5),
+    ("B", "T18 non-negative costs", b_costs),
+    ("B", "T21 unknown /api route JSON 404", b_api_404),
+    ("B", "T21 deterministic results", b_deterministic),
+])
+
 
 
 def main() -> int:

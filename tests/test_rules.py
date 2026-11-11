@@ -93,6 +93,14 @@ class TestVoiceLeadingRules:
         assert not res.is_valid
         assert any(v.rule_id == "HIDDEN_FIFTHS_OCTAVES" for v in res.hard_violations)
 
+    def test_parallel_dim5_to_p5(self, engine):
+        # Tenor F3(53), Bass B2(47) (dim 5th) -> Tenor G3(55), Bass C3(48) (P5) in similar motion
+        v1 = Voicing(soprano=72, alto=60, tenor=53, bass=47)
+        v2 = Voicing(soprano=72, alto=60, tenor=55, bass=48)
+        res = engine.validate(v1, v2)
+        assert not res.is_valid
+        assert any(v.rule_id == "PARALLEL_DIM5_P5" for v in res.hard_violations)
+
     def test_voice_overlapping(self, engine):
         # Alto in v2 (65) rises above Soprano in v1 (64)
         v1 = Voicing(soprano=64, alto=60, tenor=52, bass=48)
@@ -231,6 +239,18 @@ class TestSyntaxRules:
         res = engine.validate(v1, v2, prev_chord=chord_d, curr_chord=chord_s)
         assert not res.is_valid
         assert any(v.rule_id == "SYNTAX_NO_D_TO_S" for v in res.hard_violations)
+
+    def test_functional_regression_d_to_s_phrase_boundary(self, engine):
+        chord_d = Chord(function="D")
+        chord_s = Chord(function="S")
+        v1 = Voicing(soprano=62, alto=59, tenor=50, bass=43)
+        v2 = Voicing(soprano=65, alto=60, tenor=53, bass=41)
+        res = engine.validate(v1, v2, prev_chord=chord_d, curr_chord=chord_s, phrase_boundary=True)
+        assert not any(v.rule_id == "SYNTAX_NO_D_TO_S" for v in res.hard_violations)
+
+    def test_rule_catalog_description_lookup(self, engine):
+        assert engine.get_rule_description("VOICE_UNISON") is not None
+        assert engine.get_rule_description("PARALLEL_FIFTHS") is not None
 
     def test_functional_regression_d_to_k64(self, engine):
         chord_d = Chord(function="D")

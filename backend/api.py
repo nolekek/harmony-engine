@@ -26,7 +26,11 @@ from backend.exporters import build_colored_musicxml, generate_midi_bytes
 from backend.grader import grade_satb_solution
 from src.harmony.export.ascii import format_ascii_score
 
+from starlette.concurrency import run_in_threadpool
+from backend.service import HarmonizationService
+
 router = APIRouter(prefix="/api")
+harmonization_service = HarmonizationService()
 
 VALID_TONICS = set(PITCH_CLASS_NAMES.keys())
 VALID_MODES = {
@@ -205,172 +209,15 @@ def api_parse_text(req: ParseTextRequest) -> list[dict[str, Any]]:
 
 
 @router.post("/harmonize")
-def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
+async def api_harmonize(req: HarmonizeRequest) -> dict[str, Any]:
     """
     Harmonizes a given soprano melody.
     Returns candidate pool (top-3 solutions) with Viterbi costs, colored MusicXML,
     and Sposobin functional analysis.
     """
-    t_start = time.perf_counter()
-
     if not req.melody:
         raise HTTPException(status_code=400, detail="Мелодия не может быть пустой.")
-
-    from src.harmony.core.types import TimeSignature, calculate_metric_structure
-
-    parsed_key = Key(tonic=req.key.tonic, mode=req.key.mode)
-    time_sig = TimeSignature.parse(req.time_signature)
-
-    # Derive exact metric structure, downbeats, and durations
-    metric_info = calculate_metric_structure(
-        [
-            {
-                "pitch": m.pitch,
-                "duration": m.duration,
-                "is_downbeat": m.is_downbeat,
-            }
-            for m in req.melody
-        ],
-        default_time_signature=time_sig,
-    )
-    melody_dicts = [
-        {"pitch": info["pitch"], "is_downbeat": info["is_downbeat"], "duration": info["duration"]}
-        for info in metric_info
-    ]
-    durations_list = [info["duration"] for info in metric_info]
-
-    # 1. Synthesize candidate functional plans
-    grammar = HarmonicGrammar(key=parsed_key)
-    all_plans = grammar.generate_plans(melody=melody_dicts, key=parsed_key, max_plans=req.max_plans)
-
-    # If secondary dominants are disallowed, filter them out
-    if not req.allow_secondary_dominants:
-        filtered_plans = []
-        for plan in all_plans:
-            fns = [c.function for c in plan]
-            if not any(f.startswith("DD") for f in fns):
-                filtered_plans.append(plan)
-        plans_to_try = filtered_plans
-        if not plans_to_try:
-            return {
-                "is_success": False,
-                "candidates": [],
-                "best_candidate": None,
-                "message": "Без побочных доминант невозможно гармонизовать заданную мелодию.",
-                "error": {
-                    "code": "SECONDARY_DOMINANTS_DISABLED",
-                    "message": "Без побочных доминант невозможно гармонизовать заданную мелодию.",
-                    "diagnostics": [],
-                    "hint": "Включите опцию allow_secondary_dominants=true или скорректируйте мелодию.",
-                },
-                "latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
-            }
-    else:
-        plans_to_try = all_plans
-
-    if not plans_to_try:
-        return {
-            "is_success": False,
-            "candidates": [],
-            "best_candidate": None,
-            "message": "Не удалось синтезировать функциональные планы для данной мелодии.",
-            "error": {
-                "code": "NO_PLANS",
-                "message": "Не удалось синтезировать функциональные планы для данной мелодии.",
-                "diagnostics": [],
-                "hint": "Проверьте тональность мелодии или диапазон нот.",
-            },
-            "latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
-        }
-
-    # 2. Solve candidate plans
-    solver = ViterbiSolver()
-    solutions: list[dict[str, Any]] = []
-    collected_diagnostics: list[dict[str, Any]] = []
-
-    for plan_idx, plan in enumerate(plans_to_try):
-        res = solver.solve(
-            melody=melody_dicts,
-            chords=plan,
-            key=parsed_key,
-            allow_extended_ranges=req.allow_extended_ranges,
-        )
-
-        if res.is_success and res.voicings:
-            chords_list = [c.function for c in plan]
-            voicings_list = [
-                {"soprano": v.s, "alto": v.a, "tenor": v.t, "bass": v.b}
-                for v in res.voicings
-            ]
-            ascii_text = format_ascii_score(
-                voicings=res.voicings,
-                chords=plan,
-                key=f"{parsed_key.tonic} {parsed_key.mode}",
-            )
-            colored_xml = build_colored_musicxml(
-                voicings=res.voicings,
-                chords=plan,
-                key=parsed_key,
-                title=f"Гармонизация в {parsed_key.tonic} {parsed_key.mode}",
-                durations=durations_list,
-                time_signature=str(time_sig),
-            )
-
-            # Generate descriptive summary for the candidate card
-            progression_str = " → ".join(chords_list)
-            cadence_type = "Полная каденция" if "K64" in chords_list else "Автентический оборот"
-            if any("DD" in c for c in chords_list):
-                cadence_type += " (с двойной доминантой DD)"
-
-            solutions.append({
-                "id": f"cand_{len(solutions) + 1}",
-                "rank": len(solutions) + 1,
-                "cost": round(res.total_cost, 2),
-                "chords": chords_list,
-                "progression_preview": progression_str,
-                "description": cadence_type,
-                "time_signature": str(time_sig),
-                "durations": durations_list,
-                "voicings": voicings_list,
-                "musicxml": colored_xml,
-                "ascii_score": ascii_text,
-            })
-        else:
-            if getattr(res, "diagnostics", None):
-                for d in res.diagnostics:
-                    if isinstance(d, dict) and d not in collected_diagnostics:
-                        collected_diagnostics.append(d)
-
-    # Stably select top-3 candidate solutions by ascending cost
-    solutions = select_top_candidates(solutions, k=3)
-    for idx, s in enumerate(solutions, start=1):
-        s["id"] = f"cand_{idx}"
-
-    latency = round((time.perf_counter() - t_start) * 1000, 2)
-
-    if not solutions:
-        return {
-            "is_success": False,
-            "candidates": [],
-            "best_candidate": None,
-            "message": "Все кандидаты отклонены жесткими правилами голосоведения.",
-            "error": {
-                "code": "NO_FEASIBLE_PLAN",
-                "message": "Все кандидаты отклонены жесткими правилами голосоведения.",
-                "diagnostics": collected_diagnostics,
-                "hint": "Проверьте мелодические ходы на запрещенные интервалы или включите расширенные диапазоны (allow_extended_ranges=true).",
-            },
-            "latency_ms": latency,
-        }
-
-    return {
-        "is_success": True,
-        "candidates": solutions,
-        "best_candidate": solutions[0],
-        "message": f"Найдено {len(solutions)} математически оптимальных решений.",
-        "latency_ms": latency,
-        "error": None,
-    }
+    return await run_in_threadpool(harmonization_service.harmonize, req)
 
 
 @router.post("/grade")

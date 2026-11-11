@@ -28,6 +28,8 @@ def check_seventh_resolution(
     """
     In dominant seventh chords (D7, D65, D43, D2), the seventh (scale degree IV)
     must resolve down by step (1 or 2 semitones down).
+    If curr_chord is in DOMINANT_GROUP (intra-dominant repositioning or inversion change, e.g. D7 -> D65),
+    the seventh may be sustained on the same pitch (delta == 0) or transferred to another voice.
     """
     if prev_chord is None:
         return []
@@ -36,17 +38,26 @@ def check_seventh_resolution(
     if prev_sym not in DOMINANT_SEVENTH_CHORDS:
         return []
 
+    curr_sym = parse_chord_symbol(curr_chord) if curr_chord is not None else ""
+    is_curr_dominant = curr_sym in DOMINANT_GROUP
+
     tonic_pc, _ = parse_key(key) if key is not None else (0, "MAJOR")
     seventh_pc = (tonic_pc + 5) % 12  # Scale degree IV is the 7th of the dominant
 
     prev_satb = to_satb(prev_voicing)
     curr_satb = to_satb(curr_voicing)
 
+    seventh_present_in_curr = any(curr_satb[v] % 12 == seventh_pc for v in range(4))
+
     violations: list[RuleViolation] = []
     for idx in range(4):
         if prev_satb[idx] % 12 == seventh_pc:
             delta = curr_satb[idx] - prev_satb[idx]
-            # Must step down: -1 or -2 semitones
+            # If transitioning within DOMINANT_GROUP: allow sustained 7th (delta 0) or transfer
+            if is_curr_dominant and (delta == 0 or seventh_present_in_curr or delta in (-1, -2)):
+                continue
+
+            # Standard authentic resolution: must step down (-1 or -2 semitones)
             if delta not in (-1, -2):
                 violations.append(
                     RuleViolation(

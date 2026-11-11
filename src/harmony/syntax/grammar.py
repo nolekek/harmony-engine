@@ -8,6 +8,7 @@ from typing import Any, Sequence
 from dataclasses import dataclass
 from src.harmony.core.types import Key, Chord, parse_key
 from src.harmony.rules.doubling import get_triad_tones
+from src.harmony.rules.engine import check_syntax_rules
 
 # All standard classical functions considered by the grammar
 ALL_FUNCTIONS = [
@@ -35,6 +36,7 @@ class MelodyNote:
     duration: int = 4
     is_downbeat: bool = False
     is_cadence_point: bool = False
+    phrase_boundary: bool = False
 
 
 class HarmonicGrammar:
@@ -169,11 +171,12 @@ class HarmonicGrammar:
         self,
         prev_fn: str,
         curr_fn: str,
-        is_downbeat: bool = False,
+        is_downbeat: bool = True,
+        phrase_boundary: bool = False,
     ) -> bool:
         """
-        Validates syntactic progression rules:
-        - No D -> S or D -> II regression
+        Validates syntactic progression rules using unified RuleEngine check_syntax_rules:
+        - No D -> S or D -> II regression (unless phrase_boundary=True)
         - D43 must go to T6 or T
         - D2 must go to T6
         - K64 must be followed by D or D7
@@ -183,11 +186,21 @@ class HarmonicGrammar:
         - D6 and D65 have leading tone in bass; cannot leap to T6 or VI
         - D7 cannot resolve to T6
         """
+        # Unified check with RuleEngine syntax rules
+        syntax_violations = check_syntax_rules(
+            prev_chord=prev_fn,
+            curr_chord=curr_fn,
+            is_downbeat=is_downbeat,
+            phrase_boundary=phrase_boundary,
+        )
+        if any(v.is_hard for v in syntax_violations):
+            return False
+
         prev_upper = prev_fn.strip().upper()
         curr_upper = curr_fn.strip().upper()
 
-        # D -> S and D -> II regression forbidden
-        if prev_upper in DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP:
+        # D -> S and D -> II regression forbidden inside phrase (allowed at phrase boundary)
+        if not phrase_boundary and (prev_upper in DOMINANT_GROUP and curr_upper in SUBDOMINANT_GROUP):
             return False
 
         # Dominants cannot move to K64 (D -> K64, D6 -> K64 is strictly forbidden; K64 resolves TO dominant)
@@ -278,11 +291,13 @@ class HarmonicGrammar:
             if isinstance(m, dict):
                 p = int(m["pitch"])
                 db = bool(m.get("is_downbeat", False))
+                pb = bool(m.get("phrase_boundary", m.get("is_phrase_boundary", False)))
             else:
                 p = int(m)
                 db = (i % 2 == 0)
+                pb = False
             is_final = (i == n - 1)
-            notes.append(MelodyNote(pitch=p, is_downbeat=db, is_cadence_point=is_final))
+            notes.append(MelodyNote(pitch=p, is_downbeat=db, is_cadence_point=is_final, phrase_boundary=pb))
 
         is_minor = "MINOR" in mode.upper()
         tonic_tones = {tonic_pc, (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12, (tonic_pc + 7) % 12}
@@ -306,6 +321,7 @@ class HarmonicGrammar:
                 cands = [
                     fn for fn in ALL_FUNCTIONS
                     if (note.pitch % 12) in self.get_chord_pitch_classes(fn, k)
+                    and (fn != "K64" or note.is_downbeat)
                     and (not is_final or (fn in ("T", "t") if (note.pitch % 12) in tonic_tones else fn in ("D", "d")))
                 ]
             step_candidates.append(cands)
@@ -317,12 +333,13 @@ class HarmonicGrammar:
         for i, cands in enumerate(step_candidates):
             new_beams: list[tuple[float, list[str]]] = []
             is_downbeat = notes[i].is_downbeat
+            is_pb = bool(notes[i].phrase_boundary)
 
             for score, path in beams:
                 for cand in cands:
                     if path:
                         prev_fn = path[-1]
-                        if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat):
+                        if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat, phrase_boundary=is_pb):
                             continue
                         # Second-relationship voice leading law (REPORT #54):
                         # In root-position S, bass is scale degree 4. Moving to dominant with soprano rising from 4 to 5
@@ -471,7 +488,7 @@ class HarmonicGrammar:
                     for cand in cands:
                         if path:
                             prev_fn = path[-1]
-                            if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat):
+                            if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat, phrase_boundary=is_pb):
                                 continue
                             new_beams.append((score - 10.0, path + [cand]))
                         else:
@@ -486,6 +503,8 @@ class HarmonicGrammar:
                     if path:
                         prev_fn = path[-1]
                         for fn in ALL_FUNCTIONS:
+                            if fn == "K64" and (not is_downbeat or is_final_step):
+                                continue
                             if is_final_step:
                                 if (notes[i].pitch % 12) in tonic_tones:
                                     if fn not in ("T", "t", "T6", "t6"):
@@ -498,7 +517,7 @@ class HarmonicGrammar:
                                     else:
                                         continue
                             if (notes[i].pitch % 12) in self.get_chord_pitch_classes(fn, k):
-                                if self.is_valid_syntax_transition(prev_fn, fn, is_downbeat):
+                                if self.is_valid_syntax_transition(prev_fn, fn, is_downbeat, phrase_boundary=is_pb):
                                     new_beams.append((score - 20.0, path + [fn]))
                     else:
                         for fn in ALL_FUNCTIONS:
@@ -512,7 +531,9 @@ class HarmonicGrammar:
                 for score, path in beams:
                     if path:
                         prev_fn = path[-1]
-                        if self.is_valid_syntax_transition(prev_fn, prev_fn, is_downbeat):
+                        if prev_fn == "K64" and (not is_downbeat or (i == n - 1)):
+                            continue
+                        if self.is_valid_syntax_transition(prev_fn, prev_fn, is_downbeat, phrase_boundary=is_pb):
                             new_beams.append((score - 30.0, path + [prev_fn]))
 
             # Keep top beams

@@ -443,73 +443,10 @@ def calculate_metric_structure(
 ) -> list[dict[str, Any]]:
     """
     Calculates exact metric coordinates for a sequence of melody notes or chord slices.
-    Handles variable durations, dotted notes, and time signature changes.
-    Returns for each note:
-    - measure (int, 1-indexed)
-    - offset_in_measure (float, in quarters)
-    - is_downbeat (bool)
-    - time_signature (TimeSignature)
-    - duration (str)
-    - duration_quarters (float)
-    - time_sig_changed (bool)
+    Delegates to MetricGrid while strictly preserving backward compatibility.
+    Explicit is_downbeat (True/False) is always respected; None is taken from MetricGrid.
     """
-    curr_time_sig = TimeSignature.parse(default_time_signature)
-    curr_measure = 1
-    curr_offset = 0.0
-    prev_time_sig = None
+    from src.harmony.core.metric import MetricGrid
 
-    result: list[dict[str, Any]] = []
-
-    for n in notes:
-        # Check if note carries its own time signature change
-        note_time_sig = None
-        if isinstance(n, dict):
-            if "time_signature" in n and n["time_signature"]:
-                note_time_sig = TimeSignature.parse(n["time_signature"])
-            dur_raw = n.get("duration", "half")
-            pitch = n.get("pitch", 60)
-            explicit_db = n.get("is_downbeat")
-        else:
-            dur_raw = "half"
-            pitch = int(n)
-            explicit_db = None
-
-        if note_time_sig is not None and note_time_sig != curr_time_sig:
-            if curr_offset > 1e-4:
-                curr_measure += 1
-                curr_offset = 0.0
-            curr_time_sig = note_time_sig
-
-        dur_q = parse_duration_quarters(dur_raw)
-
-        while curr_offset >= curr_time_sig.measure_duration_quarters - 1e-4:
-            curr_measure += 1
-            curr_offset -= curr_time_sig.measure_duration_quarters
-        if abs(curr_offset) < 1e-4:
-            curr_offset = 0.0
-
-        time_sig_changed = (curr_time_sig != prev_time_sig)
-        prev_time_sig = curr_time_sig
-
-        if explicit_db is not None:
-            is_db = bool(explicit_db)
-        else:
-            is_db = curr_time_sig.is_downbeat(curr_offset)
-
-        xml_type, dots = quarters_to_xml_type_and_dots(dur_q)
-        norm_dur_name = f"dotted_{xml_type}" if dots > 0 else xml_type
-
-        result.append({
-            "pitch": pitch,
-            "duration": norm_dur_name,
-            "duration_quarters": dur_q,
-            "measure": curr_measure,
-            "offset_in_measure": round(curr_offset, 4),
-            "is_downbeat": is_db,
-            "time_signature": curr_time_sig,
-            "time_sig_changed": time_sig_changed,
-        })
-
-        curr_offset += dur_q
-
-    return result
+    grid = MetricGrid(time_signature=default_time_signature, notes=notes)
+    return grid.to_list()

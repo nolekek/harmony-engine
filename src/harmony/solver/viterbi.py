@@ -75,26 +75,32 @@ class ViterbiSolver:
         # Parse melody and chords
         melody_pitches: list[int] = []
         downbeats: list[bool] = []
+        phrase_boundaries: list[bool] = []
 
+        metric_structure = calculate_metric_structure(melody)
         has_explicit_downbeats = any(
             isinstance(m, dict) and "is_downbeat" in m for m in melody
         )
-        if has_explicit_downbeats:
-            for i, m in enumerate(melody):
-                if isinstance(m, dict):
-                    melody_pitches.append(int(m["pitch"]))
+        for i, (m, metric) in enumerate(zip(melody, metric_structure)):
+            if isinstance(m, dict):
+                melody_pitches.append(int(m["pitch"]))
+                if has_explicit_downbeats:
                     downbeats.append(bool(m.get("is_downbeat", False)))
                 else:
-                    melody_pitches.append(int(m))
-                    downbeats.append(False)
-        else:
-            metric_structure = calculate_metric_structure(melody)
-            for m, metric in zip(melody, metric_structure):
-                if isinstance(m, dict):
-                    melody_pitches.append(int(m["pitch"]))
+                    downbeats.append(bool(metric.get("is_downbeat", False)))
+                explicit_pb = m.get("phrase_boundary") if "phrase_boundary" in m else m.get("is_phrase_boundary")
+                if explicit_pb is not None:
+                    phrase_boundaries.append(bool(explicit_pb))
                 else:
-                    melody_pitches.append(int(m))
+                    measure = metric.get("measure", 1)
+                    is_pb = (measure % 4 == 0 and metric.get("is_downbeat", False)) or (i > 0 and (i % 4 == 0 or i == n // 2))
+                    phrase_boundaries.append(bool(is_pb))
+            else:
+                melody_pitches.append(int(m))
                 downbeats.append(bool(metric.get("is_downbeat", False)))
+                measure = metric.get("measure", 1)
+                is_pb = (measure % 4 == 0 and metric.get("is_downbeat", False)) or (i > 0 and (i % 4 == 0 or i == n // 2))
+                phrase_boundaries.append(bool(is_pb))
 
         parsed_chords: list[Chord] = []
         for c in chords:
@@ -172,6 +178,7 @@ class ViterbiSolver:
                     curr_chord=parsed_chords[0],
                     key=parsed_key,
                     is_downbeat=downbeats[0],
+                    phrase_boundary=phrase_boundaries[0],
                 )
                 if res.is_valid and not res.has_hard_violations:
                     init_delta.append(res.cost)
@@ -224,6 +231,7 @@ class ViterbiSolver:
                             curr_chord=curr_chord,
                             key=parsed_key,
                             is_downbeat=is_downbeat,
+                            phrase_boundary=phrase_boundaries[t],
                         )
 
                         if not res.is_valid or res.has_hard_violations:

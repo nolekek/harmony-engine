@@ -14,6 +14,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.harmony.core.types import Key, Chord, Voicing, parse_key
+from src.harmony.core.metric import MetricGrid
 from src.harmony.pipeline import Harmonizer
 from src.harmony.rules.engine import RuleEngine
 from scripts.generate_dataset import get_scale_pitches, NOTE_TO_PC
@@ -145,8 +146,13 @@ def test_single_key(tonic: str, mode: str, level: int, seed: int, harmonizer: Ha
     # Verify every single transition through RuleEngine
     prev_v = None
     prev_c = None
+    metric_grid = MetricGrid(
+        time_signature=getattr(best, "time_signature", "4/4"),
+        durations=best.durations or ["half"] * len(best.voicings),
+        pitches=melody,
+    )
     for idx, (v, c) in enumerate(zip(best.voicings, best.chords)):
-        is_downbeat = (idx % 2 == 0)
+        is_downbeat = metric_grid[idx]["is_downbeat"] if idx < len(metric_grid) else False
         vres = engine.validate(
             prev_voicing=prev_v,
             curr_voicing=v,

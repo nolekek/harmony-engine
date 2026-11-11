@@ -40,11 +40,32 @@ def test_select_top_candidates_edge_cases():
     assert res[0]["rank"] == 1
 
 
+def _all_success_costs(melody_dicts, key="C Major", max_plans=50):
+    """Enumerate every generated plan and collect costs of all successful solutions."""
+    from src.harmony.core.types import Key as HarmonyKey, TimeSignature, calculate_metric_structure
+
+    h = Harmonizer()
+    metric = calculate_metric_structure(
+        melody_dicts, default_time_signature=TimeSignature.parse("4/4")
+    )
+    processed = [
+        {"pitch": m["pitch"], "duration": m["duration"], "is_downbeat": m["is_downbeat"]}
+        for m in metric
+    ]
+    parsed_key = HarmonyKey.parse(key)
+    plans = h.grammar.generate_plans(melody=processed, key=parsed_key, max_plans=max_plans)
+    costs = []
+    for plan in plans:
+        res = h.solver.solve(melody=processed, chords=plan, key=parsed_key)
+        if res.is_success:
+            costs.append(round(res.total_cost, 2))
+    return sorted(costs)
+
+
 def test_api_harmonize_honest_top3():
-    # Melody [64, 65, 62, 67] (E F D G, half, C-dur, max_plans=50)
-    # Total successful plans are 5 (costs: -6.0, -1.0, 4.0, 6.0, 8.0).
-    # With honest top-3 selection, the candidates must be [-6.0, -1.0, 4.0].
-    # Early break previously returned [-6.0, 4.0, 6.0], missing the -1.0 plan.
+    # Melody [64, 65, 62, 67] (E F D G, half, C-dur, max_plans=50).
+    # Honest top-3 must return the three globally cheapest successful plans,
+    # not the first three plans that happen to solve.
     payload = {
         "melody": [
             {"pitch": 64, "duration": "half", "is_downbeat": True},
@@ -64,12 +85,10 @@ def test_api_harmonize_honest_top3():
     assert len(candidates) == 3
 
     costs = [c["cost"] for c in candidates]
-    # First candidate has minimal cost
-    assert costs[0] == -6.0
-    # Second candidate must be -1.0, NOT 4.0
-    assert costs[1] == -1.0
-    assert costs[2] == 4.0
+    expected = _all_success_costs(payload["melody"], max_plans=50)[:3]
+    assert costs == expected, f"API returned {costs}, global top-3 is {expected}"
     assert costs == sorted(costs)
+    assert all(c >= 0 for c in costs), f"costs must be non-negative, got {costs}"
 
 
 def test_pipeline_honest_top3():
@@ -83,7 +102,8 @@ def test_pipeline_honest_top3():
     res = h.harmonize(melody, key="C Major", max_plans=50)
     assert res.is_success is True
     assert len(res.solutions) == 3
-    costs = [s.cost for s in res.solutions]
-    assert costs[0] == -6.0
-    assert costs[1] == -1.0
-    assert costs[2] == 4.0
+    costs = [round(s.cost, 2) for s in res.solutions]
+    expected = _all_success_costs(melody, max_plans=50)[:3]
+    assert costs == expected, f"pipeline returned {costs}, global top-3 is {expected}"
+    assert costs == sorted(costs)
+    assert all(c >= 0 for c in costs), f"costs must be non-negative, got {costs}"
