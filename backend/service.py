@@ -1,4 +1,4 @@
-﻿"""
+"""
 Service layer for Brigade Classical Harmony harmonization requests.
 Encapsulates plan generation, DD filtering, Viterbi optimization, candidate selection,
 scoring, MusicXML/ASCII formatting, and structured error reporting.
@@ -151,6 +151,16 @@ class HarmonizationService:
             data = req
         else:
             data = dict(req)
+
+        # relax_hard_gates is a last resort: a strictly legal plan always wins.
+        # The fast path evaluates plans with the solver directly, so the strict
+        # retry has to happen here as well (mirrors Harmonizer.harmonize).
+        if data.get("relax_hard_gates"):
+            strict_request = dict(data)
+            strict_request["relax_hard_gates"] = False
+            strict_result = self.harmonize(strict_request)
+            if strict_result.get("is_success"):
+                return strict_result
 
         melody_raw = data.get("melody", [])
         if not melody_raw:

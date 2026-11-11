@@ -1,4 +1,4 @@
-﻿"""
+"""
 Opt-in escape-hatch flags: adjacent unisons and relaxed hard gates.
 
 Semantics under test:
@@ -95,4 +95,26 @@ def test_api_default_response_has_no_relaxed_metadata():
     assert data.get("is_success") is True
     for cand in data.get("candidates", []):
         assert "relaxed_violations" not in cand
+
+
+def test_api_relax_hard_gates_still_prefers_strict_plan():
+    strict_melody = [{"pitch": p, "duration": "half"} for p in (60, 62, 64, 65, 67)]
+    key = {"tonic": "C", "mode": "Major"}
+
+    strict = client.post("/api/harmonize", json={"melody": strict_melody, "key": key})
+    relaxed = client.post(
+        "/api/harmonize",
+        json={"melody": strict_melody, "key": key, "relax_hard_gates": True},
+    )
+    assert strict.status_code == relaxed.status_code == 200
+    strict_data, relaxed_data = strict.json(), relaxed.json()
+
+    assert relaxed_data["is_success"] is True
+    # A clean plan exists, so the HTTP layer must return it instead of a
+    # 10000-point-penalty compromise.
+    assert relaxed_data["best_candidate"]["cost"] < 1000
+    assert relaxed_data["best_candidate"]["cost"] == pytest.approx(
+        strict_data["best_candidate"]["cost"]
+    )
+    assert "relaxed_violations" not in relaxed_data["best_candidate"]
 

@@ -2,6 +2,8 @@
 
 > **Для исполнителей:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development (рекомендуется) или superpowers:executing-plans. Шаги — чекбоксы (`- [ ]`). Каждая задача заканчивается зелёными тестами и коммитом.
 
+> **Состояние на 2026-11-12:** волны P0/P1/P2 закрыты, работа продолжается по [HANDOFF.md](HANDOFF.md) (снимок состояния, метрики выживаемости планов и открытые дефекты из [scratch/critic/AUDIT.md](scratch/critic/AUDIT.md)).
+
 **Цель:** превратить прототип, который генерирует унисонные огрызки с самооценкой «5/5» и валится на обычной диатонике, в честный строгий SATB-движок по «Бригадному» учебнику — без фейковых заявлений, без слепых зон в правилах, с внятной диагностикой.
 
 **Спека:** [REPORT.md](REPORT.md) (карта из 64 находок), [theory-research.md](theory-research.md), [architecture-audit.md](architecture-audit.md), [backend-audit.md](backend-audit.md), [solver-audit.md](solver-audit.md), [rules-audit.md](rules-audit.md), [frontend-audit.md](frontend-audit.md), [fuzz.md](fuzz.md).

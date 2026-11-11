@@ -143,18 +143,30 @@ def test_relax_hard_gates_mode():
 def test_pipeline_relax_hard_gates_e2e():
     """Harmonizer end-to-end supports relax_hard_gates for melodies without viable strict paths."""
     h = Harmonizer()
-    melody = [60, 71]  # Strict rejects octave leaps / contrary motion
+    melody = [71, 67]
 
-    res_strict = h.harmonize(melody, key="C Major", relax_hard_gates=False)
+    # Without replanning / with standard functional plan, strict mode rejects [71, 67]:
+    res_strict = h.harmonize(melody, key="C Major", allow_replanning=False, relax_hard_gates=False)
     assert res_strict.is_success is False
 
-    res_relax = h.harmonize(melody, key="C Major", relax_hard_gates=True)
+    res_relax = h.harmonize(melody, key="C Major", allow_replanning=False, relax_hard_gates=True)
     assert res_relax.is_success is True
     best = res_relax.best_solution
     assert best is not None
     assert best.cost >= 10000.0
     assert best.had_relaxed_violations is True
     assert len(best.relaxed_rule_ids) > 0
+    assert "RESOLUTION_LEADING_TONE_UP" in best.relaxed_rule_ids
+
+    # Also with explicit D -> T cadential plan:
+    res_chords_strict = h.harmonize(melody, chords=["D", "T"], key="C Major", relax_hard_gates=False)
+    assert res_chords_strict.is_success is False
+
+    res_chords_relax = h.harmonize(melody, chords=["D", "T"], key="C Major", relax_hard_gates=True)
+    assert res_chords_relax.is_success is True
+    assert res_chords_relax.best_solution is not None
+    assert res_chords_relax.best_solution.cost >= 10000.0
+    assert "RESOLUTION_LEADING_TONE_UP" in res_chords_relax.best_solution.relaxed_rule_ids
 
 
 def test_api_harmonize_default_response_contract(api_client):
@@ -176,7 +188,7 @@ def test_api_harmonize_default_response_contract(api_client):
 
 
 def test_api_harmonize_with_relaxed_flags(api_client):
-    """API passes through allow_adjacent_unisons and relax_hard_gates."""
+    """API accepts both allow_adjacent_unisons and relax_hard_gates fields."""
     # 1. Unison flag
     resp_unison = api_client.post(
         "/api/harmonize",
@@ -190,12 +202,29 @@ def test_api_harmonize_with_relaxed_flags(api_client):
     data_unison = resp_unison.json()
     assert data_unison["is_success"] is True
 
-    # 2. Relax hard gates flag
+    # 2. Relax hard gates flag on melody [71, 67]
+    # Without relax flag:
+    resp_strict = api_client.post(
+        "/api/harmonize",
+        json={
+            "melody": [{"pitch": 71}, {"pitch": 67}],
+            "key": {"tonic": "C", "mode": "Major"},
+            "allow_secondary_dominants": False,
+            "relax_hard_gates": False,
+        },
+    )
+    assert resp_strict.status_code == 200
+    data_strict = resp_strict.json()
+    assert data_strict["is_success"] is False
+    assert "relaxed" not in data_strict
+
+    # With relax_hard_gates=True:
     resp_relax = api_client.post(
         "/api/harmonize",
         json={
-            "melody": [{"pitch": 60}, {"pitch": 71}],
+            "melody": [{"pitch": 71}, {"pitch": 67}],
             "key": {"tonic": "C", "mode": "Major"},
+            "allow_secondary_dominants": False,
             "relax_hard_gates": True,
         },
     )
@@ -207,3 +236,22 @@ def test_api_harmonize_with_relaxed_flags(api_client):
     assert cand["cost"] >= 10000.0
     assert isinstance(cand.get("relaxed_violations"), list)
     assert len(cand["relaxed_violations"]) > 0
+    assert "RESOLUTION_LEADING_TONE_UP" in cand["relaxed_violations"]
+
+    # 3. Both flags accepted together:
+    resp_both = api_client.post(
+        "/api/harmonize",
+        json={
+            "melody": [{"pitch": 71}, {"pitch": 67}],
+            "key": {"tonic": "C", "mode": "Major"},
+            "allow_adjacent_unisons": True,
+            "relax_hard_gates": True,
+        },
+    )
+    assert resp_both.status_code == 200
+    data_both = resp_both.json()
+    assert data_both["is_success"] is True
+    assert data_both.get("relaxed") is True
+    cand_both = data_both["candidates"][0]
+    assert cand_both["cost"] >= 10000.0
+    assert isinstance(cand_both.get("relaxed_violations"), list)

@@ -12,7 +12,10 @@
     {"role": "performance", "status": "completed", "note": "мемоизация generator, pruning Viterbi"},
     {"role": "harmonic-rhythm", "status": "completed", "note": "штрафы за болтовню"},
     {"role": "chromatic", "status": "completed", "note": "N/N6, bVI/bVI6"},
-    {"role": "grammar-filters", "status": "running", "note": "снятие фильтров по высотам сопрано + метрики выживаемости"},
-    {"role": "solver-flags-2", "status": "running", "note": "allow_adjacent_unisons / relax_hard_gates"}
-  ]
+    {"role": "grammar-filters", "status": "completed", "note": "фильтры -> штрафы -6.0, beam_starvations, lru_cache; отчёт .redteam/scratch/grammar_metrics/REPORT.md, коммит 0b2134e"},
+    {"role": "solver-flags-2", "status": "completed", "note": "allow_adjacent_unisons / relax_hard_gates + метаданные; коммит 0b2134e; Lead добавил prefer-strict в pipeline и service"},
+    {"role": "final-approach", "status": "completed", "note": "доминантовая подготовка финала, T6->T и VI-без-доминанты хард-гейты; tests/test_final_approach.py (20)"},
+    {"role": "critic-audit", "status": "completed", "note": "7 находок в .redteam/scratch/critic/AUDIT.md; 3 репро подтверждены Lead'ом, план следующей волны в HANDOFF.md"}
+  ],
+  "resume_note": "После рестарта DSH агенты из этой таблицы недоступны по id; спавнить заново по роли, не больше 3 одновременно. Перед спавном читать .redteam/HANDOFF.md."
 }
