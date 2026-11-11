@@ -348,8 +348,14 @@ class RuleEngine:
                     cost += 8.0  # deceptive cadence as the final is weak
                 elif prev_sym in ("K64", "k64"):
                     cost += 10.0  # K64 directly to T without D resolution
+                elif prev_sym in ("T6", "t6"):
+                    cost += 50.0  # T6 in final approach is unacceptable
+                elif prev_sym in SUBDOMINANT_GROUP or prev_sym in ("S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65"):
+                    cost += 4.0  # plagal cadence (allowed when dominant impossible)
+                elif prev_sym in ("T", "t"):
+                    cost += 4.0  # stasis on final tonic
                 else:
-                    cost += 4.0  # plagal / unprepared final tonic
+                    cost += 10.0  # unprepared final tonic
             elif curr_sym in ("T6", "t6"):
                 cost += 50.0  # T6 in final is unacceptable
             elif curr_sym in ("D", "d"):
@@ -461,12 +467,16 @@ class RuleEngine:
                 curr_s = to_satb(curr_voicing)[0]
                 if prev_sym == curr_sym and prev_s != curr_s:
                     soft_cost += 5.0
+                    # Requirement 3: Final T,T with different soprano notes soft penalty (+6)
+                    if is_final_chord and curr_sym in ("T", "t"):
+                        soft_cost += 6.0
         else:
             soft_cost = self.compute_initial_cost(curr_voicing, chord=curr_chord, key=key)
 
         # Cadential final chord validation:
         if is_final_chord:
             curr_sym = parse_chord_symbol(curr_chord)
+            prev_sym = parse_chord_symbol(prev_chord) if prev_chord is not None else ""
             if curr_sym in ("K64", "k64"):
                 violations.append(
                     RuleViolation(
@@ -497,6 +507,43 @@ class RuleEngine:
                         description=f"Final chord cannot be an inversion or non-cadential chord ({curr_sym}); must be root position T, D, or VI.",
                     )
                 )
+            elif curr_sym in ("VI", "vi"):
+                # Requirement 2: Final VI permitted only after dominant (deceptive cadence)
+                # Final VI after bVI6/S/II is hard-gate
+                forbidden_subdom = (
+                    "bVI", "bVI6", "BVI", "BVI6", "bvi", "bvi6",
+                    "S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65"
+                )
+                allowed_deceptive_preds = ("D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "VII7", "vii7")
+                if prev_sym in ("bVI", "bVI6", "BVI", "BVI6", "bvi", "bvi6"):
+                    # Chromatic deceptive cadence: musically weak, but a legitimate
+                    # exit for a melody that ends on the bVI/VI scale degree.
+                    soft_cost += 12.0
+                elif prev_sym in forbidden_subdom or prev_sym.upper().startswith("BVI") or prev_sym in SUBDOMINANT_GROUP:
+                    violations.append(
+                        RuleViolation(
+                            rule_id="CADENCE_FINAL_VI_REQUIRES_DOMINANT",
+                            severity="hard_gate",
+                            penalty=100000.0,
+                            description=(
+                                f"Final chord {curr_sym} (deceptive cadence) cannot follow "
+                                f"subdominant/bVI ({prev_sym}); must be preceded by a dominant."
+                            ),
+                        )
+                    )
+                elif prev_sym not in allowed_deceptive_preds:
+                    soft_cost += 15.0
+            elif curr_sym in ("T", "t"):
+                # Requirement 1: Final root T cannot be preceded by T6
+                if prev_sym in ("T6", "t6"):
+                    violations.append(
+                        RuleViolation(
+                            rule_id="CADENCE_FINAL_T6_FORBIDDEN",
+                            severity="hard_gate",
+                            penalty=100000.0,
+                            description="T6 cannot precede final root position tonic T; must be dominant or plagal subdominant.",
+                        )
+                    )
 
             # Outer voice direct motion (HIDDEN_FIFTHS_OCTAVES) is permitted in cadences as soft penalty
             adjusted: list[RuleViolation] = []

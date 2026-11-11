@@ -6,6 +6,7 @@ for a given soprano melody according to classical period form and Brigade syntax
 
 from typing import Any, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from src.harmony.core.types import Key, Chord, parse_key
 from src.harmony.rules.doubling import get_triad_tones
 from src.harmony.rules.engine import check_syntax_rules
@@ -134,7 +135,8 @@ class HarmonicGrammar:
                 if fn in ("II7", "II65") and pc == tonic_pc % 12:
                     continue
                 if fn == "VII7" and pc in ((tonic_pc + 8) % 12, (tonic_pc + 9) % 12):
-                    continue
+                    if not (next_pitch == pitch + 1):
+                        continue
 
             root, third, fifth = get_triad_tones(fn, tonic_pc, mode)
             allowed_pcs = {root, third, fifth}
@@ -172,18 +174,52 @@ class HarmonicGrammar:
 
         # Cadential preference: before the final tonic the textbook wants a
         # dominant preparation (D/D7/D65/D43/D2/D6), not a plagal S/II.
+        # Requirement 1: Before final root T, penultimate chord is strictly dominant group
+        # (D, D6, D7, D65, D43, D2, K64) if melodic note allows it;
+        # if dominant physically impossible, S/II is allowed, but NOT T6/VI/T.
+        # Exception: when the final two melody notes repeat the tonic pitch (e.g. C4 -> C4),
+        # T, T is valid cadential prolongation.
         if is_penultimate and next_pitch is not None and (next_pitch % 12) in tonic_tones:
-            cadential = [
-                fn for fn in compatible
-                if fn in ("D", "d", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2", "D6", "d6")
-            ]
-            if cadential:
-                compatible = cadential
+            if pitch == next_pitch and (pitch % 12) in tonic_tones:
+                t_cands = [fn for fn in compatible if fn in ("T", "t")]
+                if t_cands:
+                    compatible = t_cands
+            else:
+                cadential = [
+                    fn for fn in compatible
+                    if fn in ("D", "d", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2", "D6", "d6", "VII7", "vii7")
+                ]
+                if cadential:
+                    compatible = cadential
+                else:
+                    subdominant = [
+                        fn for fn in compatible
+                        if fn in ("S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65")
+                    ]
+                    if subdominant:
+                        compatible = subdominant
+                    else:
+                        compatible = [fn for fn in compatible if fn not in ("T6", "t6", "VI", "vi")]
 
         return compatible
 
     def is_valid_syntax_transition(
         self,
+        prev_fn: str,
+        curr_fn: str,
+        is_downbeat: bool = True,
+        phrase_boundary: bool = False,
+    ) -> bool:
+        return self._cached_is_valid_syntax_transition(
+            prev_fn=prev_fn,
+            curr_fn=curr_fn,
+            is_downbeat=is_downbeat,
+            phrase_boundary=phrase_boundary,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=4096)
+    def _cached_is_valid_syntax_transition(
         prev_fn: str,
         curr_fn: str,
         is_downbeat: bool = True,
@@ -257,9 +293,9 @@ class HarmonicGrammar:
             if curr_upper not in ("D", "D7", "D43", "D2", "D65", "D6", "K64", "T64"):
                 return False
 
-        # Leading-tone chords (VII6, VII7) can only resolve to Tonic or intra-functionally to Dominant
+        # Leading-tone chords (VII6, VII7) can only resolve to Tonic, intra-functionally to Dominant, or deceptively to VI
         if prev_upper in ("VII", "VII6", "VII7"):
-            if curr_upper not in ("T", "T6", "T53", "T-6", "t", "t6", "D", "D7", "D65", "d", "d7"):
+            if curr_upper not in ("T", "T6", "T53", "T-6", "t", "t6", "D", "D7", "D65", "d", "d7", "VI", "vi"):
                 return False
 
         # VII6 is a passing chord between tonic inversions (T-VII6-T6, T6-VII6-T); cannot follow subdominant
@@ -307,6 +343,10 @@ class HarmonicGrammar:
                 return False
             if prev_upper in ("III", "III6"):
                 return False
+
+        # Transition between natural submediant VI and chromatic submediant bVI is forbidden
+        if prev_upper in ("VI", "VI6") and curr_upper in ("BVI", "BVI6"):
+            return False
 
         # Chromatic submediant transitions:
         # bVI/bVI6 -> D/D7/S/T (and VI-zone)
@@ -447,11 +487,16 @@ class HarmonicGrammar:
 
             # Canon requirement: Penultimate chord before final tonic prioritizes dominant if soprano allows
             if is_penult and (notes[-1].pitch % 12) in tonic_tones:
-                dom_tones = {(tonic_pc + 7) % 12, (tonic_pc + 11) % 12, (tonic_pc + 2) % 12, (tonic_pc + 5) % 12}
-                if (note.pitch % 12) in dom_tones:
-                    d_cands = [fn for fn in cands if fn in ("D", "d", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2", "D6", "d6")]
-                    if d_cands:
-                        cands = d_cands + [fn for fn in cands if fn not in d_cands]
+                if notes[i].pitch == notes[-1].pitch:
+                    t_cands = [fn for fn in cands if fn in ("T", "t")]
+                    if t_cands:
+                        cands = t_cands
+                else:
+                    dom_tones = {(tonic_pc + 7) % 12, (tonic_pc + 11) % 12, (tonic_pc + 2) % 12, (tonic_pc + 5) % 12}
+                    if (note.pitch % 12) in dom_tones:
+                        d_cands = [fn for fn in cands if fn in ("D", "d", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2", "D6", "d6")]
+                        if d_cands:
+                            cands = d_cands + [fn for fn in cands if fn not in d_cands]
 
             step_candidates.append(cands)
 
@@ -475,6 +520,14 @@ class HarmonicGrammar:
                         prev_fn = path[-1]
                         if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat, phrase_boundary=is_pb):
                             continue
+                        if i == n - 1 and cand in ("VI", "vi"):
+                            if prev_fn in ("S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65"):
+                                continue
+                            if prev_fn not in ("D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "VII7", "vii7", "III", "iii", "bVI", "bVI6", "BVI", "BVI6"):
+                                continue
+                        if i == n - 1 and cand in ("T", "t"):
+                            if prev_fn in ("T6", "t6"):
+                                continue
                         if cand in ("VI", "vi") and prev_fn in (
                             "D", "d", "D7", "D65", "D43", "D2", "D6"
                         ):
@@ -563,8 +616,15 @@ class HarmonicGrammar:
                                 trans_score += 3.0
 
                         if not is_minor:
+                            is_next_bvi = (
+                                i + 1 < n
+                                and (notes[i + 1].pitch % 12) == (tonic_pc + 8) % 12
+                            )
                             if cand in ("III", "iii", "III6", "iii6"):
-                                trans_score -= 25.0
+                                if is_next_bvi and cand in ("III6", "iii6"):
+                                    trans_score += 4.0
+                                else:
+                                    trans_score -= 25.0
                         else:
                             if (prev_fn in ("III", "iii", "III6", "iii6") and cand in ("VI", "vi")) or \
                                (prev_fn in ("VI", "vi") and cand in ("III", "iii", "III6", "iii6")):
@@ -670,16 +730,25 @@ class HarmonicGrammar:
                             dom_pcs = {(tonic_pc + 7) % 12, (tonic_pc + 11) % 12, (tonic_pc + 2) % 12, (tonic_pc + 5) % 12}
                             if (notes[i].pitch % 12) in dom_pcs:
                                 if cand in DOMINANT_GROUP:
-                                    trans_score += 4.0
+                                    trans_score += 6.0
                                 elif cand in SUBDOMINANT_GROUP:
-                                    trans_score -= 4.0
-                                elif cand in ("VI", "vi"):
                                     trans_score -= 8.0
+                                elif cand in ("VI", "vi", "T6", "t6"):
+                                    trans_score -= 25.0
+                                elif cand in ("T", "t"):
+                                    trans_score -= 10.0
                             elif (notes[i].pitch % 12) in tonic_tones:
-                                if cand in ("T", "t", "T6", "t6"):
-                                    trans_score += 3.0
-                                elif cand in SUBDOMINANT_GROUP:
-                                    trans_score -= 3.0
+                                if cand in SUBDOMINANT_GROUP:
+                                    trans_score += 4.0
+                                elif cand in ("T", "t"):
+                                    trans_score -= 4.0
+                                elif cand in ("VI", "vi", "T6", "t6"):
+                                    trans_score -= 25.0
+                            else:
+                                if cand in SUBDOMINANT_GROUP:
+                                    trans_score += 4.0
+                                elif cand in ("VI", "vi", "T6", "t6"):
+                                    trans_score -= 25.0
 
                         if (notes[i].pitch % 12) not in scale_pcs and not is_downbeat and cand == prev_fn:
                             trans_score += 4.0

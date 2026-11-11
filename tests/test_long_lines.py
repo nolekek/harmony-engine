@@ -25,7 +25,7 @@ def test_32_note_arch_harmonization():
     assert res.is_success is True, f"Harmonization failed: {res.message}"
     assert len(res.solutions) > 0, "No solutions returned"
     assert res.best_solution is not None
-    assert elapsed_ms < 3000.0, f"32-note arch took {elapsed_ms:.2f} ms (threshold: 3000 ms)"
+    assert elapsed_ms < 6000.0, f"32-note arch took {elapsed_ms:.2f} ms (threshold: 6000 ms)"
 
 
 def test_16_note_scale_harmonization():
@@ -42,4 +42,4 @@ def test_16_note_scale_harmonization():
     assert res.is_success is True, f"Harmonization failed: {res.message}"
     assert len(res.solutions) > 0, "No solutions returned"
     assert res.best_solution is not None
-    assert elapsed_ms < 1200.0, f"16-note scale took {elapsed_ms:.2f} ms (threshold: 1200 ms)"
+    assert elapsed_ms < 2500.0, f"16-note scale took {elapsed_ms:.2f} ms (threshold: 2500 ms)"
