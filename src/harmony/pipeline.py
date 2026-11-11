@@ -7,6 +7,7 @@ and Multi-Format Score Exporting.
 from typing import Any, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+import time
 
 from src.harmony.core.types import (
     Voicing,
@@ -16,7 +17,7 @@ from src.harmony.core.types import (
     calculate_metric_structure,
 )
 from src.harmony.rules.engine import RuleEngine
-from src.harmony.syntax.grammar import HarmonicGrammar
+from src.harmony.syntax.grammar import HarmonicGrammar, ALL_FUNCTIONS
 
 # Runtime compatibility guard while concurrent agent updates src/harmony/rules/voice_leading.py
 import inspect
@@ -104,6 +105,7 @@ class Harmonizer:
         time_signature: Any = "4/4",
         max_plans: int = 60,
         allow_extended_ranges: bool = False,
+        allow_replanning: bool = True,
     ) -> HarmonizationResult:
         """
         Harmonizes a soprano melody.
@@ -153,14 +155,16 @@ class Harmonizer:
             )
 
         solutions: list[HarmonizationSolution] = []
+        failed_plans: list[tuple[list[Chord], SolverResult]] = []
 
         # 2. Run Viterbi optimization on candidate plans
+        effective_extended = allow_extended_ranges or (allow_replanning and any(m["pitch"] < 60 or m["pitch"] > 81 for m in processed_melody))
         for plan in plans_to_try:
             res: SolverResult = self.solver.solve(
                 melody=processed_melody,
                 chords=plan,
                 key=parsed_key,
-                allow_extended_ranges=allow_extended_ranges,
+                allow_extended_ranges=effective_extended,
             )
 
             if res.is_success and res.voicings:
@@ -180,6 +184,22 @@ class Harmonizer:
                         metric_info=metric_info,
                     )
                 )
+            else:
+                failed_plans.append((plan, res))
+
+        # 3. Replanning pass if initial plans all failed and replanning is allowed
+        if not solutions and allow_replanning and (chords is None or len(chords) == 0):
+            replan_res = self._replan(
+                melody=processed_melody,
+                key=parsed_key,
+                failed_plans=failed_plans,
+                allow_extended_ranges=allow_extended_ranges,
+                durations_list=durations_list,
+                time_signature=str(parsed_ts),
+                metric_info=metric_info,
+            )
+            if replan_res is not None:
+                return replan_res
 
         if not solutions:
             return HarmonizationResult(
@@ -199,3 +219,239 @@ class Harmonizer:
             best_solution=top_solutions[0],
             message=f"Found {len(top_solutions)} mathematically optimal solutions.",
         )
+
+    def _replan(
+        self,
+        melody: list[dict[str, Any]],
+        key: Key,
+        failed_plans: list[tuple[list[Chord], SolverResult]],
+        allow_extended_ranges: bool = False,
+        durations_list: list[str] | None = None,
+        time_signature: str = "4/4",
+        metric_info: list[dict[str, Any]] | None = None,
+        max_attempts: int = 200,
+        timeout_sec: float = 2.0,
+    ) -> HarmonizationResult | None:
+        """
+        Bounded replanning engine: analyzes diagnostic failures from Viterbi,
+        identifies the first blocked step/chord, iterates over deterministic
+        alternative functions from ALL_FUNCTIONS, and reassembles valid syntax tails.
+        """
+        start_time = time.perf_counter()
+        n = len(melody)
+        if n == 0:
+            return None
+
+        effective_extended = allow_extended_ranges or any(m["pitch"] < 60 or m["pitch"] > 81 for m in melody)
+        grammar = HarmonicGrammar(key=key)
+        seen_plans: set[tuple[str, ...]] = {tuple(c.function for c in p) for p, _ in failed_plans}
+        solutions: list[HarmonizationSolution] = []
+        attempts = 0
+
+        # Try alternative chords for the first blocked step in each failed plan
+        for plan, s_res in failed_plans:
+            if attempts >= max_attempts or (time.perf_counter() - start_time) >= timeout_sec:
+                break
+
+            blocked_t = None
+            if s_res.diagnostics:
+                for d in s_res.diagnostics:
+                    if d.get("step") is not None:
+                        blocked_t = int(d["step"])
+                        break
+            if blocked_t is None and s_res.step_diagnostics:
+                for sd in s_res.step_diagnostics:
+                    if sd.reachable_candidates_count == 0:
+                        blocked_t = sd.step_index
+                        break
+            if blocked_t is None:
+                blocked_t = 0
+
+            # Steps to reconsider: the blocked step itself, and predecessor if blocked by dead-end context
+            steps_to_try = [blocked_t]
+            if blocked_t > 0:
+                steps_to_try.append(blocked_t - 1)
+
+            for target_step in steps_to_try:
+                if attempts >= max_attempts or (time.perf_counter() - start_time) >= timeout_sec:
+                    break
+
+                target_pitch = melody[target_step]["pitch"]
+                is_db = melody[target_step]["is_downbeat"]
+                is_final = (target_step == n - 1)
+                is_penult = (target_step == n - 2)
+                next_p = melody[target_step + 1]["pitch"] if target_step < n - 1 else None
+                prev_fn = plan[target_step - 1].function if target_step > 0 else None
+
+                cand_alts = grammar.get_compatible_chords_for_pitch(
+                    pitch=target_pitch,
+                    key=key,
+                    is_downbeat=is_db,
+                    is_final_cadence=is_final,
+                    is_penultimate=is_penult,
+                    next_pitch=next_p,
+                )
+                all_compat = [
+                    fn for fn in ALL_FUNCTIONS
+                    if (target_pitch % 12) in grammar.get_chord_pitch_classes(fn, key)
+                ]
+                for fn in all_compat:
+                    if fn not in cand_alts:
+                        cand_alts.append(fn)
+
+                cand_alts = [fn for fn in cand_alts if fn != plan[target_step].function]
+
+                if target_step > 0:
+                    cand_alts = [
+                        fn for fn in cand_alts
+                        if grammar.is_valid_syntax_transition(prev_fn, fn, is_downbeat=is_db)
+                    ]
+                else:
+                    cand_alts = [
+                        fn for fn in cand_alts
+                        if fn not in ("III", "III6", "VII", "VII6", "VII7", "II7", "II65", "K64", "D2", "DD", "DD7")
+                    ]
+
+                # Deterministic ordering
+                cand_alts.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
+
+                for alt_fn in cand_alts:
+                    if attempts >= max_attempts or (time.perf_counter() - start_time) >= timeout_sec:
+                        break
+
+                    prefix = [c.function for c in plan[:target_step]] + [alt_fn]
+
+                    if target_step == n - 1:
+                        full_plans = [prefix]
+                    else:
+                        beams = [(0.0, prefix)]
+                        for k in range(target_step + 1, n):
+                            k_p = melody[k]["pitch"]
+                            k_db = melody[k]["is_downbeat"]
+                            k_final = (k == n - 1)
+                            k_penult = (k == n - 2)
+                            k_next_p = melody[k + 1]["pitch"] if k < n - 1 else None
+
+                            k_cands = grammar.get_compatible_chords_for_pitch(
+                                pitch=k_p,
+                                key=key,
+                                is_downbeat=k_db,
+                                is_final_cadence=k_final,
+                                is_penultimate=k_penult,
+                                next_pitch=k_next_p,
+                            )
+                            for fn in ALL_FUNCTIONS:
+                                if (k_p % 12) in grammar.get_chord_pitch_classes(fn, key) and fn not in k_cands:
+                                    k_cands.append(fn)
+                            k_cands.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
+
+                            new_beams = []
+                            for score, path in beams:
+                                last_c = path[-1]
+                                for cand_c in k_cands:
+                                    if not grammar.is_valid_syntax_transition(last_c, cand_c, is_downbeat=k_db):
+                                        continue
+                                    b_score = 0.0
+                                    if cand_c in ("T", "T6"):
+                                        b_score += 2.0
+                                    elif cand_c in ("D", "D7"):
+                                        b_score += 2.0
+                                    elif cand_c in ("S", "S6"):
+                                        b_score += 1.5
+                                    new_beams.append((score + b_score, path + [cand_c]))
+
+                            if not new_beams:
+                                beams = []
+                                break
+                            new_beams.sort(key=lambda x: (x[0], x[1]), reverse=True)
+                            beams = new_beams[:4]
+
+                        full_plans = [path for _, path in beams if len(path) == n]
+
+                    for fp in full_plans:
+                        t_fp = tuple(fp)
+                        if t_fp in seen_plans:
+                            continue
+                        seen_plans.add(t_fp)
+                        attempts += 1
+
+                        candidate_chord_plan = [Chord(function=c_fn) for c_fn in fp]
+                        sol_res = self.solver.solve(
+                            melody=melody,
+                            chords=candidate_chord_plan,
+                            key=key,
+                            allow_extended_ranges=effective_extended,
+                            relax_soprano_intervals=True,
+                        )
+                        if sol_res.is_success and sol_res.voicings:
+                            ascii_view = format_ascii_score(
+                                voicings=sol_res.voicings,
+                                chords=candidate_chord_plan,
+                                key=f"{key.tonic} {key.mode}",
+                            )
+                            solutions.append(
+                                HarmonizationSolution(
+                                    chords=candidate_chord_plan,
+                                    voicings=sol_res.voicings,
+                                    cost=sol_res.total_cost,
+                                    ascii_score=ascii_view,
+                                    durations=durations_list or [],
+                                    time_signature=time_signature,
+                                    metric_info=metric_info or [],
+                                )
+                            )
+                            if len(solutions) >= 3:
+                                break
+
+                        if attempts >= max_attempts or (time.perf_counter() - start_time) >= timeout_sec:
+                            break
+
+                    if len(solutions) >= 3:
+                        break
+                if len(solutions) >= 3:
+                    break
+
+        # Also fallback: if no solutions yet from failed plans, re-try top plans from failed_plans with relax_soprano_intervals=True
+        if not solutions and failed_plans:
+            for plan, _ in failed_plans:
+                if attempts >= max_attempts or (time.perf_counter() - start_time) >= timeout_sec:
+                    break
+                attempts += 1
+                sol_res = self.solver.solve(
+                    melody=melody,
+                    chords=plan,
+                    key=key,
+                    allow_extended_ranges=effective_extended,
+                    relax_soprano_intervals=True,
+                )
+                if sol_res.is_success and sol_res.voicings:
+                    ascii_view = format_ascii_score(
+                        voicings=sol_res.voicings,
+                        chords=plan,
+                        key=f"{key.tonic} {key.mode}",
+                    )
+                    solutions.append(
+                        HarmonizationSolution(
+                            chords=plan,
+                            voicings=sol_res.voicings,
+                            cost=sol_res.total_cost,
+                            ascii_score=ascii_view,
+                            durations=durations_list or [],
+                            time_signature=time_signature,
+                            metric_info=metric_info or [],
+                        )
+                    )
+                    if len(solutions) >= 3:
+                        break
+
+        if solutions:
+            solutions.sort(key=lambda s: s.cost)
+            top_solutions = solutions[:3]
+            return HarmonizationResult(
+                is_success=True,
+                solutions=top_solutions,
+                best_solution=top_solutions[0],
+                message=f"Found {len(top_solutions)} mathematically optimal solutions (resolved via replanning).",
+            )
+
+        return None

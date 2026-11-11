@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import {
   Music,
   Award,
@@ -10,7 +10,9 @@ import { MelodyInput } from "./components/MelodyInput";
 import type { MelodyNote } from "./components/MelodyInput";
 import { ControlPanel } from "./components/ControlPanel";
 import type { CandidateSolution } from "./components/ControlPanel";
-import { ScoreDisplay } from "./components/ScoreDisplay";
+const ScoreDisplay = lazy(() =>
+  import("./components/ScoreDisplay").then((m) => ({ default: m.ScoreDisplay }))
+);
 import { AudioControls } from "./components/AudioControls";
 import { GraderPanel } from "./components/GraderPanel";
 import type { GraderReportData, GraderMeta } from "./components/GraderPanel";
@@ -539,12 +541,23 @@ export function App() {
             {/* Right Column (Score Display, Playback & Export for Harmonizer) */}
             <div className="lg:col-span-7 space-y-5">
               {/* Score Display (OSMD) */}
-              <ScoreDisplay
-                musicxml={activeScoreState.musicxml}
-                currentChordIndex={activeScoreState.currentPlaybackIndex}
-                problemMeasures={activeScoreState.problemMeasures}
-                title={activeScoreState.title}
-              />
+              <Suspense
+                fallback={
+                  <div className="flex h-64 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-400">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                      <span>Загрузка партитуры (OSMD)...</span>
+                    </div>
+                  </div>
+                }
+              >
+                <ScoreDisplay
+                  musicxml={activeScoreState.musicxml}
+                  currentChordIndex={activeScoreState.currentPlaybackIndex}
+                  problemMeasures={activeScoreState.problemMeasures}
+                  title={activeScoreState.title}
+                />
+              </Suspense>
 
               {/* Audio Playback Controls */}
               <AudioControls
@@ -580,12 +593,23 @@ export function App() {
 
             {/* Right: Real-time Score with error highlighting & audio playback for Grader */}
             <div className="lg:col-span-6 space-y-5">
-              <ScoreDisplay
-                musicxml={activeScoreState.musicxml}
-                currentChordIndex={activeScoreState.currentPlaybackIndex}
-                problemMeasures={activeScoreState.problemMeasures}
-                title={activeScoreState.title}
-              />
+              <Suspense
+                fallback={
+                  <div className="flex h-64 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-400">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                      <span>Загрузка партитуры (OSMD)...</span>
+                    </div>
+                  </div>
+                }
+              >
+                <ScoreDisplay
+                  musicxml={activeScoreState.musicxml}
+                  currentChordIndex={activeScoreState.currentPlaybackIndex}
+                  problemMeasures={activeScoreState.problemMeasures}
+                  title={activeScoreState.title}
+                />
+              </Suspense>
 
               <AudioControls
                 voicings={activeScoreState.voicings}
@@ -609,7 +633,7 @@ export function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
-        Бригадный Гармонизатор · Строгое соблюдение канонов гармонии (И. И. Способин, И. В. Способин, В. В. Хвостенко, В. А. Вахромеев) · Viterbi Algorithm & Pure Python
+        Бригадный Гармонизатор · Строгое соблюдение канонов гармонии (И. Дубовский, С. Евсеев, И. В. Способин, В. Соколов) · Viterbi Algorithm & Pure Python
       </footer>
     </div>
   );

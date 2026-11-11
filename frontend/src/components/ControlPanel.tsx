@@ -73,7 +73,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 text-xs font-mono">
             <Clock className="w-3.5 h-3.5" />
             <span>{latencyMs} мс</span>
-            <span className="text-emerald-500 text-[10px]">(&lt; 500 мс)</span>
           </div>
         )}
       </div>
@@ -202,7 +201,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               return (
                 <div
                   key={cand.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Выбрать решение #${cand.rank}: ${cand.description}`}
                   onClick={() => onSelectCandidate(cand)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectCandidate(cand);
+                    }
+                  }}
                   className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
                     isSelected
                       ? "bg-indigo-950/40 border-indigo-500 ring-1 ring-indigo-500 shadow-md"

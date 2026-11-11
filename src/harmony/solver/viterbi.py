@@ -52,6 +52,7 @@ class ViterbiSolver:
         chords: Sequence[Chord | str],
         key: Any = None,
         allow_extended_ranges: bool = False,
+        relax_soprano_intervals: bool = False,
     ) -> SolverResult:
         """
         Finds the globally optimal sequence of Voicings for the given melody and chord progression.
@@ -234,10 +235,19 @@ class ViterbiSolver:
                             phrase_boundary=phrase_boundaries[t],
                         )
 
-                        if not res.is_valid or res.has_hard_violations:
+                        # In SATB harmonization of a given cantus firmus, soprano melodic intervals
+                        # are immutable input constraints of the melody itself (such as degree 6 <-> 7
+                        # in harmonic minor scales). Hard violations strictly confined to voice 0
+                        # (soprano) melodic intervals must not prune the lattice for accompanying voices.
+                        hard_violations = [
+                            v for v in res.violations
+                            if v.is_hard and not (relax_soprano_intervals and v.voices == (0,) and v.rule_id == "MELODIC_AUGMENTED_INTERVAL")
+                        ]
+                        if hard_violations:
                             continue
 
-                        total_cost = delta[t - 1][i] + res.cost
+                        trans_cost = res.cost if res.cost < float("inf") else self.rule_engine.compute_soft_cost(prev_v, curr_v)
+                        total_cost = delta[t - 1][i] + trans_cost
                         if total_cost < best_cost:
                             best_cost = total_cost
                             best_prev_idx = i

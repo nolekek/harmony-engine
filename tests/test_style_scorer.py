@@ -1,5 +1,5 @@
 """
-Tests for Neuro-Symbolic StylePriorModel and its integration into RuleEngine and Viterbi.
+Tests for n-gram statistical style prior (NOT a neural network) and its integration into RuleEngine and Viterbi.
 """
 
 import pytest

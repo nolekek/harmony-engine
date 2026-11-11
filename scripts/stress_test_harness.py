@@ -208,14 +208,16 @@ if __name__ == "__main__":
     parser.add_argument("--level", type=int, default=1)
     parser.add_argument("--seed", type=int, default=100)
     parser.add_argument("--consecutive", type=int, default=1, help="Number of consecutive 24/24 iterations required")
+    parser.add_argument("--fixed-level", action="store_true", help="Keep difficulty level fixed at --level across consecutive runs")
     args = parser.parse_args()
 
     if args.consecutive > 1:
-        print(f"\n🚀 Запуск марафона: требуется {args.consecutive} подряд успешных итераций 24/24 с эскалацией сложности!")
+        mode_str = f"на фиксированном уровне {args.level}" if args.fixed_level else "с эскалацией сложности"
+        print(f"\n🚀 Запуск марафона: требуется {args.consecutive} подряд успешных итераций 24/24 {mode_str}!")
         consecutive_passed = 0
         current_iter = 1
         while consecutive_passed < args.consecutive and current_iter <= 20:
-            lvl = min(consecutive_passed + 1, 5)
+            lvl = args.level if args.fixed_level else min(consecutive_passed + 1, 5)
             passed, failures = run_iteration(current_iter, lvl, args.seed + current_iter * 77)
             if passed == 24:
                 consecutive_passed += 1

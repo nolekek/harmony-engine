@@ -374,6 +374,7 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
                   <td key={i} className="p-1 border-r border-slate-800">
                     <input
                       type="number"
+                      aria-label={`Сопрано, аккорд #${i + 1}`}
                       value={v.soprano}
                       onChange={(e) =>
                         updateVoicePitch(i, "soprano", Number(e.target.value))
@@ -393,6 +394,7 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
                   <td key={i} className="p-1 border-r border-slate-800">
                     <input
                       type="number"
+                      aria-label={`Альт, аккорд #${i + 1}`}
                       value={v.alto}
                       onChange={(e) => updateVoicePitch(i, "alto", Number(e.target.value))}
                       className="w-full text-center bg-slate-900 border border-slate-700 rounded px-1 py-1 text-green-300 font-bold focus:border-green-500 focus:outline-none"
@@ -410,6 +412,7 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
                   <td key={i} className="p-1 border-r border-slate-800">
                     <input
                       type="number"
+                      aria-label={`Тенор, аккорд #${i + 1}`}
                       value={v.tenor}
                       onChange={(e) => updateVoicePitch(i, "tenor", Number(e.target.value))}
                       className="w-full text-center bg-slate-900 border border-slate-700 rounded px-1 py-1 text-orange-300 font-bold focus:border-orange-500 focus:outline-none"
@@ -427,6 +430,7 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
                   <td key={i} className="p-1 border-r border-slate-800">
                     <input
                       type="number"
+                      aria-label={`Бас, аккорд #${i + 1}`}
                       value={v.bass}
                       onChange={(e) => updateVoicePitch(i, "bass", Number(e.target.value))}
                       className="w-full text-center bg-slate-900 border border-slate-700 rounded px-1 py-1 text-red-300 font-bold focus:border-red-500 focus:outline-none"
@@ -504,7 +508,16 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
                 {report.violations.map((v, idx) => (
                   <div
                     key={idx}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Подсветить ошибку в такте ${v.measure}: ${v.message_ru}`}
                     onClick={() => onHighlightMeasure(v.measure)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onHighlightMeasure(v.measure);
+                      }
+                    }}
                     className={`p-3 rounded-lg border text-left cursor-pointer transition-colors ${
                       v.severity === "hard_gate"
                         ? "bg-rose-950/30 border-rose-800/80 hover:bg-rose-950/50"

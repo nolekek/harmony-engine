@@ -317,14 +317,18 @@ def parse_musicxml_content(xml_text: str) -> dict[str, Any]:
 def parse_midi_file(data: bytes) -> dict[str, Any]:
     """
     Parses binary MIDI file data using mido.
-    Extracts soprano melody from the top melodic line.
+    Extracts soprano melody from the top melodic line and SATB voicings.
+    Calculates exact durations and metric downbeats from delta_time and MetricGrid.
     """
     import mido
+    from src.harmony.core.types import quarters_to_xml_type_and_dots, calculate_metric_structure
 
     mid = mido.MidiFile(file=io.BytesIO(data))
-    
-    # Collect note-on events with timestamp and detect time signature
+    ticks_per_beat = mid.ticks_per_beat if mid.ticks_per_beat and mid.ticks_per_beat > 0 else 480
+
+    # Collect note-on and note-off events with timestamp and detect time signature
     events: list[dict[str, Any]] = []
+    note_ends: dict[tuple[int, int], list[int]] = {}
     detected_ts = {"beats": 4, "beat_type": 4}
 
     for track_idx, track in enumerate(mid.tracks):
@@ -340,9 +344,12 @@ def parse_midi_file(data: bytes) -> dict[str, Any]:
                     "channel": getattr(msg, "channel", 0),
                     "track": track_idx,
                 })
+            elif msg.type == "note_off" or (msg.type == "note_on" and msg.velocity == 0):
+                ch = getattr(msg, "channel", 0)
+                note_ends.setdefault((ch, msg.note), []).append(current_time)
 
     if not events:
-        return {"soprano_melody": [], "satb_voicings": [], "time_signature": detected_ts}
+        return {"soprano_melody": [], "satb_voicings": [], "time_signature": detected_ts, "durations": []}
 
     # Sort events by time
     events.sort(key=lambda e: e["time"])
@@ -359,19 +366,68 @@ def parse_midi_file(data: bytes) -> dict[str, Any]:
             else:
                 time_clusters.append([ev])
 
+    # Calculate real duration for each cluster from delta_time or note_off
+    cluster_durations_q: list[float] = []
+    for i, cluster in enumerate(time_clusters):
+        t_start = cluster[0]["time"]
+        if i < len(time_clusters) - 1:
+            delta_ticks = time_clusters[i + 1][0]["time"] - t_start
+        else:
+            # For the last chord, search matching note_off times
+            matching_offs = []
+            for ev in cluster:
+                key = (ev["channel"], ev["pitch"])
+                if key in note_ends:
+                    offs = [o for o in note_ends[key] if o > t_start]
+                    if offs:
+                        matching_offs.append(offs[0] - t_start)
+            if matching_offs:
+                delta_ticks = max(matching_offs)
+            elif cluster_durations_q:
+                delta_ticks = int(round(cluster_durations_q[-1] * ticks_per_beat))
+            else:
+                delta_ticks = ticks_per_beat * 2  # default 2 beats (half)
+
+        dur_q = max(0.25, delta_ticks / ticks_per_beat)
+        cluster_durations_q.append(dur_q)
+
+    # Convert durations to canonical duration strings
+    cluster_dur_names: list[str] = []
+    for dur_q in cluster_durations_q:
+        xml_type, dots = quarters_to_xml_type_and_dots(dur_q)
+        dur_name = f"dotted_{xml_type}" if dots > 0 else xml_type
+        cluster_dur_names.append(dur_name)
+
+    # Build raw items for metric grid analysis
+    raw_items = []
+    for i, cluster in enumerate(time_clusters):
+        sorted_notes = sorted(cluster, key=lambda x: x["pitch"], reverse=True)
+        raw_items.append({
+            "pitch": sorted_notes[0]["pitch"],
+            "duration": cluster_dur_names[i],
+        })
+
+    # Authoritative metric coordinates and downbeats from MetricGrid
+    ts_str = f"{detected_ts['beats']}/{detected_ts['beat_type']}"
+    metric_info = calculate_metric_structure(raw_items, default_time_signature=ts_str)
+
     soprano_melody: list[dict[str, Any]] = []
     satb_voicings: list[dict[str, Any]] = []
+    extracted_durations: list[str] = []
 
     for i, cluster in enumerate(time_clusters):
-        # Sort notes by pitch descending (highest is soprano, lowest is bass)
         sorted_notes = sorted(cluster, key=lambda x: x["pitch"], reverse=True)
         soprano_note = sorted_notes[0]
+        m_info = metric_info[i]
+
         soprano_melody.append({
             "pitch": soprano_note["pitch"],
             "name": midi_to_note_name(soprano_note["pitch"]),
-            "is_downbeat": (i % 2 == 0),
-            "duration": "half",
+            "is_downbeat": m_info["is_downbeat"],
+            "duration": m_info["duration"],
+            "measure": m_info["measure"],
         })
+        extracted_durations.append(m_info["duration"])
 
         if len(sorted_notes) >= 4:
             satb_voicings.append({
@@ -379,12 +435,14 @@ def parse_midi_file(data: bytes) -> dict[str, Any]:
                 "alto": sorted_notes[1]["pitch"],
                 "tenor": sorted_notes[2]["pitch"],
                 "bass": sorted_notes[3]["pitch"],
-                "measure": (i // 2) + 1,
-                "is_downbeat": (i % 2 == 0),
+                "measure": m_info["measure"],
+                "is_downbeat": m_info["is_downbeat"],
+                "duration": m_info["duration"],
             })
 
     return {
         "soprano_melody": soprano_melody,
         "satb_voicings": satb_voicings,
         "time_signature": detected_ts,
+        "durations": extracted_durations,
     }

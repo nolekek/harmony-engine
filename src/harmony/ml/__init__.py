@@ -1,5 +1,5 @@
 """
-Neuro-symbolic style scoring package for classical harmony.
+Statistical n-gram style prior module for classical harmony (NOT a neural network) [EXPERIMENTAL].
 """
 
 from .model import StylePriorModel

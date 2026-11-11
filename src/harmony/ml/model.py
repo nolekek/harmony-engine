@@ -1,10 +1,10 @@
 """
-Lightweight Neuro-Symbolic Style Scorer for Classical SATB Harmony.
-Pure Python (zero C-dependencies).
+n-gram statistical style prior (NOT a neural network) [EXPERIMENTAL].
+Pure Python (zero external C-dependencies).
 
-Learns stylistic transition distributions (interval movements, texture spacing,
-cadence weighting) from verified Brigade dataset and scores transitions for Viterbi DP:
-Cost_total = Cost_rules + lambda * Cost_neural_style
+Learns empirical transition frequency distributions (interval movements, bass leaps)
+from classical datasets with Laplace smoothing and computes negative log-likelihood
+transition costs for Viterbi DP soft guidance.
 """
 
 import json
@@ -17,8 +17,8 @@ from src.harmony.core.types import Voicing, to_satb
 
 class StylePriorModel:
     """
-    Probabilistic Style Transition Scorer.
-    Scores SATB voice leading smoothness and composer style preferences.
+    n-gram statistical style prior (NOT a neural network) [EXPERIMENTAL].
+    Scores SATB voice leading smoothness based on empirical transition frequencies.
     """
 
     def __init__(self, weight: float = 1.0):

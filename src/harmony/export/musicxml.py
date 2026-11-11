@@ -20,8 +20,38 @@ from src.harmony.core.types import (
     calculate_metric_structure,
 )
 
-STEP_NAMES = ("C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B")
-ALTERS = (0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0)
+SHARP_SPELLING = (
+    ("C", 0),  # 0: C
+    ("C", 1),  # 1: C#
+    ("D", 0),  # 2: D
+    ("D", 1),  # 3: D#
+    ("E", 0),  # 4: E
+    ("F", 0),  # 5: F
+    ("F", 1),  # 6: F#
+    ("G", 0),  # 7: G
+    ("G", 1),  # 8: G#
+    ("A", 0),  # 9: A
+    ("A", 1),  # 10: A#
+    ("B", 0),  # 11: B
+)
+
+FLAT_SPELLING = (
+    ("C", 0),   # 0: C
+    ("D", -1),  # 1: Db
+    ("D", 0),   # 2: D
+    ("E", -1),  # 3: Eb
+    ("E", 0),   # 4: E
+    ("F", 0),   # 5: F
+    ("G", -1),  # 6: Gb
+    ("G", 0),   # 7: G
+    ("A", -1),  # 8: Ab
+    ("A", 0),   # 9: A
+    ("B", -1),  # 10: Bb
+    ("B", 0),   # 11: B
+)
+
+STEP_NAMES = tuple(s[0] for s in SHARP_SPELLING)
+ALTERS = tuple(s[1] for s in SHARP_SPELLING)
 
 FIFTHS_TABLE = {
     # Major
@@ -43,13 +73,29 @@ def get_fifths(tonic: str, mode: str) -> int:
     return FIFTHS_TABLE.get((t_clean, m_clean), 0)
 
 
-def midi_to_pitch_element(midi_pitch: int) -> ET.Element:
+def midi_to_pitch_element(
+    midi_pitch: int,
+    fifths: int = 0,
+    tonic: str = "C",
+    mode: str = "Major",
+) -> ET.Element:
     pitch_elem = ET.Element("pitch")
     pc = midi_pitch % 12
     octave = (midi_pitch // 12) - 1
 
-    step = STEP_NAMES[pc]
-    alter = ALTERS[pc]
+    if fifths < 0:
+        use_flats = True
+    elif fifths > 0:
+        use_flats = False
+    else:
+        t_clean = tonic.strip().upper().replace("H", "B")
+        if "B" in t_clean[1:] or t_clean in ("F", "BB", "EB", "AB", "DB", "GB") or "b" in tonic.lower():
+            use_flats = True
+        else:
+            use_flats = False
+
+    spelling = FLAT_SPELLING if use_flats else SHARP_SPELLING
+    step, alter = spelling[pc]
 
     step_elem = ET.SubElement(pitch_elem, "step")
     step_elem.text = step
@@ -96,12 +142,15 @@ def make_note_element(
     tie_stop: bool = False,
     chord_sym: str | None = None,
     is_rest: bool = False,
+    fifths: int = 0,
+    tonic: str = "C",
+    mode: str = "Major",
 ) -> ET.Element:
     note = ET.Element("note")
     if is_rest:
         ET.SubElement(note, "rest")
     else:
-        note.append(midi_to_pitch_element(pitch_num))
+        note.append(midi_to_pitch_element(pitch_num, fifths=fifths, tonic=tonic, mode=mode))
 
     dur_elem = ET.SubElement(note, "duration")
     dur_elem.text = str(dur_divs)
@@ -191,6 +240,9 @@ def export_to_musicxml(
         if isinstance(key, Key):
             tonic_str = key.tonic
             mode_str = key.mode
+        elif isinstance(key, dict):
+            tonic_str = key.get("tonic", "C")
+            mode_str = key.get("mode", "Major")
         elif isinstance(key, str):
             parts = key.split()
             tonic_str = parts[0] if parts else "C"
@@ -374,6 +426,9 @@ def export_to_musicxml(
                 tie_stop=s.tie_stop,
                 chord_sym=s.chord_sym,
                 is_rest=s.is_rest,
+                fifths=fifths_val,
+                tonic=tonic_str,
+                mode=mode_str,
             )
             measure.append(note)
 
@@ -394,6 +449,9 @@ def export_to_musicxml(
                 tie_stop=s.tie_stop,
                 chord_sym=None,
                 is_rest=s.is_rest,
+                fifths=fifths_val,
+                tonic=tonic_str,
+                mode=mode_str,
             )
             measure.append(note)
 
@@ -414,6 +472,9 @@ def export_to_musicxml(
                 tie_stop=s.tie_stop,
                 chord_sym=None,
                 is_rest=s.is_rest,
+                fifths=fifths_val,
+                tonic=tonic_str,
+                mode=mode_str,
             )
             measure.append(note)
 
@@ -434,6 +495,9 @@ def export_to_musicxml(
                 tie_stop=s.tie_stop,
                 chord_sym=None,
                 is_rest=s.is_rest,
+                fifths=fifths_val,
+                tonic=tonic_str,
+                mode=mode_str,
             )
             measure.append(note)
 
