@@ -84,6 +84,7 @@ class HarmonizationResult:
     message: str = ""
     had_relaxed_violations: bool = False
     relaxed_rule_ids: list[str] = field(default_factory=list)
+    auto_extended_ranges: bool = False
 
 
 class Harmonizer:
@@ -165,6 +166,9 @@ class Harmonizer:
                 "is_downbeat": db,
             })
         durations_list = [info["duration"] for info in metric_info]
+        melody_pitches = [m["pitch"] for m in processed_melody]
+        auto_extended = (not allow_extended_ranges) and any(p < 60 or p > 81 for p in melody_pitches)
+        effective_extended = allow_extended_ranges or auto_extended
 
         # 1. Determine functional plans to try
         plans_to_try: list[list[Chord]] = []
@@ -182,15 +186,13 @@ class Harmonizer:
                 solutions=[],
                 best_solution=None,
                 message="No viable functional plans could be synthesized for the melody.",
+                auto_extended_ranges=auto_extended,
             )
 
         solutions: list[HarmonizationSolution] = []
         failed_plans: list[tuple[list[Chord], SolverResult]] = []
 
         # 2. Run Viterbi optimization on candidate plans
-        # Honour the caller's flag: replanning must never silently widen the
-        # allowed vocal ranges when allow_extended_ranges=False.
-        effective_extended = allow_extended_ranges
         for plan in plans_to_try:
             res: SolverResult = self.solver.solve(
                 melody=processed_melody,
@@ -229,12 +231,13 @@ class Harmonizer:
                 melody=processed_melody,
                 key=parsed_key,
                 failed_plans=failed_plans,
-                allow_extended_ranges=allow_extended_ranges,
+                allow_extended_ranges=effective_extended,
                 durations_list=durations_list,
                 time_signature=str(parsed_ts),
                 metric_info=metric_info,
                 allow_adjacent_unisons=allow_adjacent_unisons,
                 relax_hard_gates=relax_hard_gates,
+                auto_extended_ranges=auto_extended,
             )
             if replan_res is not None:
                 return replan_res
@@ -245,6 +248,7 @@ class Harmonizer:
                 solutions=[],
                 best_solution=None,
                 message="All candidate plans were rejected by hard voice-leading constraints.",
+                auto_extended_ranges=auto_extended,
             )
 
         # Sort solutions by ascending cost and take top-3
@@ -258,6 +262,7 @@ class Harmonizer:
             message=f"Found {len(top_solutions)} mathematically optimal solutions.",
             had_relaxed_violations=top_solutions[0].had_relaxed_violations if top_solutions else False,
             relaxed_rule_ids=top_solutions[0].relaxed_rule_ids if top_solutions else [],
+            auto_extended_ranges=auto_extended,
         )
 
     def _replan(
@@ -273,6 +278,7 @@ class Harmonizer:
         timeout_sec: float = 2.0,
         allow_adjacent_unisons: bool = False,
         relax_hard_gates: bool = False,
+        auto_extended_ranges: bool = False,
     ) -> HarmonizationResult | None:
         """
         Bounded replanning engine: analyzes diagnostic failures from Viterbi,
@@ -383,7 +389,11 @@ class Harmonizer:
                     elif (target_pitch % 12) in tonic_tones:
                         cand_alts = [fn for fn in cand_alts if fn in ("T", "t", "D", "d", "VI", "vi")]
                     else:
-                        cand_alts = [fn for fn in cand_alts if fn in ("D", "d", "VI", "vi")]
+                        base = [fn for fn in cand_alts if fn in ("D", "d", "VI", "vi")]
+                        if base:
+                            cand_alts = base
+                        else:
+                            cand_alts = [fn for fn in cand_alts if fn in ("S", "s", "II", "ii")]
                     cand_alts = [
                         fn for fn in cand_alts
                         if fn not in ("K64", "k64", "D7", "d7", "T6", "t6", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2", "S6", "s6", "II6", "ii6", "III6", "iii6")
@@ -436,7 +446,11 @@ class Harmonizer:
                                 elif (k_p % 12) in tonic_tones_k:
                                     k_cands = [fn for fn in k_cands if fn in ("T", "t", "D", "d", "VI", "vi")]
                                 else:
-                                    k_cands = [fn for fn in k_cands if fn in ("D", "d", "VI", "vi")]
+                                    base_k = [fn for fn in k_cands if fn in ("D", "d", "VI", "vi")]
+                                    if base_k:
+                                        k_cands = base_k
+                                    else:
+                                        k_cands = [fn for fn in k_cands if fn in ("S", "s", "II", "ii")]
                                 k_cands = [
                                     fn for fn in k_cands
                                     if fn not in ("K64", "k64", "D7", "d7", "T6", "t6", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2", "S6", "s6", "II6", "ii6", "III6", "iii6")
@@ -584,6 +598,7 @@ class Harmonizer:
                 message=f"Found {len(top_solutions)} mathematically optimal solutions (resolved via replanning).",
                 had_relaxed_violations=top_solutions[0].had_relaxed_violations if top_solutions else False,
                 relaxed_rule_ids=top_solutions[0].relaxed_rule_ids if top_solutions else [],
+                auto_extended_ranges=auto_extended_ranges,
             )
 
         return None

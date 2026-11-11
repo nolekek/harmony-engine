@@ -46,6 +46,8 @@ BENCHMARK_MELODIES: list[tuple[str, list[int], str]] = [
     ("chromatic 3", [64, 65, 68, 69], "C Major"),
     ("chromatic 4", [64, 68, 67, 62, 60], "C Major"),
     ("chromatic 5", [60, 63, 64, 62, 60], "C Major"),
+    ("final F4 plagal", [60, 64, 62, 65], "C Major"),
+    ("soprano B3 extended", [65, 61, 59, 60], "C Major"),
 ]
 
 ADDITIONAL_MELODIES: list[tuple[str, list[int], str]] = [

@@ -210,6 +210,9 @@ class HarmonicGrammar:
                     else:
                         compatible = [fn for fn in compatible if fn not in ("T6", "t6", "VI", "vi")]
 
+        if is_final_cadence and not compatible and pc not in tonic_tones:
+            compatible = [fn for fn in ("S", "s", "II", "ii") if pc in set(get_triad_tones(fn, tonic_pc, mode))]
+
         return compatible
 
     def is_valid_syntax_transition(
@@ -473,6 +476,8 @@ class HarmonicGrammar:
                     and (fn != "K64" or note.is_downbeat)
                     and (not is_final or (fn in ("T", "t") if (note.pitch % 12) in tonic_tones else fn in ("D", "d", "VI", "vi")))
                 ]
+            if is_final and not cands and (note.pitch % 12) not in tonic_tones:
+                cands = [fn for fn in ("S", "s", "II", "ii") if (note.pitch % 12) in self.get_chord_pitch_classes(fn, k)]
             lead_pc = (tonic_pc + 11) % 12
             if (note.pitch % 12) == lead_pc:
                 cands = [fn for fn in cands if fn != "VII7"]
@@ -489,11 +494,18 @@ class HarmonicGrammar:
                 if t_cands:
                     cands = t_cands
             elif is_final:
-                # Inversions and 7th chords strictly forbidden in final cadence (must be root D or VI)
-                cands = [
+                # Inversions and 7th chords strictly forbidden in final cadence (must be root D or VI, or fallback S/s/II/ii)
+                final_d_vi = [
                     fn for fn in cands
                     if fn in ("D", "d", "VI", "vi")
                 ]
+                if final_d_vi:
+                    cands = final_d_vi
+                else:
+                    cands = [
+                        fn for fn in cands
+                        if fn in ("S", "s", "II", "ii")
+                    ]
 
             # Canon requirement: Penultimate chord before final tonic prioritizes dominant if soprano allows
             if is_penult and (notes[-1].pitch % 12) in tonic_tones:
@@ -513,6 +525,20 @@ class HarmonicGrammar:
         # Beam search for top functional progressions
         # State: (score, [chord_symbols])
         beams: list[tuple[float, list[str]]] = [(0.0, [])]
+
+        def _final_fallback_chords(target_pitch: int, prev_fn_chord: str | None = None) -> tuple[str, ...]:
+            target_pc = target_pitch % 12
+            d_vi = []
+            for fn in ("D", "d", "VI", "vi"):
+                if target_pc in self.get_chord_pitch_classes(fn, k):
+                    if fn in ("VI", "vi"):
+                        if prev_fn_chord and prev_fn_chord in ("D", "d", "D7"):
+                            d_vi.append(fn)
+                    else:
+                        d_vi.append(fn)
+            if d_vi:
+                return tuple(d_vi)
+            return tuple(fn for fn in ("S", "s", "II", "ii") if target_pc in self.get_chord_pitch_classes(fn, k))
 
         for i, cands in enumerate(step_candidates):
             new_beams: list[tuple[float, list[str]]] = []
@@ -538,14 +564,15 @@ class HarmonicGrammar:
                         if i == n - 1 and cand in ("T", "t"):
                             if prev_fn in ("T6", "t6"):
                                 continue
+
+                        trans_score = 0.0
+
                         if cand in ("VI", "vi") and prev_fn in (
                             "D", "d", "D7", "D65", "D43", "D2", "D6"
                         ):
                             vi_root_pc = (tonic_pc + (8 if is_minor else 9)) % 12
                             if (notes[i].pitch % 12) == vi_root_pc:
-                                continue
-
-                        trans_score = 0.0
+                                trans_score -= 6.0
 
                         if prev_fn in ("S", "s") and cand in DOMINANT_GROUP:
                             if (
@@ -564,7 +591,7 @@ class HarmonicGrammar:
 
                         if prev_fn in ("D6", "D65") and cand in ("T", "t"):
                             if (notes[i].pitch - notes[i - 1].pitch) > 2 and (notes[i].pitch % 12) == (tonic_pc + 7) % 12:
-                                continue
+                                trans_score -= 6.0
 
                         same_triad_inversion = (
                             (prev_fn in ("T", "t") and cand in ("T6", "t6"))
@@ -593,6 +620,9 @@ class HarmonicGrammar:
 
                         if i == 1 and cand in DOMINANT_GROUP:
                             trans_score -= 2.0
+
+                        if i == n - 1 and cand in ("S", "s") and (notes[i].pitch % 12) not in tonic_tones:
+                            trans_score += 12.0
 
                         soprano_step = abs(notes[i].pitch - notes[i - 1].pitch) in (1, 2)
                         if soprano_step and cand in ("S6", "s6", "D6", "d6", "II6", "VII6"):
@@ -800,13 +830,11 @@ class HarmonicGrammar:
                             if (notes[i].pitch % 12) in tonic_tones:
                                 if cand not in ("T", "t"):
                                     continue
-                            elif cand in ("VI", "vi"):
-                                if not path or path[-1] not in ("D", "d", "D7"):
-                                    continue
-                            elif cand in ("D", "d"):
-                                pass
                             else:
-                                continue
+                                prev_fn_for_cand = path[-1] if path else None
+                                allowed_finals = _final_fallback_chords(notes[i].pitch, prev_fn_for_cand)
+                                if cand not in allowed_finals:
+                                    continue
                         if path:
                             prev_fn = path[-1]
                             if not self.is_valid_syntax_transition(prev_fn, cand, is_downbeat, phrase_boundary=is_pb):
@@ -828,6 +856,7 @@ class HarmonicGrammar:
                 for score, path in beams:
                     if path:
                         prev_fn = path[-1]
+                        allowed_finals = _final_fallback_chords(notes[i].pitch, prev_fn) if is_final_step else ()
                         for fn in ALL_FUNCTIONS:
                             if fn == "K64" and (not is_downbeat or is_final_step):
                                 continue
@@ -836,16 +865,13 @@ class HarmonicGrammar:
                                     if fn not in ("T", "t"):
                                         continue
                                 else:
-                                    if fn in ("VI", "vi") and prev_fn in ("D", "d", "D7"):
-                                        pass
-                                    elif fn in ("D", "d"):
-                                        pass
-                                    else:
+                                    if fn not in allowed_finals:
                                         continue
                             if (notes[i].pitch % 12) in self.get_chord_pitch_classes(fn, k):
                                 if self.is_valid_syntax_transition(prev_fn, fn, is_downbeat, phrase_boundary=is_pb):
                                     new_beams.append((score - 20.0, path + [fn]))
                     else:
+                        allowed_finals = _final_fallback_chords(notes[i].pitch, None) if is_final_step else ()
                         for fn in ALL_FUNCTIONS:
                             if fn in (
                                 "III", "III6", "VII", "VII6", "VII7", "II7", "II65",
@@ -853,6 +879,8 @@ class HarmonicGrammar:
                             ):
                                 continue
                             if (notes[0].pitch % 12) in tonic_tones and fn not in ("T", "t", "T6", "t6"):
+                                continue
+                            if is_final_step and (notes[i].pitch % 12) not in tonic_tones and fn not in allowed_finals:
                                 continue
                             if (notes[i].pitch % 12) in self.get_chord_pitch_classes(fn, k):
                                 new_beams.append((score - 20.0, [fn]))
@@ -864,6 +892,8 @@ class HarmonicGrammar:
                     if path:
                         prev_fn = path[-1]
                         if is_final_step:
+                            if (notes[i].pitch % 12) not in self.get_chord_pitch_classes(prev_fn, k):
+                                continue
                             if (notes[i].pitch % 12) in tonic_tones:
                                 if prev_fn not in ("T", "t"):
                                     continue

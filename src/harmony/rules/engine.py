@@ -16,7 +16,7 @@ from src.harmony.core.types import (
 )
 from src.harmony.rules.spacing import validate_spacing
 from src.harmony.rules.voice_leading import validate_voice_leading
-from src.harmony.rules.doubling import check_doubling
+from src.harmony.rules.doubling import check_doubling, get_triad_tones
 from src.harmony.rules.resolutions import validate_resolutions
 from src.harmony.rules.chromatic import validate_chromatic_rules
 
@@ -540,6 +540,26 @@ class RuleEngine:
                             description="T6 cannot precede final root position tonic T; must be dominant or plagal subdominant.",
                         )
                     )
+            elif curr_sym in ("S", "s", "II", "ii"):
+                tonic_pc, mode = parse_key(key)
+                soprano_pc = to_satb(curr_voicing)[0] % 12
+                t_tones = set(get_triad_tones("T", tonic_pc, mode))
+                d_tones = set(get_triad_tones("D", tonic_pc, mode))
+                vi_tones = set(get_triad_tones("VI", tonic_pc, mode))
+                if soprano_pc in (t_tones | d_tones | vi_tones):
+                    violations.append(
+                        RuleViolation(
+                            rule_id="CADENCE_FINAL_NON_CADENTIAL_FORBIDDEN",
+                            severity="hard_gate",
+                            penalty=100000.0,
+                            description=(
+                                f"Final chord cannot be subdominant root {curr_sym} when soprano "
+                                f"pitch class {soprano_pc} belongs to T, D, or VI; authentic/half cadence required."
+                            ),
+                        )
+                    )
+                else:
+                    soft_cost += 50.0 if curr_sym in ("S", "s") else 70.0
 
             # Outer voice direct motion (HIDDEN_FIFTHS_OCTAVES) is permitted in cadences as soft penalty
             adjusted: list[RuleViolation] = []
