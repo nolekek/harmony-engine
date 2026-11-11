@@ -1,20 +1,25 @@
 # HANDOFF — «Бригадное Ядро Гармонизации» (D:\aitraining)
 
-> Точка входа для следующей сессии. Обновлено 2026-11-12 ~01:50 (Asia/Yekaterinburg).
+> Точка входа для следующей сессии. Обновлено 2026-11-12 ~03:55 (Asia/Yekaterinburg) после волны P2-фиксов.
 > Полный план рефакторинга и статусы волн — [REMEDIATION_PLAN.md](REMEDIATION_PLAN.md).
 > Независимый аудит критика — [scratch/critic/AUDIT.md](scratch/critic/AUDIT.md).
-> Метрики выживаемости планов — [scratch/grammar_metrics/REPORT.md](scratch/grammar_metrics/REPORT.md).
+> Метрики выживаемости планов: старый снапшот — [scratch/grammar_metrics/REPORT.md](scratch/grammar_metrics/REPORT.md),
+> актуальные после P2-фиксов — [scratch/grammar_metrics/REPORT_P2_FIX.md](scratch/grammar_metrics/REPORT_P2_FIX.md).
 
-## 1. Снимок состояния
+> ⚠️ История: предыдущая версия этого файла врала (последний коммит `c6ef64d` вместо `cfbb8a0`,
+> «824 теста» при другом состоянии, статусы дефектов #1/#4 как OPEN уже после фикса). Сверяйтесь с
+> `git log -1` и реальным прогоном, а не с таблицами ниже, если они расходятся.
+
+## 1. Снимок состояния (проверено)
 
 | Параметр | Значение |
 |---|---|
 | Рабочая папка | `D:\aitraining` |
-| Ветка | `redteam-p2` (remote: `https://github.com/nolekek/harmony-engine.git`) |
-| Последний коммит | `c6ef64d` (вся работа по каденциям/флагам — `0b2134e`, handoff и prefer-strict — `0c49f42`), запушено в `redteam-p2` |
-| Тесты | **824 собрано**, полный прогон `pytest -q` → exit 0 |
-| Сервис | `http://127.0.0.1:8000` (backend/uvicorn, PID см. `Win32_Process`), `/api/health` → 200 |
-| Python | `C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe` |
+| Ветка | `master` (единственная рабочая; `redteam-p0/p1/p2` влиты и удалены локально и на origin) |
+| Remote | `https://github.com/nolekek/harmony-engine.git` |
+| Последний коммит | `814ca5f` — `fix(grammar,engine,pipeline): plagal last-resort final + auto-extended ranges` (запушен) |
+| Тесты | **830 собрано/проходит**, `pytest -q` → exit 0 (базовые 824 + 6 новых) |
+| Python | `C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe` (единственный рабочий; `.venv` битый) |
 | Node/фронт | `frontend/` React 19 + Vite; прод-сборка в `frontend/dist` (в .gitignore) |
 
 ## 2. Быстрый старт
@@ -27,6 +32,12 @@ cd D:\aitraining
 
 # скрипты из .redteam/scratch запускать с PYTHONPATH
 $env:PYTHONPATH='D:\aitraining'
+$env:PYTHONIOENCODING='utf-8'
+
+# метрики грамматики (13 мелодий, before/after)
+python scripts/grammar_metrics.py
+# перф-бенчмарк
+python scripts/benchmark_harmonize.py
 
 # приёмка волн (exit 0 = ок)
 python .redteam/scratch/lead/verify_p0.py
@@ -37,7 +48,6 @@ python .redteam/scratch/lead/verify_p2.py
 Get-CimInstance Win32_Process -Filter "Name like '%python%'" |
   Where-Object { $_.CommandLine -like '*run_app.py*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-$env:PYTHONIOENCODING='utf-8'
 Start-Process -FilePath 'C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe' `
   -ArgumentList 'run_app.py','--port','8000','--no-browser' -WorkingDirectory 'D:\aitraining' `
   -WindowStyle Hidden -RedirectStandardOutput '.redteam\scratch\lead\server.out.log' `
@@ -45,110 +55,106 @@ Start-Process -FilePath 'C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\
 # проверка: Invoke-WebRequest http://127.0.0.1:8000/api/health
 ```
 
-**Важно:** системный `python` — единственный рабочий интерпретатор. `.venv` пустой/битый (задача T22),
-`uv sync` не проверялся. `run_app.py` форсит UTF-8 на stdout — без этого cp1251 ломает логи.
+`run_app.py` форсит UTF-8 на stdout — без этого cp1251 ломает логи с русским.
 
 ## 3. Что сделано (сжато)
 
-Волны P0/P1/P2 из плана закрыты: убраны униисоны и неполные трезвучия, канонический D43/D2/K64,
-честный топ-3, структурные ошибки API (`error.code`, 422/400/413), NCT, MetricGrid, словарь
-III/VII6/VII7/II7, Krumhansl-Schmuckler, единый `RuleEngine`, `HarmonizationService`, изоляция
-вкладок фронта, MIDI Format 1, MusicXML с бемолями по `fifths`, OSMD в lazy-чанке.
+Волны P0/P1/P2 закрыты: унисоны/неполные трезвучия, канонический D43/D2/K64, честный топ-3,
+структурные ошибки API (`error.code`, 422/400/413), NCT, MetricGrid, словарь III/VII6/VII7/II7,
+Krumhansl-Schmuckler, единый `RuleEngine`, `HarmonizationService`, изоляция вкладок фронта,
+MIDI Format 1, MusicXML с бемолями по `fifths`, OSMD в lazy-чанке.
 
-Последний коммит `0b2134e`:
-1. **Каденционные хард-гейты** — предпоследний аккорд обязан быть доминантой (D/D7/D65/D43/D2/D6/VII7)
-   либо плагальной подготовкой S/II; `T6 → T` и финальный `VI` без доминанты запрещены;
-   разрешён хроматический маршрут `N6 → VII7 → VI`.
-2. **Фильтры грамматики по высотам сопрано** (`same_triad_scalar`, пары квинт корневых трезвучий,
-   запреты S→D / D→T по высоте) переведены из `continue` в мягкие `-6.0` штрафы + счётчик
-   `beam_starvations`; `is_valid_syntax_transition` обёрнут в `lru_cache(4096)`.
-3. **Опциональные флаги решателя** `allow_adjacent_unisons` и `relax_hard_gates`
-   (штраф 10000 за hard-нарушение, метаданные `relaxed_rule_ids` / `had_relaxed_violations`),
-   прокинуты в pipeline, `HarmonizationService` и Pydantic-модель API.
-   **Семантика: строгий план всегда предпочтительнее релаксации** — повторный strict-прогон
-   в `Harmonizer.harmonize` и `HarmonizationService.harmonize`.
-4. Новые тесты: `tests/test_final_approach.py` (20), `tests/test_relaxed_flags.py` (7),
-   `tests/test_relaxed_modes.py`; `scripts/grammar_metrics.py`.
+**Последняя волна (коммит `814ca5f`, сделана Lead+Coder+Critic через two-stage gate):**
+1. **Плагальный last-resort финал** для нетонической сопрано. Раньше `harmonize([60,64,62,65])`
+   (финал F4, IV ступень) отбивался в трёх слоях: `grammar.get_compatible_chords_for_pitch:122-128`
+   → дубль фильтра в `generate_plans` → `engine.py:477-509` (финальный аккорд только root T/D/VI).
+   Теперь: при пустом пуле разрешены root `S/s/II/ii`; `engine.py` даёт hard-gate только если
+   pc сопрано покрывается T/D/VI, иначе soft-штраф (50 для S/s, 70 для II/ii); финальный `S/s`
+   получает +12.0 в beam-скоринге, чтобы консонантный F-A-C выигрывал у уменьшённого ii (D-F-Ab).
+2. **Та же мина в replanning:** `pipeline._replan:*` хардкодил финальные альтернативы ("D","d","VI","vi")
+   в двух местах — синхронизировано с плагальным fallback, иначе репланнинг на IV-ступени слеп.
+3. **B3 / суб-C4 сопрано:** вместо ломки `STANDARD_VOICE_RANGES` (роняет `tests/unit/test_spacing.py`)
+   в `pipeline.harmonize` автоматически включается `allow_extended_ranges`, когда мелодия выходит
+   за `[60,81]`; флаг прокинут в solver и `_replan`, в результате выставлен `auto_extended_ranges=True`.
+4. **Две замены soprano-`continue` на штрафы −6.0:** VI после D при сопрано на корне VI (было по всей
+   пьесе, не только в финале) и `D6/D65 → T` при скачке >2 вверх на V. `Fallback 3` больше не сустейнит
+   аккорд, не содержащий финальную ноту сопрано (раньше рождал фантомный план `['T','T','D','D']`).
+5. **Новые тесты:** `tests/test_plagal_final_and_ranges.py` (6 шт.) — финал S консонантен (F-A-C-F),
+   B3-мелодия проходит с `auto_extended_ranges=True`, полукаденция остаётся на D, контракт
+   `get_compatible_chords_for_pitch` и стандартные диапазоны не тронуты. Существующие тесты не менялись.
+6. **Метрики:** корпус `scripts/grammar_metrics.py` расширен двумя мелодиями; отчёт
+   `scratch/grammar_metrics/REPORT_P2_FIX.md`.
 
-## 4. Метрики выживаемости планов (до/после снятия фильтров)
+## 4. Метрики выживаемости планов (после P2-фиксов)
 
-Отчёт: `.redteam/scratch/grammar_metrics/REPORT.md`, скрипт: `scripts/grammar_metrics.py`
-(сравнивает текущую грамматику с сохранённым снапшотом `grammar_before.py`).
+Полная таблица — [scratch/grammar_metrics/REPORT_P2_FIX.md](scratch/grammar_metrics/REPORT_P2_FIX.md).
+Ключевое:
 
-| Мелодия | Планов | Решено | Survival | NO_FEASIBLE | Harmonize |
-|---|---:|---:|---:|---:|---|
-| default (6) | 61 | 13 | 21.3% | 78.7% | PASSED |
-| a-moll desc (8) | 61 | 0 | **0.0%** | 100% | PASSED (replanning) |
-| 16-note scale | 60 | 27 | 45.0% | 55.0% | PASSED |
-| 32-note arch | 60 | 0 | **0.0%** | 100% | PASSED (replanning) |
-| chromatic 1 `[60,61,64,67,60]` | 60 | 4 | 6.7% | 93.3% | PASSED |
-| chromatic 2 `[60,64,68,69,72,60]` | 60 | 3 | 5.0% | 95.0% | PASSED |
-| chromatic 3 `[64,65,68,69]` | 12 | 1 | 8.3% | 91.7% | PASSED |
-| chromatic 4 `[64,68,67,62,60]` | 61 | 0 | 0.0% | 100% | PASSED |
-| chromatic 5 `[60,63,64,62,60]` | 61 | 0 | 0.0% | 100% | **FAILED** |
-| same_triad `[60,64,62,60]` | 48→56 | 20→22 | 41.7→39.3% | 58.3→60.7% | PASSED |
-| s_to_d_leap `[65,67,60]` | 20→23 | 5→6 | 25.0→26.1% | 75.0→73.9% | PASSED |
+| Мелодия | Survival (Before -> After) | Starvations | Harmonize |
+|---|---|---:|---|
+| default (6) | 21.3% -> 21.3% | 0 | PASSED |
+| a-moll desc (8) | 0.0% -> 0.0% | 0 | PASSED (replanning) |
+| 16-note scale | 45.0% -> 45.0% | 0 | PASSED |
+| 32-note arch | 0.0% -> 0.0% | **1 -> 0** | PASSED (replanning) |
+| chromatic 1..4 | 0–8.3% без изменений | 0 | PASSED |
+| **final F4 plagal** | **0.0% -> 40.0%** | 0 | PASSED |
+| **soprano B3 extended** | 0% (артефакт метрики*) | 0 | PASSED |
+| same_triad / s_to_d_leap | 41.7→39.3% / 25.0→26.1% | 0 | PASSED |
 
-**Вывод:** сам по себе план-генератор выдаёт «жизнеспособный» план лишь в 0–45% случаев; всё, что
-работает в UI, держится на bounded replanning. Это главный архитектурный долг: повышать survival
-(диверсификация планов + K-best), а не наращивать репланнинг.
+\* `evaluate_melody()` дергает `ViterbiSolver.solve()` напрямую, без pipeline-авто-расширения диапазона,
+поэтому колонка survival для B3 остаётся 0 — сквозной `harmonize()` при этом PASSED. Это осознанный
+артефакт измерения, а не регрессия.
 
-## 5. Открытые дефекты (из аудита критика, репро подтверждены Lead'ом)
+**Вывод неизменен:** план-генератор сам по себе выдаёт жизнеспособный план редко; UI держится на
+bounded replanning. Главный архитектурный долг — диверсификация планов / K-best Viterbi, а не
+дальнейшее размягчение синтаксиса. Снятие двух soprano-фильтров дало ноль прироста survival на
+корпусе (честный отрицательный результат: фильтры срабатывали редко, а горлышко было в финальных
+каденционных фильтрах и отказе Viterbi по диапазонам).
 
-Источник: `.redteam/scratch/critic/AUDIT.md`. Проверено вручную на текущем коде
-(`.redteam/scratch/lead/repro_critic.py`):
+## 5. Статусы дефектов (после 814ca5f)
 
-| # | Дефект | Репро | Статус |
-|---|---|---|---|
-| 1 | Финальный аккорд жёстко T/VI/D при нетонической сопрано → мелодия, кончающаяся на IV ступени или альтерации, падает с 0 решений | `Harmonizer().harmonize([60,64,62,65], 'C Major').is_success` → **False** | OPEN, P0 |
-| 2 | Финальный `T → VI` / `III → VI` как «прерванная каденция» (софт-штраф +15) — музыкальный мусор | `harmonize([60,62,64,65,67,69])` → `T,II6,T,S6,T,VI` | OPEN, P0 (частично: hard-гейт только после S/II) |
-| 3 | Monkey-patching: `doubling.py` перезаписывает `chromatic.check_false_relation` и весь `validate_chromatic_rules` | `src/harmony/rules/doubling.py:21-65` | OPEN, P1 (архитектура) |
-| 4 | Сопрано B3 (59) вне стандартного диапазона `(60,81)` → неаполитанский оборот `F4→Db4→B3→C4` падает | `harmonize([65,61,59,60])` → **False** | OPEN, P0 (одна строка) |
-| 5 | Перфоманс: пороги тестов подняты (16 нот 1200→2500 мс, длинные 3000→6000 мс, replan timeout 2→10 с) вместо профилирования | `tests/test_long_lines.py` | OPEN, P1 |
-| 6 | Мёртвый/декоративный код в `RuleEngine` | AUDIT §6 | OPEN, P2 |
-| 7 | Незастаженный хак в рабочей копии — **снят**, всё в `0b2134e` | — | CLOSED |
-
-Рекомендуемый порядок следующей волны:
-1. **P0:** финальная каденция при нетонической/альтерированной сопрано — плагальный выход (S/II),
-   либо явный `error.code = FINAL_DEGREE_UNSUPPORTED` вместо пустого списка кандидатов; правило
-   `grammar.py:474, 491-496` + хард-гейты `RuleEngine`.
-2. **P0:** B3 в стандартном диапазоне сопрано (`spacing.py:24-29`) + тест на `[65,61,59,60]`.
-3. **P0:** запретить финальный `T → VI` / `III → VI`; прерванная каденция — только из доминанты.
-4. **P1:** вынести уточнённую логику ложных перечений из `doubling.py` в `chromatic.py`,
-   удалить monkey-patch; прогнать `tests/test_chromatic_layer.py`.
-5. **P1:** профилирование генератора планов (цель — вернуть 1200 мс на 16 нотах), или честно
-   задокументировать перф-бюджет.
-6. **P1:** survival-метрики в CI (`scripts/grammar_metrics.py`), K-best Viterbi (P3-остаток).
+| # | Дефект | Статус |
+|---|---|---|
+| 1 | Финальный аккорд жёстко T/VI/D при нетонической сопрано → 0 решений | **CLOSED** — плагальный last-resort S, `harmonize([60,64,62,65])` → True, финал F-A-C-F |
+| 2 | Финальный `T -> VI` как «прерванная каденция» (софт +15) — музыкальный мусор | **OPEN** — `harmonize([60,62,64,65,67,69])` → `T,II6,T,S6,T,VI`; нужен hard-gate/больший штраф после T |
+| 3 | Monkey-patching: `doubling.py:64-65` перезаписывает `chromatic.check_false_relation` и `validate_chromatic_rules` | **OPEN** (подтверждено) — архитектурный долг P1 |
+| 4 | Сопрано B3 (59) вне диапазона → неаполитанский оборот падал | **CLOSED** — авто-включение extended, `auto_extended_ranges=True` |
+| 5 | Перф-пороги тестов подняты (16 нот 2500 мс, 32/длинные 6000 мс) вместо профилирования | **OPEN** (подтверждено) — фактические тайминги: 16 нот ~157 мс, 32 ноты ~420 мс, 64 ноты ~942 мс |
+| 6 | Мёртвый/декоративный код в `RuleEngine` | **OPEN** (не перепроверялось в этой волне) |
+| 7 | Незастаженный хак в рабочей копии | **CLOSED** — дерево чистое, всё в коммитах |
+| 8 | `chromatic 5` `[60,63,64,62,60]` → FAILED (`FALSE_RELATION_PERECHENIE`, тенор E3 vs альтерированное сопрано Eb4) | **OPEN** — вне скоупа P2-фиксов, нужен отдельный разбор |
 
 ## 6. Известные ограничения (не блокеры)
 
-- Хроматика (N/bVI/альтерации) абсорбируется не полностью: `[60,63,64,62,60]` → отказ; поглощение ~86.7%.
+- Хроматика (N/bVI/альтерации) абсорбируется не полностью: `[60,63,64,62,60]` → отказ.
 - `brigade_rules.json` подключён, но часть правил всё ещё захардкожена в `RuleEngine`.
-- Grader API принимает только канонические символы функций (римские `I/IV/V` нормализуются на входе парсера,
-  но не в `GradeRequest`).
-- UI-каталог тональностей: только 12 мажоров и 12 гармонических миноров (natural/melodic — P3).
+- Grader API принимает только канонические символы функций.
+- UI-каталог тональностей: 12 мажоров и 12 гармонических миноров (natural/melodic — P3).
 - K-best/CP-SAT и «объяснение неразрешимости» — P3 (см. план, T24).
+- Плагальный финал `S/s` — только last-resort и только для ступеней, физически не покрываемых
+  T/D/VI (в мажоре это IV ступень и альтерации). В обычных каденциях он не выбирается (штраф 50/70 +
+  hard-gate, если сопрано покрывается T/D/VI).
 
 ## 7. Грабли окружения и агентов (личный опыт, не повторять)
 
-- **Диагностика pytest:** `Select-String -Pattern 'passed'` по выхлопу иногда не ловит строку итога
-  (CR/цвет); надёжнее `pytest -q 2>&1 | Out-String` и смотреть хвост, либо опираться на `exit code 0`.
-  Количество тестов: `pytest --co -q` и суммировать `file.py: N`.
-- **Параллельные агенты ломают прогон:** правка `.py` во время `pytest` даёт ложные фейлы
-  (`TypeError`, обрезанные импорты). Перед финальным прогоном дождаться тишины по mtime.
-- **Субагенты:** после рестарта сессии их id мёртв (`active teammate ... not found`).
-  Реестр и правила: `.redteam/agents/subagent_registry.json` (сначала reuse, иначе один агент на роль,
-  максимум 3).
-- **AgentTeams** (`agent_teams_*`) в этой сессии после перезапуска плагина исчез из инструментов;
-  команда `harmony-critic` и её задачи восстановлению не подлежат — отчёт критика сохранён в git.
-- **pwsh** в песочнице иногда падает по ACL; файловая политика сейчас `danger-full-access`.
-- `run_app.py` убивать строго по PID из `Win32_Process` (иначе плодятся сервисы на 8000).
+- **Диагностика pytest:** смотреть хвост `pytest -q` и опираться на exit code; `--co -q` для числа тестов.
+- **Параллельные агенты ломают прогон:** правка `.py` во время `pytest` даёт ложные фейлы.
+  На этой волне Coder и Critic работали строго последовательно (two-stage gate).
+- **`agy_ask(mode="plan")` в этой сборке моста падает с `unknown error`** — используйте дефолтный режим
+  и дисциплину «только чтение» в промпте; `agx`/agy model slug: `gemini-3.8-flash` (не `flash`).
+- **Медленные модели:** high-effort прогон Critic ~9-10 мин, упирается в 15-минутный кап инструмента —
+  длинный аудит дробить на два параллельных вызова.
+- **`git status` после работы субагента проверять обязательно** — агент мог не заметить лишние правки.
 - Windows: `$env:PYTHONIOENCODING='utf-8'` для скриптов с русским выводом, иначе `UnicodeEncodeError`.
+- `run_app.py` убивать строго по PID из `Win32_Process` (иначе плодятся сервисы на 8000).
 
-## 8. Что не доделано в последнем шаге
+## 8. Что дальше (рекомендуемый порядок)
 
-- `relax_hard_gates` на уровне сервиса теперь тоже предпочитает strict (правка в `service.py`),
-  но соответствующий коммит/тест — в рабочем дереве; проверить `git status` при старте.
-- Survival-метрики не интегрированы в CI, только ручной скрипт.
-- 15-мелодийная сюита критика лежит в `.redteam/scratch/critic/test_audit_melodies.py` — её стоит
-  превратить в честный параметризованный тест с фиксацией допустимого процента отказов.
+1. **P1:** закрыть дефект #2 — финальный `T -> VI` после тоники (hard-gate или штраф >> 15), тест на
+   `harmonize([60,62,64,65,67,69])`; проверить, что легальная прерванная каденция `D -> VI` не задета.
+2. **P1:** вынести уточнённую логику ложных перечений из `doubling.py` в `chromatic.py`, убрать
+   monkey-patch (строки 64-65), прогнать `tests/test_chromatic_layer.py`.
+3. **P1:** `chromatic 5` — разобрать `FALSE_RELATION_PERECHENIE` (почему отклоняется консонансный вариант).
+4. **P1:** профилирование/честный перф-бюджет и возврат порогов тестов к 1200/3000 мс.
+5. **P2:** K-best / диверсификация луча — главный драйвер survival (см. RFC-обсуждение в отчёте метрик).
+6. **P2:** survival-метрики в CI (`scripts/grammar_metrics.py` уже готов, нужен job).
