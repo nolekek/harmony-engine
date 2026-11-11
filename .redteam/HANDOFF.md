@@ -11,7 +11,7 @@
 |---|---|
 | Рабочая папка | `D:\aitraining` |
 | Ветка | `redteam-p2` (remote: `https://github.com/nolekek/harmony-engine.git`) |
-| Последний коммит | `0b2134e` + локальный коммит с `service.py` prefer-strict (см. git log) |
+| Последний коммит | `c6ef64d` (вся работа по каденциям/флагам — `0b2134e`, handoff и prefer-strict — `0c49f42`), запушено в `redteam-p2` |
 | Тесты | **824 собрано**, полный прогон `pytest -q` → exit 0 |
 | Сервис | `http://127.0.0.1:8000` (backend/uvicorn, PID см. `Win32_Process`), `/api/health` → 200 |
 | Python | `C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe` |
