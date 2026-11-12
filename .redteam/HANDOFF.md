@@ -9,6 +9,11 @@
 > ⚠️ История: этот файл уже дважды врал (последний коммит `c6ef64d` вместо фактического, счёт тестов,
 > статусы дефектов). Сверяйтесь с `git log -1` и реальным прогоном, а не с таблицами ниже, если расходятся.
 
+> 🚧 **ТЕКУЩАЯ ТОЧКА (2026-11-12 ~22:15, перед сменой клиента):** `master` = `27dd5ac` зелёный
+> (Wave 1 desktop закрыта, 848 тестов). Редизайн Wave 2 **не закончен**: WIP в ветке
+> `wip/wave2-ui-redesign` (`352b499`), билд красный (12 ошибок TS). Полный план добивки, точный
+> список ошибок, чек-лист приёмки и окружение — в [WAVE2_WIP.md](WAVE2_WIP.md). Начинать с него.
+
 ## 1. Снимок состояния (проверено)
 
 | Параметр | Значение |
@@ -16,7 +21,7 @@
 | Рабочая папка | `D:\aitraining` |
 | Ветка | `master` (единственная рабочая; `redteam-p0/p1/p2` влиты и удалены локально и на origin) |
 | Remote | `https://github.com/nolekek/harmony-engine.git` |
-| Последний коммит | `29b5a5f` — `feat(desktop): native Windows shell (pywebview + PyInstaller onedir)` |
+| Последний коммит | `27dd5ac` — `docs(handoff): record Wave 1 desktop shell …`; WIP редизайна — ветка `wip/wave2-ui-redesign` (`352b499`, билд красный, см. [WAVE2_WIP.md](WAVE2_WIP.md)) |
 | Тесты | **848 собрано/проходит**, `pytest -q` → exit 0 (830 после P2 + 11 P1 + 7 desktop) |
 | Python | `C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe` (единственный рабочий; `.venv` битый) |
 | Node/фронт | `frontend/` React 19 + Vite; прод-сборка в `frontend/dist` (в .gitignore) |
@@ -216,10 +221,13 @@ T/T6/S/II (`[60,69]`, `[64,69]`, `[67,69]`) теперь возвращают `i
 
 ## 8. Что дальше (рекомендуемый порядок)
 
-1. **Wave 2 (следующая):** редизайн фронтенда — design system на токенах, layout «рабочая станция»,
-   тёмная тема, a11y (фокус/контраст/aria), убрать белый OSMD-холст на тёмном фоне, разгрузить
-   `App.tsx` (635 строк) и `MelodyInput.tsx` (678 строк). Design-debt от критика — в истории сессии;
-   после редизайна обязательно пересобрать `frontend/dist` и пересобрать exe.
+1. **Wave 2 (НЕ ЗАКОНЧЕНА, начинать отсюда):** редизайн фронтенда — WIP-ветка
+   `wip/wave2-ui-redesign`, билд красный. Готово: токены/@theme/тема+FOUC, ui/{Button,Card,Badge},
+   распил MelodyInput/GraderPanel/App, hooks/useHarmony+useTheme, Header, types, durationUtils.
+   Осталось: починить 12 TS-ошибок (MIDI/AudioEngine API, END_PITCH, Card.title, Sparkles),
+   Input/Select/Tabs, layout-скролл, ScoreDisplay без blanket-invert, lint 0/0, build, скриншоты,
+   пересборка exe. Детали и команды — [WAVE2_WIP.md](WAVE2_WIP.md). Design-debt и 5 обязательных
+   правок Критика — там же.
 2. **P1:** `chromatic 5` `[60,63,64,62,60]` — разобрать `FALSE_RELATION_PERECHENIE` (тенор E3 vs Eb4).
 3. **P1:** профилирование/честный перф-бюджет (генератор планов, `parse_chord_symbol`), затем возврат
    порогов тестов к 1200/3000 мс отдельной волной.
