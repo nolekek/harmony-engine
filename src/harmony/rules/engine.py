@@ -453,7 +453,13 @@ class RuleEngine:
                 )
             )
             violations.extend(
-                validate_chromatic_rules(prev_voicing, curr_voicing, key=key)
+                validate_chromatic_rules(
+                    prev_voicing,
+                    curr_voicing,
+                    key=key,
+                    prev_chord=prev_chord,
+                    curr_chord=curr_chord,
+                )
             )
             soft_cost = self.compute_soft_cost(prev_voicing, curr_voicing)
             soft_cost += self.compute_functional_cost(
@@ -508,27 +514,39 @@ class RuleEngine:
                     )
                 )
             elif curr_sym in ("VI", "vi"):
-                # Requirement 2: Final VI permitted only after dominant (deceptive cadence)
-                # Final VI after bVI6/S/II is hard-gate
-                forbidden_subdom = (
-                    "bVI", "bVI6", "BVI", "BVI6", "bvi", "bvi6",
-                    "S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65"
-                )
-                allowed_deceptive_preds = ("D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "VII7", "vii7")
-                if prev_sym in forbidden_subdom or prev_sym.upper().startswith("BVI") or prev_sym in SUBDOMINANT_GROUP:
-                    violations.append(
-                        RuleViolation(
-                            rule_id="CADENCE_FINAL_VI_REQUIRES_DOMINANT",
-                            severity="hard_gate",
-                            penalty=100000.0,
-                            description=(
-                                f"Final chord {curr_sym} (deceptive cadence) cannot follow "
-                                f"subdominant/bVI ({prev_sym}); must be preceded by a dominant."
-                            ),
-                        )
+                # Requirement 2: Final VI permitted only after dominant (deceptive cadence) or mediant III/iii
+                # Final VI after T/T6, subdominant (S, II, bVI) is hard-gate.
+                # Only enforced when a predecessor chord exists (not applicable to n=1 melodies).
+                if prev_chord is not None and prev_sym:
+                    forbidden_preds = (
+                        "bVI", "bVI6", "BVI", "BVI6", "bvi", "bvi6",
+                        "S", "s", "S6", "s6", "II", "ii", "II6", "ii6", "II7", "ii7", "II65", "ii65",
+                        "T", "t", "T6", "t6", "T53", "t53",
                     )
-                elif prev_sym not in allowed_deceptive_preds:
-                    soft_cost += 15.0
+                    allowed_deceptive_preds = (
+                        "D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2",
+                        "VII7", "vii7", "III", "iii"
+                    )
+                    if (
+                        prev_sym in forbidden_preds
+                        or prev_sym.upper().startswith("BVI")
+                        or prev_sym in SUBDOMINANT_GROUP
+                        or prev_sym.upper().startswith("T")
+                        or prev_sym not in allowed_deceptive_preds
+                    ):
+                        violations.append(
+                            RuleViolation(
+                                rule_id="CADENCE_FINAL_VI_REQUIRES_DOMINANT",
+                                severity="hard_gate",
+                                penalty=100000.0,
+                                description=(
+                                    f"Final chord {curr_sym} (deceptive cadence) cannot follow "
+                                    f"tonic or subdominant ({prev_sym}); must be preceded by a dominant."
+                                ),
+                            )
+                        )
+                    elif prev_sym in ("III", "iii"):
+                        soft_cost += 15.0
             elif curr_sym in ("T", "t"):
                 # Requirement 1: Final root T cannot be preceded by T6
                 if prev_sym in ("T6", "t6"):

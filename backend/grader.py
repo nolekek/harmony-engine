@@ -213,6 +213,9 @@ def _format_rule_message(
     if rule_id == "SYNTAX_K64_MUST_RESOLVE_TO_D":
         return (f"Такт {measure}: Кадансовый квартсекстаккорд обязан разрешаться в доминанту (D или D7)", involved_voices, involved_notes)
 
+    if rule_id == "CADENCE_FINAL_VI_REQUIRES_DOMINANT":
+        return (f"Такт {measure}: Прерванная каденция (VI) обязана следовать за доминантовой группой, а не за тоникой или субдоминантой", involved_voices, involved_notes)
+
     # Fallback to description
     return (f"Такт {measure}: {desc or rule_id}", involved_voices, involved_notes)
 

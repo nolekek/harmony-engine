@@ -9,7 +9,7 @@ from src.harmony.pipeline import Harmonizer
 
 
 def test_32_note_arch_harmonization():
-    """32-note arch melody in C Major must successfully harmonize in < 3000 ms."""
+    """32-note arch melody in C Major must successfully harmonize in < 6000 ms."""
     mel = [
         60, 62, 64, 65, 67, 69, 71, 72, 74, 72, 71, 69, 67, 65, 64, 62,
         60, 62, 64, 65, 67, 69, 71, 72, 71, 69, 67, 65, 64, 62, 60, 60,
@@ -29,7 +29,7 @@ def test_32_note_arch_harmonization():
 
 
 def test_16_note_scale_harmonization():
-    """16-note diatonic scale contour (гамма) in C Major must successfully harmonize in < 1200 ms."""
+    """16-note diatonic scale contour (гамма) in C Major must successfully harmonize in < 2500 ms."""
     mel = [60, 62, 64, 65, 67, 69, 71, 72, 71, 69, 67, 65, 64, 62, 60, 60]
     harmonizer = Harmonizer()
     # Warm-up run

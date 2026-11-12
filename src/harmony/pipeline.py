@@ -390,14 +390,22 @@ class Harmonizer:
                         cand_alts = [fn for fn in cand_alts if fn in ("T", "t", "D", "d", "VI", "vi")]
                     else:
                         base = [fn for fn in cand_alts if fn in ("D", "d", "VI", "vi")]
+                        sub = [fn for fn in cand_alts if fn in ("S", "s", "II", "ii")]
                         if base:
-                            cand_alts = base
+                            cand_alts = base + sub
                         else:
-                            cand_alts = [fn for fn in cand_alts if fn in ("S", "s", "II", "ii")]
+                            cand_alts = sub
                     cand_alts = [
                         fn for fn in cand_alts
                         if fn not in ("K64", "k64", "D7", "d7", "T6", "t6", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2", "S6", "s6", "II6", "ii6", "III6", "iii6")
                     ]
+                    pred_fn = plan[target_step - 1].function if target_step > 0 else ""
+                    allowed_deceptive_preds = (
+                        "D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2",
+                        "VII7", "vii7", "III", "iii"
+                    )
+                    if target_step > 0 and pred_fn not in allowed_deceptive_preds:
+                        cand_alts = [fn for fn in cand_alts if fn not in ("VI", "vi")]
 
                 cand_alts.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
 
@@ -447,10 +455,11 @@ class Harmonizer:
                                     k_cands = [fn for fn in k_cands if fn in ("T", "t", "D", "d", "VI", "vi")]
                                 else:
                                     base_k = [fn for fn in k_cands if fn in ("D", "d", "VI", "vi")]
+                                    sub_k = [fn for fn in k_cands if fn in ("S", "s", "II", "ii")]
                                     if base_k:
-                                        k_cands = base_k
+                                        k_cands = base_k + sub_k
                                     else:
-                                        k_cands = [fn for fn in k_cands if fn in ("S", "s", "II", "ii")]
+                                        k_cands = sub_k
                                 k_cands = [
                                     fn for fn in k_cands
                                     if fn not in ("K64", "k64", "D7", "d7", "T6", "t6", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2", "S6", "s6", "II6", "ii6", "III6", "iii6")
@@ -473,10 +482,16 @@ class Harmonizer:
                             k_cands.sort(key=lambda fn: ALL_FUNCTIONS.index(fn) if fn in ALL_FUNCTIONS else 999)
 
                             new_beams = []
+                            allowed_deceptive_preds = (
+                                "D", "d", "D7", "d7", "D6", "d6", "D65", "d65", "D43", "d43", "D2", "d2",
+                                "VII7", "vii7", "III", "iii"
+                            )
                             for score, path in beams:
                                 last_c = path[-1]
                                 for cand_c in k_cands:
                                     if not grammar.is_valid_syntax_transition(last_c, cand_c, is_downbeat=k_db):
+                                        continue
+                                    if k_final and cand_c in ("VI", "vi") and last_c not in allowed_deceptive_preds:
                                         continue
                                     b_score = 0.0
                                     if cand_c in ("T", "t"):

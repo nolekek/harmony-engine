@@ -14,55 +14,6 @@ from src.harmony.core.types import (
     parse_key,
     parse_chord_symbol,
 )
-import src.harmony.rules.chromatic as _chromatic
-
-# Brigade harmony (Ch. 28, 31): diatonic minor seconds between distinct scale degrees
-# (degree I <-> bII, degree V <-> bVI) are diatonic steps, not false relations (переченье).
-def _refined_check_false_relation(prev_voicing: Any, curr_voicing: Any, key: Any = None) -> list[RuleViolation]:
-    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
-    p_satb = to_satb(prev_voicing)
-    c_satb = to_satb(curr_voicing)
-    diatonic_pcs = _chromatic.get_diatonic_pcs(key)
-    p_pcs = [(i, p % 12, p) for i, p in enumerate(p_satb)]
-    c_pcs = [(j, c % 12, c) for j, c in enumerate(c_satb)]
-
-    diatonic_pairs = {
-        ((tonic_pc + 0) % 12, (tonic_pc + 1) % 12),
-        ((tonic_pc + 1) % 12, (tonic_pc + 0) % 12),
-        ((tonic_pc + 7) % 12, (tonic_pc + 8) % 12),
-        ((tonic_pc + 8) % 12, (tonic_pc + 7) % 12),
-    }
-
-    violations: list[RuleViolation] = []
-    for j, c_pc, c_pitch in c_pcs:
-        for i, p_pc, p_pitch in p_pcs:
-            if p_pc in diatonic_pcs and c_pc in diatonic_pcs:
-                continue
-            if (p_pc, c_pc) in diatonic_pairs:
-                continue
-            diff = abs(c_pc - p_pc)
-            is_chromatic_semitone = (diff == 1 or diff == 11)
-            if is_chromatic_semitone and (i != j):
-                voice_i_moved = (c_satb[i] % 12 == c_pc)
-                voice_j_came = (p_satb[j] % 12 == p_pc)
-                if not voice_i_moved and not voice_j_came:
-                    violations.append(
-                        RuleViolation(
-                            rule_id="FALSE_RELATION_PERECHENIE",
-                            severity="hard_gate",
-                            penalty=100000.0,
-                            description=(
-                                f"False relation (переченье) between {_chromatic.VOICE_NAMES[i]} "
-                                f"(pitch {p_pitch}, pc {p_pc}) and {_chromatic.VOICE_NAMES[j]} "
-                                f"(pitch {c_pitch}, pc {c_pc}). "
-                                f"Chromatic alteration must occur within the same voice."
-                            ),
-                        )
-                    )
-    return violations
-
-_chromatic.check_false_relation = _refined_check_false_relation
-_chromatic.validate_chromatic_rules = lambda p, c, key=None: _refined_check_false_relation(p, c, key=key)
 
 # Triad symbols (root position, first inversion '6', second inversion '64') and
 # seventh-chord symbols (7, 65, 43, 2). Completeness rules must cover ALL of
@@ -214,14 +165,16 @@ def check_triad_completeness(
     voicing: Any,
     chord: Any,
     key: Any = None,
+    prev_chord: Any = None,
     is_final_chord: bool = False,
 ) -> list[RuleViolation]:
     """
     Chord-tone completeness for triads (all inversions, DD, K64) and seventh chords:
     - Third is strictly required everywhere (CHORD_THIRD_MISSING).
     - Triads: fifth is required, except a first inversion of a non-diminished triad
-      (canon: the 5th may be omitted, but not in 2nd inversion or diminished chords)
-      and the canonical incomplete final tonic (tripled root + third).
+      (canon: the 5th may be omitted, but not in 2nd inversion or diminished chords),
+      the canonical incomplete final tonic (tripled root + third),
+      and deceptive cadence VI with doubled third after dominant (root position VI53).
     - Seventh chords: fifth may be omitted (incomplete V7 doubles the root), but
       root, third and seventh are mandatory.
     """
@@ -289,6 +242,19 @@ def check_triad_completeness(
             and group.upper() == "T"
         ):
             allowed = True  # canonical incomplete final tonic (tripled root)
+        if (
+            group.upper() == "VI"
+            and inversion == "53"
+            and counts[third] >= 2
+            and prev_chord is not None
+        ):
+            prev_s = parse_chord_symbol(prev_chord).strip()
+            deceptive_dom_group = (
+                "D", "d", "D7", "d7", "D65", "d65", "D43", "d43", "D2", "d2", "D6", "d6",
+                "VII7", "vii7", "D53", "d53"
+            )
+            if prev_s in deceptive_dom_group:
+                allowed = True
         if not allowed:
             _add("CHORD_FIFTH_MISSING", f"Chord '{sym}' is missing fifth (PC {fifth})")
 
@@ -992,7 +958,7 @@ def check_doubling(
     """
     violations = []
     violations.extend(check_main_triad_doubling(voicing, chord, key=key, prev_chord=prev_chord))
-    violations.extend(check_triad_completeness(voicing, chord, key=key, is_final_chord=is_final_chord))
+    violations.extend(check_triad_completeness(voicing, chord, key=key, prev_chord=prev_chord, is_final_chord=is_final_chord))
     violations.extend(check_sextaccord_doubling(voicing, chord, key=key, prev_chord=prev_chord))
     violations.extend(check_chromatic_triad_doubling(voicing, chord, key=key))
     violations.extend(check_vii_triad_doubling(voicing, chord, key=key))
