@@ -16,8 +16,8 @@
 | Рабочая папка | `D:\aitraining` |
 | Ветка | `master` (единственная рабочая; `redteam-p0/p1/p2` влиты и удалены локально и на origin) |
 | Remote | `https://github.com/nolekek/harmony-engine.git` |
-| Последний коммит | `06c4437` — `fix(rules,pipeline,grader): hard-gate pseudo-deceptive T->VI, drop doubling monkey-patch, mode-aware false relations` |
-| Тесты | **841 собрано/проходит**, `pytest -q` → exit 0 (830 после P2 + 11 новых) |
+| Последний коммит | `29b5a5f` — `feat(desktop): native Windows shell (pywebview + PyInstaller onedir)` |
+| Тесты | **848 собрано/проходит**, `pytest -q` → exit 0 (830 после P2 + 11 P1 + 7 desktop) |
 | Python | `C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe` (единственный рабочий; `.venv` битый) |
 | Node/фронт | `frontend/` React 19 + Vite; прод-сборка в `frontend/dist` (в .gitignore) |
 
@@ -32,6 +32,12 @@ cd D:\aitraining
 # скрипты из .redteam/scratch запускать с PYTHONPATH
 $env:PYTHONPATH='D:\aitraining'
 $env:PYTHONIOENCODING='utf-8'
+
+# нативное Windows-приложение (без браузера/терминала)
+python -m desktop                      # dev-запуск из исходников
+python -m PyInstaller desktop.spec --noconfirm
+# готовый exe: dist\HarmonyEngine\HarmonyEngine.exe (onedir, ~14.4 МБ)
+# логи: %LOCALAPPDATA%\HarmonyEngine\logs\desktop.log
 
 # метрики грамматики (13 мелодий, before/after)
 python scripts/grammar_metrics.py
@@ -103,6 +109,28 @@ MIDI Format 1, MusicXML с бемолями по `fifths`, OSMD в lazy-чанк
    не даёт `T→VI` (теперь `T,II6,T,S6,III,VI`); `[69]` → `['VI']`; `[60,69]/[64,69]/[67,69]` →
    `is_success=False` (осознанно, строгая каденция); `[72,71,69]` → `['T','III','VI']`; cross-voice
    переченья; отсутствие monkey-patch. `test_long_lines.py`: докстринги синхронизированы (пороги не тронуты).
+
+**Волна Desktop (коммит `29b5a5f`):**
+1. **`desktop/`** — нативное окно pywebview (EdgeChromium) в главном потоке, uvicorn в daemon-треде,
+   свободный порт, ожидание `/api/health`, логи `%LOCALAPPDATA%\HarmonyEngine\logs` (10 МБ × 3),
+   DPI-awareness V2, сохранение геометрии окна, проверка WebView2 с нативным MessageBox.
+2. **Single-instance — НЕ мьютекс.** Win32 named mutex обосрался в реальной жизни: WebView2-дети
+   наследуют хэндл, после force-kill родителя мьютекс остаётся занят, и следующий запуск навсегда
+   выходит как «второй». Заменено на эксклюзивный byte-range file-lock (`instance.lock`,
+   `msvcrt.locking`): ОС снимает лок при смерти процесса, Python-fd не наследуется. `instance.json`
+   пишется атомарно (tmp + os.replace); дубликат шлёт FOCUS по loopback-TCP и выходит.
+3. **FOCUS — только Win32** (`FindWindowW` + `ShowWindow(SW_RESTORE)` + `SetForegroundWindow`).
+   Кросс-поточные `window.restore()/show()` из IPC-треда убивали окно pywebview (лог «Window closed»).
+4. **`backend/main.py`: `resolve_frontend_dist()`** — env `FRONTEND_DIST_DIR` → `sys._MEIPASS` →
+   dev-путь; иначе в PyInstaller onedir/onefile exe показывал заглушку вместо SPA.
+5. **`desktop.spec`** — onedir COLLECT, `upx=False` (Defender), `console=False`,
+   `datas=frontend/dist`, hidden imports uvicorn/fastapi/pywebview/pythonnet/mido.
+6. **Тесты:** `tests/test_desktop_lifecycle.py` (7) — порт, health-wait, graceful shutdown, IPC focus,
+   и два регресса на найденные баги (дубликат не удаляет `instance.json`; лок освобождается и stale
+   discovery перезаписывается).
+7. **Сборка:** `python -m PyInstaller desktop.spec --noconfirm` → `dist/HarmonyEngine/HarmonyEngine.exe`
+   (onedir, ~14.4 МБ). Проверено на живой Windows: окно видимо, health ok, SPA отдаётся, второй
+   инстанс выходит, первый жив, минимизированное окно восстанавливается по FOCUS.
 
 ## 4. Метрики выживаемости планов (после P2-фиксов, P1 не изменил)
 
@@ -188,9 +216,11 @@ T/T6/S/II (`[60,69]`, `[64,69]`, `[67,69]`) теперь возвращают `i
 
 ## 8. Что дальше (рекомендуемый порядок)
 
-1. **P1:** `chromatic 5` `[60,63,64,62,60]` — разобрать `FALSE_RELATION_PERECHENIE` (тенор E3 vs Eb4);
-   проверить, не стало ли mode-aware правило ложно-положительным на других хроматических мелодиях.
-2. **P1:** grader e2e-тест через `/api/grade` (сейчас покрыт unit-тестом `grade_satb_solution`).
+1. **Wave 2 (следующая):** редизайн фронтенда — design system на токенах, layout «рабочая станция»,
+   тёмная тема, a11y (фокус/контраст/aria), убрать белый OSMD-холст на тёмном фоне, разгрузить
+   `App.tsx` (635 строк) и `MelodyInput.tsx` (678 строк). Design-debt от критика — в истории сессии;
+   после редизайна обязательно пересобрать `frontend/dist` и пересобрать exe.
+2. **P1:** `chromatic 5` `[60,63,64,62,60]` — разобрать `FALSE_RELATION_PERECHENIE` (тенор E3 vs Eb4).
 3. **P1:** профилирование/честный перф-бюджет (генератор планов, `parse_chord_symbol`), затем возврат
    порогов тестов к 1200/3000 мс отдельной волной.
 4. **P2:** K-best / диверсификация луча — главный драйвер survival.
