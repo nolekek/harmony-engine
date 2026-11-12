@@ -6,6 +6,8 @@ Serves REST API and compiled SPA static assets.
 from __future__ import annotations
 
 import logging
+import os
+import sys
 import uuid
 from pathlib import Path
 
@@ -137,9 +139,32 @@ async def api_unknown_fallback(full_path: str):
 
 
 # Static files setup (serving frontend/dist)
-DIST_DIR = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+def resolve_frontend_dist() -> Path | None:
+    """Robust resolution of frontend/dist for dev and PyInstaller onedir/onefile."""
+    # 1. Explicit override via environment variable
+    env_dir = os.environ.get("FRONTEND_DIST_DIR")
+    if env_dir:
+        p = Path(env_dir).resolve()
+        if p.exists():
+            return p
 
-if DIST_DIR.exists():
+    # 2. PyInstaller bundle path (_MEIPASS / internal bundle)
+    if hasattr(sys, "_MEIPASS"):
+        meipass_p = Path(sys._MEIPASS) / "frontend" / "dist"
+        if meipass_p.exists():
+            return meipass_p
+
+    # 3. Development / source tree path
+    dev_p = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+    if dev_p.exists():
+        return dev_p
+
+    return None
+
+
+DIST_DIR = resolve_frontend_dist()
+
+if DIST_DIR is not None and DIST_DIR.exists():
     assets_dir = DIST_DIR / "assets"
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
