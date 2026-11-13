@@ -1,6 +1,6 @@
 # HANDOFF — «Бригадное Ядро Гармонизации» (D:\aitraining)
 
-> Точка входа для следующей сессии. Обновлено 2026-11-13 ~21:00 (Asia/Yekaterinburg) после merge Wave 2 UI.
+> Точка входа для следующей сессии. Обновлено 2026-11-13 (вечер) после волны 2 (гигиена).
 > Полный план рефакторинга и статусы волн — [REMEDIATION_PLAN.md](REMEDIATION_PLAN.md).
 > Независимый аудит критика — [scratch/critic/AUDIT.md](scratch/critic/AUDIT.md).
 > Свежий аудит оркестратора + план починки волнами — [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md).
@@ -10,12 +10,17 @@
 > ⚠️ История: этот файл уже дважды врал (последний коммит `c6ef64d` вместо фактического, счёт тестов,
 > статусы дефектов). Сверяйтесь с `git log -1` и реальным прогоном, а не с таблицами ниже, если расходятся.
 
-> ✅ **ТЕКУЩАЯ ТОЧКА (2026-11-13 ~21:00, оркестратор build):** `master` = `078114a` (merge Wave 2) зелёный:
-> **848 passed** (живой прогон QA 13.11), lint 0/0, build exit 0 (OSMD отдельный lazy-чанк 1.44 МБ),
-> визуальная приёмка 3 экранов + zero-regression смоук (консоль 0 ошибок), exe пересобран 13.11 20:56 и смоукнут.
-> **Wave 2 UI-редизайн ЗАВЕРШЁН**: критик APPROVE (5 minor закрыты), фича-коммит `d9c5294` влит merge-коммитом.
-> Дальше — план починки [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6: волна 2 гигиена (ruff/README/мусор) →
-> волна 3 надёжность backend → волна 4 дефекты ядра #8/#6.
+> ✅ **ТЕКУЩАЯ ТОЧКА (2026-11-13, оркестратор build):** `master` = `57ec318` (волна 2: гигиена) зелёный:
+> **848 passed** (живой прогон QA), **ruff check . → 0 ошибок** (новый обязательный гейт!),
+> frontend не тронут (Wave 2 UI влит ранее, merge `078114a`).
+> **Волна 1 (Wave 2 UI) ЗАВЕРШЕНА**: критик APPROVE, 5 minor закрыты, exe пересобран 13.11 20:56 и смоукнут.
+> **Волна 2 (гигиена) ЗАВЕРШЕНА**: ruff 472→0 (extend-exclude `.redteam/scratch` + 156 авто + 52 ручных),
+> мусор `Microsoft/` удалён, `hunt*.log` untracked+gitignored, README актуализирован (848/master/uv sync).
+> Критик APPROVE, 4 minor — осознанные решения: расширение `__all__` в `rules/__init__` вместо удаления
+> реэкспортов; `import math` поднят в `key_detector.py` (безопасно, side-effects нет); per-file-ignore
+> `scripts/* E402` широк — сузить при следующем касании pyproject.
+> Дальше — [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6: **волна 3 надёжность backend (начинать отсюда)** →
+> волна 4 дефекты ядра #8/#6.
 > Новые находки QA 13.11: (1) **текстовый ввод мелодии сломан** — `/api/parse-text` отдаёт голый `list[dict]`,
 > фронт ждёт `data.melody` → всегда «Не удалось распознать нотный текст» (пред-существующий контракт-баг,
 > чинить в волне 3); (2) косметика: «Очистить» мелодию не сбрасывает старую партитуру; (3) PyInstaller
@@ -28,8 +33,9 @@
 | Рабочая папка | `D:\aitraining` |
 | Ветка | `master`; `wip/wave2-ui-redesign` влита (merge `078114a`), ветка сохранена; `redteam-p0/p1/p2` удалены |
 | Remote | `https://github.com/nolekek/harmony-engine.git` |
-| Последний коммит | `078114a` — merge Wave 2 UI redesign (фича-коммит `d9c5294`) |
+| Последний коммит | `57ec318` — волна 2 гигиена (ruff 472→0, мусор, README); ранее `078114a` merge Wave 2 UI |
 | Тесты | **848 passed, 0 failed**, подтверждено живым прогоном 13.11 (QA, exit 0, ~103 с) |
+| Линт | **ruff check . → 0 ошибок** (гейт с 13.11; extend-exclude `.redteam/scratch`; per-file-ignores: `scripts/*` E402, `pipeline.py` E402) |
 | Python | `.venv\Scripts\python.exe` (3.14.0; `.venv` восстановлен 13.11 через `uv sync --extra dev --extra desktop`); системный `pythoncore-3.14-64` — fallback |
 | Node/фронт | `frontend/` React 19 + Vite; прод-сборка в `frontend/dist` (в .gitignore) |
 
@@ -40,6 +46,9 @@ cd D:\aitraining
 
 # тесты (обязательный гейт перед коммитом); .venv восстановлен 13.11 (uv sync --extra dev --extra desktop)
 .venv\Scripts\python.exe -m pytest -q
+
+# линт (обязательный гейт с волны 2, 13.11)
+.venv\Scripts\python.exe -m ruff check .
 
 # скрипты из .redteam/scratch запускать с PYTHONPATH
 $env:PYTHONPATH='D:\aitraining'
@@ -75,6 +84,11 @@ Start-Process -FilePath 'C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\
 `run_app.py` форсит UTF-8 на stdout — без этого cp1251 ломает логи с русским.
 
 ## 3. Что сделано (сжато)
+
+**Волна 1 починки — Wave 2 UI (merge `078114a`, фича `d9c5294`, 13.11):** редизайн завершён,
+приёмка и детали — [WAVE2_WIP.md](WAVE2_WIP.md) (баннер ✅ ЗАВЕРШЕНО).
+**Волна 2 починки — гигиена (`57ec318`, 13.11):** ruff 472→0, мусор, README; критик APPROVE,
+4 minor — осознанные решения перечислены в текущей точке выше.
 
 Волны P0/P1/P2 закрыты: унисоны/неполные трезвучия, канонический D43/D2/K64, честный топ-3,
 структурные ошибки API (`error.code`, 422/400/413), NCT, MetricGrid, словарь III/VII6/VII7/II7,
@@ -225,16 +239,23 @@ T/T6/S/II (`[60,69]`, `[64,69]`, `[67,69]`) теперь возвращают `i
 - `run_app.py` убивать строго по PID из `Win32_Process` (иначе плодятся сервисы на 8000).
 - Много «мёртвых» тимпейтов в roster чистить нельзя: API удаления нет, имена immutable, лимит 8;
   чистый roster — только в новой сессии.
+- **Пайплайн (опыт 13.11):** кодер flash склонен к ролевой инверсии — пытается делегировать через
+  `pipeline_run` изнутри прогона (гарантированный BUSY, ноль правок) или зависает до дедлайна
+  (тогда fallback devstral делает работу). Лечение: ролевая блокировка в начале ТЗ («ты исполнитель,
+  делегирование запрещено») + явные QA-критерии в ТЗ («нулевой diff = FAILED», иначе QA проверяет
+  что попало и даёт false-green). Критик на большом diff (~90 файлов) падает по таймауту 15 мин →
+  ревью напрямую саб-агентом critic с ограниченным скоупом (полный diff только рисковых файлов,
+  остальное — выборка + косвенные гейты ruff/pytest).
 
 ## 8. Что дальше (рекомендуемый порядок)
 
-1. **Wave 2 (НЕ ЗАКОНЧЕНА, начинать отсюда):** редизайн фронтенда — WIP-ветка
-   `wip/wave2-ui-redesign`, билд красный. Готово: токены/@theme/тема+FOUC, ui/{Button,Card,Badge},
-   распил MelodyInput/GraderPanel/App, hooks/useHarmony+useTheme, Header, types, durationUtils.
-   Осталось: починить 12 TS-ошибок (MIDI/AudioEngine API, END_PITCH, Card.title, Sparkles),
-   Input/Select/Tabs, layout-скролл, ScoreDisplay без blanket-invert, lint 0/0, build, скриншоты,
-   пересборка exe. Детали и команды — [WAVE2_WIP.md](WAVE2_WIP.md). Design-debt и 5 обязательных
-   правок Критика — там же.
+1. **Волна 3 — надёжность backend (НАЧИНАТЬ ОТСЮДА; план [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6):**
+   контракт-баг `/api/parse-text` (бэк `list[dict]` vs фронт `data.melody` — текстовый ввод сломан)
+   + `time_signature` с фронта; import-file: битые base64/JSON/XML → 400 вместо 500 + честная
+   OpenAPI-схема; `_SERVICE_REQUEST_CACHE` с eviction (LRU/TTL); мёртвый `timeout_sec`;
+   `VALID_CHORD_FUNCTIONS` из `grammar.ALL_FUNCTIONS`; удалить monkey-patch guard `pipeline.py:23-35`
+   (+ регресс-тест по образцу P1); косметика «Очистить» не сбрасывает партитуру; relaxed-флаги в UI.
+   Гейт: pytest 848+новые, ruff 0, frontend lint/build, пересборка exe.
 2. **P1:** `chromatic 5` `[60,63,64,62,60]` — разобрать `FALSE_RELATION_PERECHENIE` (тенор E3 vs Eb4).
 3. **P1:** профилирование/честный перф-бюджет (генератор планов, `parse_chord_symbol`), затем возврат
    порогов тестов к 1200/3000 мс отдельной волной.
