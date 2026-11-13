@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Download, FileText, Check, Music } from "lucide-react";
+import { Button } from "./ui/Button";
 import type { SATBVoicing } from "../audio/synth";
 
 interface ExportBarProps {
@@ -109,55 +110,54 @@ export const ExportBar: React.FC<ExportBarProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-surface-card border border-border rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
-        <Download className="w-4 h-4 text-indigo-400" />
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+        <Download className="w-4 h-4 text-brand" />
+        <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">
           Экспорт решения (One-Click Export):
         </span>
       </div>
 
       <div className="flex items-center gap-2.5 flex-wrap">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleDownloadMidi}
           disabled={!voicings.length || downloadingMidi}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-colors disabled:opacity-40"
           title="Скачать многодорожечный MIDI файл (SATB)"
+          icon={<Music className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />}
         >
-          <Music className="w-3.5 h-3.5 text-blue-400" />
-          <span>{downloadingMidi ? "Загрузка..." : "Скачать MIDI"}</span>
-        </button>
+          {downloadingMidi ? "Загрузка..." : "Скачать MIDI"}
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleDownloadMusicXml}
           disabled={!voicings.length || downloadingXml}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-colors disabled:opacity-40"
           title="Скачать MusicXML для MuseScore, Sibelius, Dorico"
+          icon={<FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
         >
-          <FileText className="w-3.5 h-3.5 text-emerald-400" />
-          <span>{downloadingXml ? "Загрузка..." : "Скачать MusicXML"}</span>
-        </button>
+          {downloadingXml ? "Загрузка..." : "Скачать MusicXML"}
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant={copied ? "primary" : "secondary"}
+          size="sm"
           onClick={handleCopyAscii}
           disabled={!asciiScore}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-            copied
-              ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
-              : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"
-          } disabled:opacity-40`}
+          className={copied ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500" : ""}
           title="Скопировать текстовую ASCII-таблицу партитуры"
+          icon={
+            copied ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <FileText className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            )
+          }
         >
-          {copied ? (
-            <Check className="w-3.5 h-3.5 text-emerald-400" />
-          ) : (
-            <FileText className="w-3.5 h-3.5 text-amber-400" />
-          )}
-          <span>{copied ? "Скопировано в буфер!" : "Копировать ASCII-таблицу"}</span>
-        </button>
+          {copied ? "Скопировано в буфер!" : "Копировать ASCII-таблицу"}
+        </Button>
       </div>
     </div>
   );

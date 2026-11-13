@@ -6,9 +6,13 @@ import {
   VolumeX,
   Headphones,
   SlidersHorizontal,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
 import { audioEngine } from "../audio/synth";
 import type { InstrumentPreset, SATBVoicing } from "../audio/synth";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
 
 interface AudioControlsProps {
   voicings: SATBVoicing[];
@@ -16,37 +20,30 @@ interface AudioControlsProps {
   onStepChange: (index: number) => void;
 }
 
+/* SATB voice identity colors (kept recognizable in both themes). */
 const VOICES = [
-  { index: 0, label: "Сопрано (S)", color: "border-blue-500 text-blue-400 bg-blue-950/40" },
-  { index: 1, label: "Альт (A)", color: "border-green-500 text-green-400 bg-green-950/40" },
-  { index: 2, label: "Тенор (T)", color: "border-orange-500 text-orange-400 bg-orange-950/40" },
-  { index: 3, label: "Бас (B)", color: "border-red-500 text-red-400 bg-red-950/40" },
+  { index: 0, label: "Сопрано (S)", color: "border-blue-500/60 text-blue-700 dark:text-blue-400 bg-blue-500/10" },
+  { index: 1, label: "Альт (A)", color: "border-green-500/60 text-green-700 dark:text-green-400 bg-green-500/10" },
+  { index: 2, label: "Тенор (T)", color: "border-orange-500/60 text-orange-700 dark:text-orange-400 bg-orange-500/10" },
+  { index: 3, label: "Бас (B)", color: "border-red-500/60 text-red-700 dark:text-red-400 bg-red-500/10" },
 ];
 
 export const AudioControls: React.FC<AudioControlsProps> = ({
   voicings,
-  currentChordIndex: _currentChordIndex,
+  currentChordIndex,
   onStepChange,
 }) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [bpm, setBpm] = useState<number>(76);
   const [preset, setPreset] = useState<InstrumentPreset>("piano");
   const [mutes, setMutes] = useState<[boolean, boolean, boolean, boolean]>([
-    false,
-    false,
-    false,
-    false,
+    false, false, false, false,
   ]);
   const [solos, setSolos] = useState<[boolean, boolean, boolean, boolean]>([
-    false,
-    false,
-    false,
-    false,
+    false, false, false, false,
   ]);
 
-  // Unmount (tab switch, navigation) must silence playback: the engine is a
-  // module singleton, so without this the chord sequence keeps playing and the
-  // component tries to update a detached tab's state.
+  // Unmount (tab switch) must silence playback: the engine is a module singleton.
   useEffect(() => {
     return () => {
       audioEngine.stop();
@@ -75,6 +72,21 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     }
   };
 
+  // Manual transport: step back/forward through chord slices with cursor sync.
+  const handleStep = (dir: -1 | 1) => {
+    if (!voicings || voicings.length === 0) return;
+    audioEngine.stop();
+    setIsPlaying(false);
+    const base = currentChordIndex >= 0 ? currentChordIndex : dir > 0 ? -1 : 0;
+    const next = Math.min(voicings.length - 1, Math.max(0, base + dir));
+    audioEngine.playChord(voicings[next], 1.0);
+    onStepChange(next);
+  };
+
+  const handleBpmChange = (value: number) => {
+    setBpm(Math.min(200, Math.max(40, value || 76)));
+  };
+
   const handlePresetChange = (newPreset: InstrumentPreset) => {
     setPreset(newPreset);
     audioEngine.setPreset(newPreset);
@@ -94,69 +106,90 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     audioEngine.setSolo(idx, nextSolos[idx]);
   };
 
+  const hasVoicings = !!voicings && voicings.length > 0;
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-4">
+    <div className="bg-surface-card border border-border rounded-xl p-4 shadow-lg space-y-4">
       {/* Playback & Instrument bar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Play/Stop + BPM */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
+        {/* Play/Stop + Step transport + BPM */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            variant={isPlaying ? "danger" : "success"}
+            size="md"
             onClick={handlePlayToggle}
-            disabled={!voicings || voicings.length === 0}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md active:scale-95 ${
-              isPlaying
-                ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30"
-                : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30 disabled:opacity-40 disabled:pointer-events-none"
-            }`}
-          >
-            {isPlaying ? (
-              <>
+            disabled={!hasVoicings}
+            icon={
+              isPlaying ? (
                 <Square className="w-4 h-4 fill-white" />
-                <span>Стоп</span>
-              </>
-            ) : (
-              <>
+              ) : (
                 <Play className="w-4 h-4 fill-white" />
-                <span>Слушать 4 голоса</span>
-              </>
-            )}
-          </button>
+              )
+            }
+          >
+            {isPlaying ? "Стоп" : "Слушать 4 голоса"}
+          </Button>
 
-          {/* BPM */}
-          <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs text-slate-300 font-mono">BPM:</span>
-            <input
-              type="number"
-              min="40"
-              max="180"
-              value={bpm}
-              onChange={(e) => setBpm(Number(e.target.value) || 76)}
-              className="w-12 bg-slate-900 text-xs font-mono font-bold text-center text-slate-100 rounded border border-slate-700 py-0.5"
+          <div className="flex items-center gap-1" role="group" aria-label="Пошаговый транспорт">
+            <Button
+              variant="secondary"
+              size="xs"
+              onClick={() => handleStep(-1)}
+              disabled={!hasVoicings}
+              aria-label="Шаг назад (предыдущий аккорд)"
+              title="Шаг назад"
+              icon={<SkipBack className="w-3.5 h-3.5" />}
             />
+            <Button
+              variant="secondary"
+              size="xs"
+              onClick={() => handleStep(1)}
+              disabled={!hasVoicings}
+              aria-label="Шаг вперёд (следующий аккорд)"
+              title="Шаг вперёд"
+              icon={<SkipForward className="w-3.5 h-3.5" />}
+            />
+          </div>
+
+          {/* BPM 40–200 */}
+          <div className="flex items-center gap-2 bg-surface-elevated px-3 py-1.5 rounded-lg border border-border">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-text-muted" />
+            <label htmlFor="audio-bpm" className="text-xs text-text-secondary font-mono">
+              BPM:
+            </label>
+            <div className="w-16 shrink-0">
+              <Input
+                id="audio-bpm"
+                type="number"
+                min={40}
+                max={200}
+                value={bpm}
+                onChange={(e) => handleBpmChange(Number(e.target.value))}
+                inputSize="sm"
+                className="w-full text-center font-mono font-bold"
+              />
+            </div>
           </div>
         </div>
 
         {/* Preset Selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Звучание:</span>
-          <div className="inline-flex rounded-lg bg-slate-800 p-0.5 border border-slate-700">
+          <span className="text-xs text-text-muted font-medium">Звучание:</span>
+          <div className="inline-flex rounded-lg bg-surface-elevated p-0.5 border border-border" role="group" aria-label="Инструментальный пресет">
             {(["piano", "choir", "organ"] as InstrumentPreset[]).map((p) => (
-              <button
+              <Button
                 key={p}
-                type="button"
+                variant="ghost"
+                size="xs"
                 onClick={() => handlePresetChange(p)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  preset === p
-                    ? "bg-indigo-600 text-white shadow"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
+                aria-pressed={preset === p}
+                selected={preset === p}
+                selectedClass="border border-transparent bg-brand text-white shadow-sm"
               >
                 {p === "piano" && "Фортепиано"}
                 {p === "choir" && "Хоровой пад"}
                 {p === "organ" && "Орган"}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -184,37 +217,39 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5 pt-1">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="xs"
                   onClick={() => toggleMute(v.index)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1 rounded text-[11px] font-semibold border transition-colors ${
-                    isMuted
-                      ? "bg-rose-900/60 border-rose-700 text-rose-200"
-                      : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300"
-                  }`}
+                  aria-pressed={isMuted}
+                  selected={isMuted}
+                  selectedClass="border border-rose-600/60 bg-rose-600/20 text-rose-700 dark:text-rose-200"
+                  className="flex-1"
                   title="Заглушить голос"
+                  icon={
+                    isMuted ? (
+                      <VolumeX className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                    ) : (
+                      <Volume2 className="w-3 h-3 text-text-muted" />
+                    )
+                  }
                 >
-                  {isMuted ? (
-                    <VolumeX className="w-3 h-3 text-rose-400" />
-                  ) : (
-                    <Volume2 className="w-3 h-3 text-slate-400" />
-                  )}
-                  <span>Mute</span>
-                </button>
+                  Mute
+                </Button>
 
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="xs"
                   onClick={() => toggleSolo(v.index)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1 rounded text-[11px] font-semibold border transition-colors ${
-                    isSoloed
-                      ? "bg-amber-600 border-amber-500 text-slate-950 font-bold"
-                      : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300"
-                  }`}
+                  aria-pressed={isSoloed}
+                  selected={isSoloed}
+                  selectedClass="border border-amber-400 bg-amber-500 text-slate-950"
+                  className="flex-1"
                   title="Солировать голос"
+                  icon={<Headphones className="w-3 h-3" />}
                 >
-                  <Headphones className="w-3 h-3" />
-                  <span>Solo</span>
-                </button>
+                  Solo
+                </Button>
               </div>
             </div>
           );

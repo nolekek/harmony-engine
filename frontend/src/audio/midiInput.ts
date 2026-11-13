@@ -38,6 +38,14 @@ export class WebMidiManager {
   private onNoteCallback: MidiNoteCallback | null = null;
   private audioCtx: AudioContext | null = null;
 
+  /** Minimal adapter: Web MIDI support probe (no access request). */
+  public isSupported(): boolean {
+    return (
+      typeof (navigator as unknown as { requestMIDIAccess?: unknown }).requestMIDIAccess ===
+      "function"
+    );
+  }
+
   public async requestAccess(): Promise<MidiDevice[]> {
     const nav = navigator as unknown as {
       requestMIDIAccess?: (opts?: { sysex?: boolean }) => Promise<LocalMidiAccess>;
