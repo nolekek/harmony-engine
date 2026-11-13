@@ -1,6 +1,6 @@
 # HANDOFF — «Бригадное Ядро Гармонизации» (D:\aitraining)
 
-> Точка входа для следующей сессии. Обновлено 2026-11-13 (вечер) после волны 2 (гигиена).
+> Точка входа для следующей сессии. Обновлено 2026-11-14 после волны 3 (надёжность backend).
 > Полный план рефакторинга и статусы волн — [REMEDIATION_PLAN.md](REMEDIATION_PLAN.md).
 > Независимый аудит критика — [scratch/critic/AUDIT.md](scratch/critic/AUDIT.md).
 > Свежий аудит оркестратора + план починки волнами — [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md).
@@ -10,21 +10,28 @@
 > ⚠️ История: этот файл уже дважды врал (последний коммит `c6ef64d` вместо фактического, счёт тестов,
 > статусы дефектов). Сверяйтесь с `git log -1` и реальным прогоном, а не с таблицами ниже, если расходятся.
 
-> ✅ **ТЕКУЩАЯ ТОЧКА (2026-11-13, оркестратор build):** `master` = `57ec318` (волна 2: гигиена) зелёный:
-> **848 passed** (живой прогон QA), **ruff check . → 0 ошибок** (новый обязательный гейт!),
-> frontend не тронут (Wave 2 UI влит ранее, merge `078114a`).
-> **Волна 1 (Wave 2 UI) ЗАВЕРШЕНА**: критик APPROVE, 5 minor закрыты, exe пересобран 13.11 20:56 и смоукнут.
-> **Волна 2 (гигиена) ЗАВЕРШЕНА**: ruff 472→0 (extend-exclude `.redteam/scratch` + 156 авто + 52 ручных),
-> мусор `Microsoft/` удалён, `hunt*.log` untracked+gitignored, README актуализирован (848/master/uv sync).
-> Критик APPROVE, 4 minor — осознанные решения: расширение `__all__` в `rules/__init__` вместо удаления
-> реэкспортов; `import math` поднят в `key_detector.py` (безопасно, side-effects нет); per-file-ignore
-> `scripts/* E402` широк — сузить при следующем касании pyproject.
-> Дальше — [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6: **волна 3 надёжность backend (начинать отсюда)** →
-> волна 4 дефекты ядра #8/#6.
-> Новые находки QA 13.11: (1) **текстовый ввод мелодии сломан** — `/api/parse-text` отдаёт голый `list[dict]`,
-> фронт ждёт `data.melody` → всегда «Не удалось распознать нотный текст» (пред-существующий контракт-баг,
-> чинить в волне 3); (2) косметика: «Очистить» мелодию не сбрасывает старую партитуру; (3) PyInstaller
-> non-fatal warnings `uvicorn.lifespans[.on]` hidden import (сборку не ломают).
+> ✅ **ТЕКУЩАЯ ТОЧКА (2026-11-14, оркестратор build):** `master` = `7888455` (волна 3: надёжность backend) зелёный:
+> **879 passed** (848 + 31 новых, живой прогон QA), **ruff check . → 0 ошибок**,
+> frontend lint 0/0, build exit 0, exe пересобран и смоукнут (health 200, SPA 200, NO_ORPHANS).
+> **Волна 1 (Wave 2 UI) ЗАВЕРШЕНА**: критик APPROVE, 5 minor закрыты, exe пересобран 13.11 20:56.
+> **Волна 2 (гигиена) ЗАВЕРШЕНА**: ruff 472→0, мусор `Microsoft/` удалён, `hunt*.log` untracked+gitignored, README актуализирован.
+> **Волна 3 (надёжность backend) ЗАВЕРШЕНА** (`7888455`, 12 файлов, +650/−66): критик APPROVE (2 итерации фикса).
+> Сделано: (1) import-file битые base64/JSON/UTF-8/XML/MIDI/form → 400 вместо 500 + честная OpenAPI-схема;
+> (2) `_SERVICE_REQUEST_CACHE` → LRU+TTL (128 записей / 300 с, `threading.Lock`, deepcopy на чтении);
+> (3) мёртвый `timeout_sec` → константа `HARMONIZE_TIMEOUT_SEC=4.0`; (4) `VALID_CHORD_FUNCTIONS` =
+> `frozenset(grammar.ALL_FUNCTIONS) | legacy` (27 ⊂ 170, новых 422 нет); (5) monkey-patch guard
+> `pipeline.py:23-35` УДАЛЁН + регресс-тест, per-file-ignore E402 для pipeline.py убран;
+> (6) контракт-баг `/api/parse-text` (фронт принимает обе формы + шлёт `time_signature`);
+> (7) контракт-баг импорта файла (`data.soprano_melody` вместо `data.melody` — валидный импорт через UI починен,
+> round-trip MusicXML/MIDI проверен вживую); (8) «Очистить» сбрасывает партитуру + обрыв in-flight harmonize;
+> (9) relaxed-флаги (`allow_adjacent_unisons`/`relax_hard_gates`) — opt-in чекбоксы в UI, дефолт false.
+> Осознанные решения критика: deepcopy под локом (дёшево для текущих объёмов); `except Exception` вокруг
+> `request.form()` сохранён с `logger.exception` (гарантия «никогда 500»); текст/plain даёт 400 «Файл не передан»
+> (Starlette form() не бросает на text/plain — контракт 400+detail соблюдён).
+> Дальше — [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6: **волна 4 дефекты ядра #8/#6 (начинать отсюда)**.
+> Новые находки QA 14.11 (не блокеры): (1) MIDI round-trip даёт 6 нот против 7 у MusicXML — экстракция
+> сопрано из многодорожечного MIDI съедает ноту (`parse_midi_file`, дедуп по времени) — кандидат в перф/ядро-волну;
+> (2) PyInstaller non-fatal warnings `uvicorn.lifespans[.on]` hidden import (сборку не ломают).
 
 ## 1. Снимок состояния (проверено)
 
@@ -33,9 +40,9 @@
 | Рабочая папка | `D:\aitraining` |
 | Ветка | `master`; `wip/wave2-ui-redesign` влита (merge `078114a`), ветка сохранена; `redteam-p0/p1/p2` удалены |
 | Remote | `https://github.com/nolekek/harmony-engine.git` |
-| Последний коммит | `57ec318` — волна 2 гигиена (ruff 472→0, мусор, README); ранее `078114a` merge Wave 2 UI |
-| Тесты | **848 passed, 0 failed**, подтверждено живым прогоном 13.11 (QA, exit 0, ~103 с) |
-| Линт | **ruff check . → 0 ошибок** (гейт с 13.11; extend-exclude `.redteam/scratch`; per-file-ignores: `scripts/*` E402, `pipeline.py` E402) |
+| Последний коммит | `7888455` — волна 3 надёжность backend (+31 тест); ранее `57ec318` гигиена, `078114a` merge Wave 2 UI |
+| Тесты | **879 passed, 0 failed**, подтверждено живым прогоном 14.11 (QA, exit 0, ~105 с) |
+| Линт | **ruff check . → 0 ошибок** (гейт с 13.11; extend-exclude `.redteam/scratch`; per-file-ignores: `scripts/*` E402; pipeline.py E402 убран в волне 3) |
 | Python | `.venv\Scripts\python.exe` (3.14.0; `.venv` восстановлен 13.11 через `uv sync --extra dev --extra desktop`); системный `pythoncore-3.14-64` — fallback |
 | Node/фронт | `frontend/` React 19 + Vite; прод-сборка в `frontend/dist` (в .gitignore) |
 
@@ -89,6 +96,10 @@ Start-Process -FilePath 'C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\
 приёмка и детали — [WAVE2_WIP.md](WAVE2_WIP.md) (баннер ✅ ЗАВЕРШЕНО).
 **Волна 2 починки — гигиена (`57ec318`, 13.11):** ruff 472→0, мусор, README; критик APPROVE,
 4 minor — осознанные решения перечислены в текущей точке выше.
+**Волна 3 починки — надёжность backend (`7888455`, 14.11):** import-file 400-валидация, LRU+TTL кэш,
+whitelist из грамматики, удаление monkey-patch guard, контракт-фиксы parse-text/import-file,
+«Очистить»+abort, relaxed-флаги в UI; +31 тест (879), критик APPROVE (2 итерации фикса), exe пересобран.
+Детали — в текущей точке выше.
 
 Волны P0/P1/P2 закрыты: унисоны/неполные трезвучия, канонический D43/D2/K64, честный топ-3,
 структурные ошибки API (`error.code`, 422/400/413), NCT, MetricGrid, словарь III/VII6/VII7/II7,
@@ -246,20 +257,25 @@ T/T6/S/II (`[60,69]`, `[64,69]`, `[67,69]`) теперь возвращают `i
   что попало и даёт false-green). Критик на большом diff (~90 файлов) падает по таймауту 15 мин →
   ревью напрямую саб-агентом critic с ограниченным скоупом (полный diff только рисковых файлов,
   остальное — выборка + косвенные гейты ruff/pytest).
+- **Волна 3 (опыт 14.11):** на большом ТЗ (8 пунктов) ОБА кодера пайплайна таймаутнулись, оставив
+  частичные правки в дереве (`files_changed=[]` в отчёте плагина НЕ означает отсутствие правок —
+  всегда проверяй `git status`). Восстановление: ручной цикл — кодер-доделчик оценивает partial diff
+  и завершает → QA → критик. One-shot саб-агентам ЗАПРЕЩАТЬ background-команды (кодер ушёл ждать
+  уведомление от фонового pytest и потерял ход); продолжение сессии по sessionID может не работать
+  (ID обрезается) → ТЗ всегда самодостаточное. QA-смоук должен покрывать ВАЛИДНЫЕ пути, не только
+  негативные (критик поймал сломанный импорт валидного файла, который QA пропустил, проверяя только 400).
 
 ## 8. Что дальше (рекомендуемый порядок)
 
-1. **Волна 3 — надёжность backend (НАЧИНАТЬ ОТСЮДА; план [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6):**
-   контракт-баг `/api/parse-text` (бэк `list[dict]` vs фронт `data.melody` — текстовый ввод сломан)
-   + `time_signature` с фронта; import-file: битые base64/JSON/XML → 400 вместо 500 + честная
-   OpenAPI-схема; `_SERVICE_REQUEST_CACHE` с eviction (LRU/TTL); мёртвый `timeout_sec`;
-   `VALID_CHORD_FUNCTIONS` из `grammar.ALL_FUNCTIONS`; удалить monkey-patch guard `pipeline.py:23-35`
-   (+ регресс-тест по образцу P1); косметика «Очистить» не сбрасывает партитуру; relaxed-флаги в UI.
-   Гейт: pytest 848+новые, ruff 0, frontend lint/build, пересборка exe.
-2. **P1:** `chromatic 5` `[60,63,64,62,60]` — разобрать `FALSE_RELATION_PERECHENIE` (тенор E3 vs Eb4).
-3. **P1:** профилирование/честный перф-бюджет (генератор планов, `parse_chord_symbol`), затем возврат
-   порогов тестов к 1200/3000 мс отдельной волной.
-4. **P2:** K-best / диверсификация луча — главный драйвер survival.
-5. **P2:** survival-метрики в CI (`scripts/grammar_metrics.py` уже готов, нужен job).
-6. **P2:** мёртвый код в `RuleEngine` (дефект #6) и перенос оставшихся захардкоженных правил в
-   `brigade_rules.json`.
+1. **Волна 4 — дефекты ядра (НАЧИНАТЬ ОТСЮДА; план [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6):**
+   дефект #8 `chromatic 5` `[60,63,64,62,60]` → отказ `FALSE_RELATION_PERECHENIE` (тенор E3 vs
+   альтерированное сопрано Eb4) — mode-aware разбор; дефект #6 мёртвый/декоративный код в `RuleEngine`
+   (`rules/engine.py:175-183,305,376`, каталог `brigade_rules.json` грузится с `except: pass`) — вычистить,
+   перенести захардкоженные правила в каталог. Гейт: pytest 879+новые, ruff 0, `hunt_lead.py` PROBLEMS: 0.
+2. **Перф-волна:** профилирование генератора планов / `parse_chord_symbol`, 64-нотные мелодии (сейчас
+   `success=False`, timeout 4 с), затем возврат порогов тестов к 1200/3000 мс. Сюда же MIDI round-trip
+   теряет ноту (`parse_midi_file`, 6 vs 7).
+3. **P2:** K-best / диверсификация луча — главный драйвер survival (сейчас 21.3%, UI на replanning).
+4. **P2:** survival-метрики в CI (`scripts/grammar_metrics.py` уже готов, нужен job).
+5. **P3:** хроматический словарь (N/bVI/альтерации), natural/melodic minor в UI-каталоге, маппинг римских
+   I/IV/V в grader.
