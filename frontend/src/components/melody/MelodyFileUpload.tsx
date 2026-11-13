@@ -34,13 +34,22 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({
         body: JSON.stringify({ text: textInput, time_signature: timeSignature }),
       });
       const data = await resp.json();
-      if (resp.ok && data.melody) {
-        onMelodyLoaded(data.melody, data.time_signature, data.key);
-        setStatusMessage(`Загружено нот: ${data.melody.length}`);
+      // Backend contract: /api/parse-text returns a bare list of notes;
+      // accept both shapes (array or {melody: [...]}) defensively.
+      const notes = Array.isArray(data) ? data : data?.melody;
+      if (resp.ok && Array.isArray(notes) && notes.length > 0) {
+        const loadedTs =
+          !Array.isArray(data) && typeof data?.time_signature === "string"
+            ? data.time_signature
+            : timeSignature;
+        onMelodyLoaded(notes, loadedTs, !Array.isArray(data) ? data?.key : undefined);
+        setStatusMessage(`Загружено нот: ${notes.length}`);
         setTextInput("");
       } else {
         setIsError(true);
-        setStatusMessage(data.detail || "Не удалось распознать нотный текст.");
+        setStatusMessage(
+          (!Array.isArray(data) && data?.detail) || "Не удалось распознать нотный текст."
+        );
       }
     } catch {
       setIsError(true);
@@ -64,12 +73,18 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({
         body: formData,
       });
       const data = await resp.json();
-      if (resp.ok && data.melody) {
-        onMelodyLoaded(data.melody, data.time_signature, data.key);
-        setStatusMessage(`Файл "${file.name}" загружен (${data.melody.length} нот).`);
+      // Backend contract: /api/import-file returns soprano_melody (api.py);
+      // keep data.melody as a defensive fallback.
+      const notes = data?.soprano_melody ?? data?.melody;
+      if (resp.ok && Array.isArray(notes) && notes.length > 0) {
+        onMelodyLoaded(notes, data.time_signature, data.key);
+        setStatusMessage(`Файл "${file.name}" загружен (${notes.length} нот).`);
+      } else if (resp.ok && Array.isArray(notes) && notes.length === 0) {
+        setIsError(true);
+        setStatusMessage("В файле не найдено нот.");
       } else {
         setIsError(true);
-        setStatusMessage(data.detail || "Ошибка при чтении файла MusicXML/MIDI.");
+        setStatusMessage(data?.detail || "Ошибка при чтении файла MusicXML/MIDI.");
       }
     } catch {
       setIsError(true);
@@ -88,7 +103,7 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({
           type="text"
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
-          placeholder="Ввод строкой: E4/2, F4/2, G4/2, C4/1 или 64, 65, 67, 60..."
+          placeholder="Ввод строкой: C4:half, D4:quarter, E4:dotted_half или 64, 65, 67, 60..."
           aria-label="Ввод нот строкой"
           className="flex-1 bg-surface-panel border border-border rounded-lg px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus-ring transition-colors hover:border-border-strong"
           onKeyDown={(e) => {

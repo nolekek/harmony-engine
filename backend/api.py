@@ -5,11 +5,13 @@ Exposes harmonization, student grading, file imports, exports, and key detection
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any, Self
-from fastapi import APIRouter, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 
 from src.harmony.core.types import Key, Voicing, PITCH_CLASS_NAMES, VALID_DURATIONS
+from src.harmony.syntax.grammar import ALL_FUNCTIONS
 from backend.importers import (
     parse_musicxml_content,
     parse_midi_file,
@@ -22,6 +24,8 @@ from src.harmony.export.ascii import format_ascii_score
 
 from starlette.concurrency import run_in_threadpool
 from backend.service import HarmonizationService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 harmonization_service = HarmonizationService()
@@ -76,7 +80,10 @@ def _check_duration(value: str) -> str:
         ) from exc
 
 
-VALID_CHORD_FUNCTIONS = {
+# Historical aliases accepted by grade/export endpoints (case variants, figured-bass
+# spellings like "D6/5", "K6/4", lowercase minor functions, secondary-dominant shorthands).
+# Kept for backwards compatibility; the grammar itself never generates them.
+_LEGACY_CHORD_FUNCTION_ALIASES = {
     # Tonic
     "T", "T6", "T64", "T53", "T-6",
     "t", "t6", "t64", "t53", "t-6",
@@ -118,6 +125,10 @@ VALID_CHORD_FUNCTIONS = {
     "bvi", "bvi6", "bvi53", "bvi64", "bvi-6",
     "BVI", "BVI6", "BVI53", "BVI64", "BVI-6",
 }
+
+# Single source of truth (audit M-whitelist): everything the grammar can generate,
+# unioned with the historical aliases so no previously accepted symbol starts 422-ing.
+VALID_CHORD_FUNCTIONS = frozenset(ALL_FUNCTIONS) | _LEGACY_CHORD_FUNCTION_ALIASES
 
 
 def select_top_candidates(solutions: list[dict[str, Any]], k: int = 3) -> list[dict[str, Any]]:
@@ -330,58 +341,91 @@ def api_grade(req: GradeRequest) -> dict[str, Any]:
     }
 
 
-class FileUploadJsonRequest(BaseModel):
-    filename: str
-    content_base64: str | None = None
-    xml_content: str | None = None
-
-
 @router.post("/import-file")
-async def api_import_file(
-    request: Request,
-    file: UploadFile | None = None,
-    json_body: FileUploadJsonRequest | None = None,
-) -> dict[str, Any]:
+async def api_import_file(request: Request) -> dict[str, Any]:
     """
     Imports MusicXML (.musicxml, .xml) or MIDI (.mid, .midi) file.
-    Supports both multipart form-data and direct JSON with base64/text.
+
+    Two content paths are supported (the raw request is parsed manually, so no
+    body parameters are declared in the OpenAPI schema):
+    - multipart/form-data with a `file` field;
+    - application/json body: {"filename": ..., "content_base64": ...} or
+      {"filename": ..., "xml_content": ...}.
+
+    Malformed payloads (invalid JSON, invalid base64, unparsable MusicXML/MIDI)
+    are rejected with 400 and a structured detail message — never 500.
     """
     import base64
+    import binascii
+    import struct
+    import xml.etree.ElementTree as ET
 
     filename = ""
     content = b""
 
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
-        body = await request.json()
-        filename = body.get("filename", "upload")
+        try:
+            body = await request.json()
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Некорректный JSON в теле запроса.",
+            ) from exc
+        if not isinstance(body, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="Тело запроса должно быть JSON-объектом с полем 'filename'.",
+            )
+        filename = str(body.get("filename") or "")
         if body.get("xml_content"):
+            if not isinstance(body["xml_content"], str):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Поле 'xml_content' должно быть строкой с текстом MusicXML.",
+                )
             content = body["xml_content"].encode("utf-8")
         elif body.get("content_base64"):
-            content = base64.b64decode(body["content_base64"])
+            if not isinstance(body["content_base64"], str):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Поле 'content_base64' должно быть строкой в кодировке base64.",
+                )
+            try:
+                content = base64.b64decode(body["content_base64"])
+            except (binascii.Error, ValueError) as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Некорректное base64-содержимое файла.",
+                ) from exc
     else:
-        # Multipart form upload
-        form = await request.form()
+        # Multipart form upload. Non-form content types (e.g. text/plain) can
+        # make Starlette raise here — reject with 400 instead of leaking a 500.
+        try:
+            form = await request.form()
+        except Exception as exc:
+            logger.exception("import-file: form parse failed")
+            raise HTTPException(
+                status_code=400,
+                detail="Неподдерживаемый тип содержимого запроса.",
+            ) from exc
         uploaded_file = form.get("file")
         if uploaded_file is not None and hasattr(uploaded_file, "read"):
             filename = getattr(uploaded_file, "filename", "upload") or "upload"
             content = await uploaded_file.read()
-        elif file is not None:
-            filename = file.filename or "upload"
-            content = await file.read()
-        elif json_body is not None:
-            filename = json_body.filename
-            if json_body.xml_content:
-                content = json_body.xml_content.encode("utf-8")
-            elif json_body.content_base64:
-                content = base64.b64decode(json_body.content_base64)
 
     if not filename or not content:
         raise HTTPException(status_code=400, detail="Файл не передан.")
 
     if filename.endswith((".xml", ".musicxml")):
         xml_text = content.decode("utf-8", errors="ignore")
-        res = parse_musicxml_content(xml_text)
+        try:
+            res = parse_musicxml_content(xml_text)
+        except (ET.ParseError, ValueError, KeyError, IndexError, AttributeError, TypeError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Не удалось разобрать MusicXML: файл повреждён или не является партитурой.",
+            ) from exc
         ts_info = res.get("time_signature") or {}
         ts_str = f"{ts_info.get('beats', 4)}/{ts_info.get('beat_type', 4)}"
         durations = [note.get("duration", "half") for note in res["soprano_melody"]]
@@ -397,7 +441,13 @@ async def api_import_file(
             "durations": durations,
         }
     elif filename.endswith((".mid", ".midi")):
-        res = parse_midi_file(content)
+        try:
+            res = parse_midi_file(content)
+        except (ValueError, EOFError, OSError, TypeError, KeyError, IndexError, struct.error) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Не удалось разобрать MIDI: файл повреждён или не является MIDI-партией.",
+            ) from exc
         # Auto detect key from soprano
         detected_key = detect_key_from_melody(res["soprano_melody"]) if res["soprano_melody"] else CANONICAL_KEYS[0]
         durations = [note.get("duration", "half") for note in res["soprano_melody"]]

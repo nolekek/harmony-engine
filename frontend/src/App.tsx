@@ -62,6 +62,10 @@ export function App() {
     setAllowExtendedRanges,
     allowSecondaryDominants,
     setAllowSecondaryDominants,
+    allowAdjacentUnisons,
+    setAllowAdjacentUnisons,
+    relaxHardGates,
+    setRelaxHardGates,
     isHarmonizing,
     latencyMs,
     candidates,
@@ -72,6 +76,7 @@ export function App() {
     setErrorDiagnostics,
     harmonizerScore,
     setHarmonizerScore,
+    clearHarmonizationResult,
     handleHarmonize,
     handleAutoDetectKey,
     handleSelectCandidate,
@@ -79,6 +84,14 @@ export function App() {
   } = useHarmonizer(INITIAL_MELODY);
 
   const [graderScore, setGraderScore] = useState<TabScoreState>(INITIAL_GRADER_STATE);
+
+  // Clearing the melody must also clear the stale score/candidates in the right panel.
+  const handleMelodyChange = (next: MelodyNote[]) => {
+    setMelody(next);
+    if (next.length === 0) {
+      clearHarmonizationResult();
+    }
+  };
 
   const initialHarmonizeRef = useRef(false);
   useEffect(() => {
@@ -179,7 +192,7 @@ export function App() {
             <div className="w-full lg:w-[420px] shrink-0 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
               <MelodyInput
                 melody={melody}
-                onChange={setMelody}
+                onChange={handleMelodyChange}
                 onAutoDetectKey={handleAutoDetectKey}
                 timeSignature={timeSignature}
               />
@@ -194,6 +207,10 @@ export function App() {
                 onToggleExtendedRanges={setAllowExtendedRanges}
                 allowSecondaryDominants={allowSecondaryDominants}
                 onToggleSecondaryDominants={setAllowSecondaryDominants}
+                allowAdjacentUnisons={allowAdjacentUnisons}
+                onToggleAdjacentUnisons={setAllowAdjacentUnisons}
+                relaxHardGates={relaxHardGates}
+                onToggleRelaxHardGates={setRelaxHardGates}
                 onHarmonize={handleHarmonize}
                 isHarmonizing={isHarmonizing}
                 isMelodyEmpty={melody.length === 0}

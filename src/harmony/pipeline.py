@@ -19,20 +19,6 @@ from src.harmony.core.types import (
 )
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.syntax.grammar import HarmonicGrammar, ALL_FUNCTIONS
-
-# Runtime compatibility guard while concurrent agent updates src/harmony/rules/voice_leading.py
-import inspect
-from src.harmony.rules import engine, voice_leading
-_orig_vvl = getattr(engine, "validate_voice_leading", None)
-if _orig_vvl and "prev_chord" not in inspect.signature(_orig_vvl).parameters:
-    def _compat_validate_voice_leading(prev_voicing, curr_voicing, key=None, **kwargs):
-        sig = inspect.signature(_orig_vvl)
-        call_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
-        if "key" in sig.parameters:
-            call_kwargs["key"] = key
-        return _orig_vvl(prev_voicing, curr_voicing, **call_kwargs)
-    engine.validate_voice_leading = _compat_validate_voice_leading
-    voice_leading.validate_voice_leading = _compat_validate_voice_leading
 from src.harmony.solver.viterbi import ViterbiSolver, SolverResult
 from src.harmony.export.musicxml import export_to_musicxml
 from src.harmony.export.midi import export_to_midi

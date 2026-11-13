@@ -34,6 +34,10 @@ interface ControlPanelProps {
   onToggleExtendedRanges: (val: boolean) => void;
   allowSecondaryDominants: boolean;
   onToggleSecondaryDominants: (val: boolean) => void;
+  allowAdjacentUnisons: boolean;
+  onToggleAdjacentUnisons: (val: boolean) => void;
+  relaxHardGates: boolean;
+  onToggleRelaxHardGates: (val: boolean) => void;
   onHarmonize: () => void;
   isHarmonizing: boolean;
   isMelodyEmpty?: boolean;
@@ -54,6 +58,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onToggleExtendedRanges,
   allowSecondaryDominants,
   onToggleSecondaryDominants,
+  allowAdjacentUnisons,
+  onToggleAdjacentUnisons,
+  relaxHardGates,
+  onToggleRelaxHardGates,
   onHarmonize,
   isHarmonizing,
   isMelodyEmpty = false,
@@ -159,6 +167,42 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <div className="text-xs font-semibold text-text-primary">Побочные доминанты</div>
             <div className="text-[11px] text-text-muted leading-tight">
               Разрешить альтерированные DD, D7/x
+            </div>
+          </div>
+        </label>
+
+        <label
+          className="flex items-start gap-3 p-3 bg-surface-elevated/50 hover:bg-surface-elevated border border-border rounded-lg cursor-pointer transition-colors"
+          title="Опциональное послабление: разрешить унисоны соседних голосов (S=A, A=T, T=B). По умолчанию строгий классический запрет."
+        >
+          <input
+            type="checkbox"
+            className="mt-1 rounded accent-[var(--app-brand-primary)] focus-ring"
+            checked={allowAdjacentUnisons}
+            onChange={(e) => onToggleAdjacentUnisons(e.target.checked)}
+          />
+          <div>
+            <div className="text-xs font-semibold text-text-primary">Унисоны соседних голосов</div>
+            <div className="text-[11px] text-text-muted leading-tight">
+              Разрешить S=A, A=T, T=B (по умолчанию запрещено)
+            </div>
+          </div>
+        </label>
+
+        <label
+          className="flex items-start gap-3 p-3 bg-surface-elevated/50 hover:bg-surface-elevated border border-border rounded-lg cursor-pointer transition-colors"
+          title="Last-resort режим: нарушения жёстких правил получают большой штраф вместо отбраковки плана. Строгое решение всегда приоритетнее релаксации."
+        >
+          <input
+            type="checkbox"
+            className="mt-1 rounded accent-[var(--app-brand-primary)] focus-ring"
+            checked={relaxHardGates}
+            onChange={(e) => onToggleRelaxHardGates(e.target.checked)}
+          />
+          <div>
+            <div className="text-xs font-semibold text-text-primary">Смягчение hard-правил</div>
+            <div className="text-[11px] text-text-muted leading-tight">
+              Last-resort: штраф вместо отказа (строгое решение в приоритете)
             </div>
           </div>
         </label>

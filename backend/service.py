@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import copy
 import logging
+import threading
 import time
+from collections import OrderedDict
 from typing import Any
 
 from src.harmony.core.types import Key, TimeSignature
@@ -22,13 +24,50 @@ from backend.exporters import build_colored_musicxml
 
 logger = logging.getLogger(__name__)
 
-# Request-level cache for idempotent repeated requests
-_SERVICE_REQUEST_CACHE: dict[tuple, dict[str, Any]] = {}
+# Request-level cache for idempotent repeated requests.
+# Bounded LRU + TTL: the service runs inside a long-lived desktop process, so an
+# unbounded cache of full MusicXML payloads is a memory leak (audit M2).
+CACHE_MAX_ENTRIES = 128
+CACHE_TTL_SEC = 300.0
+
+# Hard time budget for the fast-path plan evaluation loop. NOT client-configurable:
+# HarmonizeRequest has no timeout field (pydantic drops unknown keys), and the old
+# data.get("timeout_sec", 4.0) was dead code always yielding 4.0 (audit finding).
+# Per-request tuning belongs to the separate performance wave.
+HARMONIZE_TIMEOUT_SEC = 4.0
+
+# Entries are (stored_at_monotonic, payload); OrderedDict gives O(1) LRU order.
+_SERVICE_REQUEST_CACHE: OrderedDict[tuple, tuple[float, dict[str, Any]]] = OrderedDict()
+_SERVICE_CACHE_LOCK = threading.Lock()
+
+
+def _cache_lookup(key: tuple) -> dict[str, Any] | None:
+    """Returns a deep copy of a live cache entry; None on miss or TTL expiry."""
+    with _SERVICE_CACHE_LOCK:
+        item = _SERVICE_REQUEST_CACHE.get(key)
+        if item is None:
+            return None
+        stored_at, payload = item
+        if time.monotonic() - stored_at > CACHE_TTL_SEC:
+            del _SERVICE_REQUEST_CACHE[key]
+            return None
+        _SERVICE_REQUEST_CACHE.move_to_end(key)
+        return copy.deepcopy(payload)
+
+
+def _cache_store(key: tuple, payload: dict[str, Any]) -> None:
+    """Stores a deep copy of the payload, evicting the LRU tail beyond capacity."""
+    with _SERVICE_CACHE_LOCK:
+        _SERVICE_REQUEST_CACHE[key] = (time.monotonic(), copy.deepcopy(payload))
+        _SERVICE_REQUEST_CACHE.move_to_end(key)
+        while len(_SERVICE_REQUEST_CACHE) > CACHE_MAX_ENTRIES:
+            _SERVICE_REQUEST_CACHE.popitem(last=False)
 
 
 def clear_service_cache() -> None:
     """Flushes the service-level request cache."""
-    _SERVICE_REQUEST_CACHE.clear()
+    with _SERVICE_CACHE_LOCK:
+        _SERVICE_REQUEST_CACHE.clear()
 
 
 def select_top_candidates(solutions: list[dict[str, Any]], k: int = 3) -> list[dict[str, Any]]:
@@ -241,8 +280,8 @@ class HarmonizationService:
             allow_adjacent_unisons,
             relax_hard_gates,
         )
-        if cache_key in _SERVICE_REQUEST_CACHE:
-            cached_resp = copy.deepcopy(_SERVICE_REQUEST_CACHE[cache_key])
+        cached_resp = _cache_lookup(cache_key)
+        if cached_resp is not None:
             cached_resp["latency_ms"] = round((time.perf_counter() - t_start) * 1000, 2)
             logger.info("Harmonization returned from request cache in %.2f ms", cached_resp["latency_ms"])
             return cached_resp
@@ -341,7 +380,7 @@ class HarmonizationService:
         best_cost_seen = float("inf")
         stagnant_count = 0
         early_stop_threshold = 15 if len(norm_melody_input) >= 16 else 0
-        timeout_sec = float(data.get("timeout_sec", 4.0))
+        timeout_sec = HARMONIZE_TIMEOUT_SEC
 
         for plan_idx, plan in enumerate(plans_to_try):
             if time.perf_counter() - t_start > timeout_sec:
@@ -490,6 +529,6 @@ class HarmonizationService:
         }
         if relax_hard_gates:
             final_response["relaxed"] = True
-        _SERVICE_REQUEST_CACHE[cache_key] = copy.deepcopy(final_response)
+        _cache_store(cache_key, final_response)
         return final_response
 

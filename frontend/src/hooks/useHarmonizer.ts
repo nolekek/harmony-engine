@@ -28,6 +28,10 @@ export function useHarmonizer(initialMelody: MelodyNote[]) {
   }, []);
   const [allowExtendedRanges, setAllowExtendedRanges] = useState<boolean>(false);
   const [allowSecondaryDominants, setAllowSecondaryDominants] = useState<boolean>(true);
+  // Opt-in relaxed modes (backend api.py: allow_adjacent_unisons / relax_hard_gates).
+  // Defaults are strict (false) — the flags are never sent implicitly enabled.
+  const [allowAdjacentUnisons, setAllowAdjacentUnisons] = useState<boolean>(false);
+  const [relaxHardGates, setRelaxHardGates] = useState<boolean>(false);
 
   const [isHarmonizing, setIsHarmonizing] = useState<boolean>(false);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
@@ -89,12 +93,17 @@ export function useHarmonizer(initialMelody: MelodyNote[]) {
           time_signature: timeSignature,
           allow_extended_ranges: allowExtendedRanges,
           allow_secondary_dominants: allowSecondaryDominants,
+          allow_adjacent_unisons: allowAdjacentUnisons,
+          relax_hard_gates: relaxHardGates,
           max_plans: 50,
         }),
       });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
+        // Same race guard as the success path: a clear during body read must
+        // not resurrect a stale error message.
+        if (controller.signal.aborted) return;
         let detailMsg = `Ошибка сервера (${resp.status})`;
         if (errData.detail) {
           detailMsg = typeof errData.detail === "string" ? errData.detail : JSON.stringify(errData.detail);
@@ -119,6 +128,9 @@ export function useHarmonizer(initialMelody: MelodyNote[]) {
       }
 
       const data = await resp.json();
+      // Guard against the race where clearHarmonizationResult() aborted the
+      // request after fetch resolved but before state was applied.
+      if (controller.signal.aborted) return;
       setLatencyMs(data.latency_ms || null);
 
       const candidateList = data.candidates || data.solutions || [];
@@ -184,7 +196,32 @@ export function useHarmonizer(initialMelody: MelodyNote[]) {
         setIsHarmonizing(false);
       }
     }
-  }, [melody, selectedKey, timeSignature, allowExtendedRanges, allowSecondaryDominants]);
+  }, [melody, selectedKey, timeSignature, allowExtendedRanges, allowSecondaryDominants, allowAdjacentUnisons, relaxHardGates]);
+
+  // Clears the harmonization result (right panel) — used when the melody is
+  // emptied so a stale score is not shown for an empty input.
+  const clearHarmonizationResult = useCallback(() => {
+    // An in-flight /api/harmonize response would otherwise repopulate the panel
+    // with a score for the melody that has just been cleared.
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsHarmonizing(false);
+    setCandidates([]);
+    setSelectedCandidate(null);
+    setLatencyMs(null);
+    setHarmonizerScore((prev) => ({
+      ...prev,
+      musicxml: "",
+      voicings: [],
+      chords: [],
+      asciiScore: "",
+      problemMeasures: [],
+      currentPlaybackIndex: -1,
+      title: "Гармонизация мелодии",
+    }));
+  }, []);
 
   // Key Auto-detection
   const handleAutoDetectKey = useCallback(async () => {
@@ -243,6 +280,10 @@ export function useHarmonizer(initialMelody: MelodyNote[]) {
     setAllowExtendedRanges,
     allowSecondaryDominants,
     setAllowSecondaryDominants,
+    allowAdjacentUnisons,
+    setAllowAdjacentUnisons,
+    relaxHardGates,
+    setRelaxHardGates,
     isHarmonizing,
     latencyMs,
     candidates,
@@ -253,6 +294,7 @@ export function useHarmonizer(initialMelody: MelodyNote[]) {
     setErrorDiagnostics,
     harmonizerScore,
     setHarmonizerScore,
+    clearHarmonizationResult,
     handleHarmonize,
     handleAutoDetectKey,
     handleSelectCandidate,
