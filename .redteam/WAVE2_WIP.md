@@ -1,5 +1,16 @@
 # WAVE 2 — UI/UX REDESIGN: CONTINUATION HANDOFF
 
+> ✅ **ЗАВЕРШЕНО 2026-11-13 (оркестратор build, пайплайн coder→qa→critic).** Все 12 TS-ошибок исправлены
+> по реальным API `audio/synth.ts` / `audio/midiInput.ts`; фазы 3.5–5 выполнены: ui/Input/Select/Tabs,
+> миграция ControlPanel/ExportBar/AudioControls/GraderPanel, единый скролл левой панели 420px,
+> ScoreDisplay без blanket-invert (маркеры #ef4444 сохранены), a11y, Firefox-скроллбары, parse-text
+> шлёт time_signature. Приёмка QA: lint 0/0, build exit 0 (osmd отдельный lazy-чанк 1.44 МБ),
+> pytest 848 passed, визуалка 3 экранов + zero-regression смоук (консоль 0 ошибок), exe пересобран
+> 13.11 20:56 и смоукнут (health 200, orphan-процессов нет). Критик APPROVE, 5 minor-находок закрыты.
+> Коммиты: `d9c5294` (wip) → merge `078114a` (master). Документ сохранён как история спека.
+> Остаток вне скоупа Wave 2: контракт-баг parse-text (бэк отдаёт массив, фронт ждёт data.melody)
+> и косметика «Очистить» — чинить в волне 3, см. [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md).
+
 > Состояние на 2026-11-12 ~22:15 (Asia/Yekaterinburg). Владелец переключил клиент, реализация
 > прервана посреди Фазы 4. Master зелёный, WIP лежит в отдельной ветке.
 > Читать вместе с [HANDOFF.md](HANDOFF.md) (основной контекст проекта).

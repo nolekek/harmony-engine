@@ -1,29 +1,36 @@
 # HANDOFF — «Бригадное Ядро Гармонизации» (D:\aitraining)
 
-> Точка входа для следующей сессии. Обновлено 2026-11-12 ~19:10 (Asia/Yekaterinburg) после волны P1-фиксов.
+> Точка входа для следующей сессии. Обновлено 2026-11-13 ~21:00 (Asia/Yekaterinburg) после merge Wave 2 UI.
 > Полный план рефакторинга и статусы волн — [REMEDIATION_PLAN.md](REMEDIATION_PLAN.md).
 > Независимый аудит критика — [scratch/critic/AUDIT.md](scratch/critic/AUDIT.md).
+> Свежий аудит оркестратора + план починки волнами — [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md).
 > Метрики выживаемости планов: старый снапшот — [scratch/grammar_metrics/REPORT.md](scratch/grammar_metrics/REPORT.md),
 > актуальные после P2-фиксов — [scratch/grammar_metrics/REPORT_P2_FIX.md](scratch/grammar_metrics/REPORT_P2_FIX.md).
 
 > ⚠️ История: этот файл уже дважды врал (последний коммит `c6ef64d` вместо фактического, счёт тестов,
 > статусы дефектов). Сверяйтесь с `git log -1` и реальным прогоном, а не с таблицами ниже, если расходятся.
 
-> 🚧 **ТЕКУЩАЯ ТОЧКА (2026-11-12 ~22:15, перед сменой клиента):** `master` = `27dd5ac` зелёный
-> (Wave 1 desktop закрыта, 848 тестов). Редизайн Wave 2 **не закончен**: WIP в ветке
-> `wip/wave2-ui-redesign` (`352b499`), билд красный (12 ошибок TS). Полный план добивки, точный
-> список ошибок, чек-лист приёмки и окружение — в [WAVE2_WIP.md](WAVE2_WIP.md). Начинать с него.
+> ✅ **ТЕКУЩАЯ ТОЧКА (2026-11-13 ~21:00, оркестратор build):** `master` = `078114a` (merge Wave 2) зелёный:
+> **848 passed** (живой прогон QA 13.11), lint 0/0, build exit 0 (OSMD отдельный lazy-чанк 1.44 МБ),
+> визуальная приёмка 3 экранов + zero-regression смоук (консоль 0 ошибок), exe пересобран 13.11 20:56 и смоукнут.
+> **Wave 2 UI-редизайн ЗАВЕРШЁН**: критик APPROVE (5 minor закрыты), фича-коммит `d9c5294` влит merge-коммитом.
+> Дальше — план починки [AUDIT_2026-11-13.md](AUDIT_2026-11-13.md) §6: волна 2 гигиена (ruff/README/мусор) →
+> волна 3 надёжность backend → волна 4 дефекты ядра #8/#6.
+> Новые находки QA 13.11: (1) **текстовый ввод мелодии сломан** — `/api/parse-text` отдаёт голый `list[dict]`,
+> фронт ждёт `data.melody` → всегда «Не удалось распознать нотный текст» (пред-существующий контракт-баг,
+> чинить в волне 3); (2) косметика: «Очистить» мелодию не сбрасывает старую партитуру; (3) PyInstaller
+> non-fatal warnings `uvicorn.lifespans[.on]` hidden import (сборку не ломают).
 
 ## 1. Снимок состояния (проверено)
 
 | Параметр | Значение |
 |---|---|
 | Рабочая папка | `D:\aitraining` |
-| Ветка | `master` (единственная рабочая; `redteam-p0/p1/p2` влиты и удалены локально и на origin) |
+| Ветка | `master`; `wip/wave2-ui-redesign` влита (merge `078114a`), ветка сохранена; `redteam-p0/p1/p2` удалены |
 | Remote | `https://github.com/nolekek/harmony-engine.git` |
-| Последний коммит | `27dd5ac` — `docs(handoff): record Wave 1 desktop shell …`; WIP редизайна — ветка `wip/wave2-ui-redesign` (`352b499`, билд красный, см. [WAVE2_WIP.md](WAVE2_WIP.md)) |
-| Тесты | **848 собрано/проходит**, `pytest -q` → exit 0 (830 после P2 + 11 P1 + 7 desktop) |
-| Python | `C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe` (единственный рабочий; `.venv` битый) |
+| Последний коммит | `078114a` — merge Wave 2 UI redesign (фича-коммит `d9c5294`) |
+| Тесты | **848 passed, 0 failed**, подтверждено живым прогоном 13.11 (QA, exit 0, ~103 с) |
+| Python | `.venv\Scripts\python.exe` (3.14.0; `.venv` восстановлен 13.11 через `uv sync --extra dev --extra desktop`); системный `pythoncore-3.14-64` — fallback |
 | Node/фронт | `frontend/` React 19 + Vite; прод-сборка в `frontend/dist` (в .gitignore) |
 
 ## 2. Быстрый старт
@@ -31,8 +38,8 @@
 ```powershell
 cd D:\aitraining
 
-# тесты (обязательный гейт перед коммитом)
-& 'C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\python.exe' -m pytest -q
+# тесты (обязательный гейт перед коммитом); .venv восстановлен 13.11 (uv sync --extra dev --extra desktop)
+.venv\Scripts\python.exe -m pytest -q
 
 # скрипты из .redteam/scratch запускать с PYTHONPATH
 $env:PYTHONPATH='D:\aitraining'
