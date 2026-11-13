@@ -10,7 +10,7 @@ transition costs for Viterbi DP soft guidance.
 import json
 import math
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Sequence
 
 from src.harmony.core.types import Voicing, to_satb
 

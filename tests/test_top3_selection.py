@@ -2,7 +2,6 @@
 Tests for honest top-3 candidate selection (T4 / REPORT #4 / BK-04).
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 from backend.api import select_top_candidates

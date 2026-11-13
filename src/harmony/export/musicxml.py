@@ -14,10 +14,8 @@ from src.harmony.core.types import (
     Chord,
     TimeSignature,
     to_satb,
-    parse_key,
     parse_duration_quarters,
     quarters_to_xml_type_and_dots,
-    calculate_metric_structure,
 )
 
 SHARP_SPELLING = (

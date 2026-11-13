@@ -20,3 +20,9 @@ frontend/node_modules/
 .playwright-mcp/
 .redteam/scratch/lead/server.out.log
 .redteam/scratch/lead/server.err.log
+
+# PowerShell module analysis cache (случайно создаётся в CWD)
+Microsoft/
+
+# Исторические логи redteam-охот (артефакты, на диске сохраняются)
+hunt*.log

@@ -3,7 +3,6 @@ Tests for student grader strictness and validation contract under T7.
 Verifies mandatory chords parameter, length matching, function whitelist, and RuleEngine enforcement.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 

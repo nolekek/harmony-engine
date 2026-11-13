@@ -6,12 +6,9 @@ Verifies symbolic metric calculations, MusicXML dots and times, MIDI ticks, and 
 import xml.etree.ElementTree as ET
 import tempfile
 from pathlib import Path
-import pytest
 from fastapi.testclient import TestClient
 
 from src.harmony.core.types import (
-    Key,
-    Chord,
     Voicing,
     TimeSignature,
     parse_duration_quarters,
@@ -23,7 +20,6 @@ from src.harmony.export.midi import export_to_midi
 from src.harmony.pipeline import Harmonizer
 from backend.main import app
 from backend.importers import parse_text_melody
-from backend.grader import grade_satb_solution
 
 client = TestClient(app)
 

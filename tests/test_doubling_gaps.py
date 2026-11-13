@@ -4,9 +4,7 @@ import pytest
 from src.harmony.core.types import Voicing, parse_chord_symbol
 from src.harmony.rules.doubling import (
     check_doubling,
-    check_main_triad_doubling,
     check_sextaccord_doubling,
-    check_triad_completeness,
 )
 
 

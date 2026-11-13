@@ -23,7 +23,6 @@ import msvcrt
 import os
 from pathlib import Path
 import socket
-import sys
 import threading
 import time
 from typing import Callable

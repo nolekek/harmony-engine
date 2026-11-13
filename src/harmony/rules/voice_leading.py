@@ -5,10 +5,12 @@ Detects parallel/contrary 5ths and 8ves, hidden 5ths/8ves, overlapping, and forb
 
 from typing import Any
 from src.harmony.core.types import RuleViolation, to_satb, parse_key, parse_chord_symbol
+# Намеренный реэкспорт spacing-проверок: историческая публичная поверхность модуля
+# (redundant alias — явный re-export, F401 не применяется).
 from src.harmony.rules.spacing import (
-    check_voice_crossing,
-    check_texture_spacing,
-    check_voice_ranges,
+    check_voice_crossing as check_voice_crossing,
+    check_texture_spacing as check_texture_spacing,
+    check_voice_ranges as check_voice_ranges,
 )
 
 VOICE_NAMES = ("Soprano", "Alto", "Tenor", "Bass")
@@ -348,7 +350,6 @@ def check_melodic_intervals(
     violations: list[RuleViolation] = []
 
     tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
-    is_minor = "MINOR" in mode
 
     # Check two leaps in same direction if history provided
     if prev2_voicing is not None:

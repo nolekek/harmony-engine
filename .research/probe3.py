@@ -1,4 +1,5 @@
-﻿import pypdf, re
+﻿import pypdf
+import re
 r = pypdf.PdfReader(r"D:\aitraining\.research\brigade.pdf")
 for idx in (3, 60, 200):
     p = r.pages[idx]

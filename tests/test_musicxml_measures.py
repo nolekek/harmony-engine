@@ -3,7 +3,6 @@ Tests for MusicXML measure integrity, duration sums, tie generation, and backup 
 """
 
 import xml.etree.ElementTree as ET
-import pytest
 
 from src.harmony.core.types import Voicing
 from src.harmony.export.musicxml import export_to_musicxml

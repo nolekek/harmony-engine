@@ -15,7 +15,6 @@ Covers Scope P1 Revisions:
 8. Replanning regression: [72, 71, 69] resolves via ['T', 'III', 'VI'].
 """
 
-import pytest
 
 from src.harmony.pipeline import Harmonizer
 from src.harmony.rules.engine import RuleEngine

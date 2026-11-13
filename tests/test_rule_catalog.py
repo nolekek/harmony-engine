@@ -1,8 +1,7 @@
 """
 Tests for RuleEngine catalog integration and syntax progression rules (T17).
 """
-import pytest
-from src.harmony.core.types import Voicing, Key, Chord
+from src.harmony.core.types import Key, Chord
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.syntax.grammar import HarmonicGrammar
 

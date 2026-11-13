@@ -7,19 +7,16 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import socket
 import sys
 import threading
 import time
-from unittest.mock import MagicMock, patch
 
-import pytest
 import uvicorn
 from fastapi import FastAPI
 
 from backend.main import resolve_frontend_dist
-from desktop.app import find_free_port, wait_for_health_check, apply_dpi_awareness
+from desktop.app import find_free_port, wait_for_health_check
 import desktop.instance as instance_mod
 
 

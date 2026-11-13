@@ -4,7 +4,7 @@ Verifies candidate generation and global optimal voice leading over benchmark ta
 """
 
 import pytest
-from src.harmony.core.types import Voicing, Key, Chord
+from src.harmony.core.types import Key, Chord
 from src.harmony.solver.state_generator import generate_candidate_voicings
 from src.harmony.solver.viterbi import ViterbiSolver
 from tests.corpus.benchmark_tasks import BENCHMARK_TASKS

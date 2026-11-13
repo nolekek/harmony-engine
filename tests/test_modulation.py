@@ -15,7 +15,6 @@ from harmony.rules.engine import RuleEngine
 from harmony.syntax.grammar import HarmonicGrammar
 from harmony.core.modulation import (
     FirstDegreeRelations,
-    RelatedKeyInfo,
     get_related_keys_first_degree,
     PivotChord,
     find_pivot_chords,

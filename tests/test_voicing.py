@@ -1,9 +1,8 @@
 """Unit tests for harmony.core.voicing."""
 
-import pytest
 from harmony.core.chord import ChordDefinition
 from harmony.core.key import Key, Mode
-from harmony.core.pitch import Pitch, PitchClass
+from harmony.core.pitch import PitchClass
 from harmony.core.voicing import Spacing, Voice, Voicing
 from tests.corpus.benchmark_tasks import BENCHMARK_TASKS
 
@@ -88,7 +87,7 @@ class TestVoicing:
             key_info = task["key"]
             tonic_pc = PitchClass.from_name(key_info["tonic"])
             mode = Mode.from_str(key_info["mode"])
-            key = Key(tonic_pc, mode)
+            Key(tonic_pc, mode)
 
             satb_list = task["ground_truth_satb"]
             for s, a, t, b in satb_list:

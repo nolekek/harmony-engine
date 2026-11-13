@@ -4,7 +4,6 @@ Tests for API error handling, SPA 404 routing, health checks, and 500 handler.
 
 import uuid
 from unittest.mock import patch
-import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 

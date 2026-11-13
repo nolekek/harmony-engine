@@ -8,8 +8,8 @@ Strictly implements Brigade textbook rules (Способин, Дубовский
    ВАЖНО: Диатонические малые секунды (например, E-F, B-C, или VII-I ступени) НЕ являются переченьем!
 """
 
-from typing import Any, Sequence
-from src.harmony.core.types import RuleViolation, Voicing, to_satb, parse_key, parse_chord_symbol
+from typing import Any
+from src.harmony.core.types import RuleViolation, to_satb, parse_key, parse_chord_symbol
 
 VOICE_NAMES = ["Soprano", "Alto", "Tenor", "Bass"]
 

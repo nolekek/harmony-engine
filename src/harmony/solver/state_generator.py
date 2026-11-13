@@ -4,8 +4,8 @@ Generates all statically admissible voicings for a given soprano melody note and
 pruning forbidden doublings and textural gaps before passing states to the DP graph.
 """
 
-from typing import Any, Sequence
-from src.harmony.core.types import Voicing, Key, Chord, to_satb, parse_key
+from typing import Any
+from src.harmony.core.types import Voicing, parse_key
 from src.harmony.rules.spacing import STANDARD_VOICE_RANGES, EXTENDED_VOICE_RANGES
 from src.harmony.rules.doubling import get_triad_tones, check_doubling
 from src.harmony.rules.non_chord_tones import classify_nct

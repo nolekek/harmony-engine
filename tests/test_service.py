@@ -3,7 +3,6 @@ Tests for HarmonizationService comparing direct service invocation with REST API
 Verifies identical contract, ranking, chords, and cost.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 from backend.service import HarmonizationService

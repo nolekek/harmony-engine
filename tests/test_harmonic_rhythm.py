@@ -5,7 +5,7 @@ mediant suppression in major keys, and cadence preparation.
 
 import pytest
 from src.harmony.pipeline import Harmonizer
-from src.harmony.core.types import Key, TimeSignature, calculate_metric_structure
+from src.harmony.core.types import TimeSignature, calculate_metric_structure
 
 
 @pytest.fixture(scope="module")

@@ -3,7 +3,6 @@ Regression test suite for Red Team findings (REPORT.md §1.2-1.3, §1.15; BK-02;
 Tests core default max_plans, plan ordering heuristics, and diatonic harmonization.
 """
 
-import pytest
 from src.harmony.pipeline import Harmonizer
 from src.harmony.core.types import Key
 

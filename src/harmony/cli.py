@@ -5,7 +5,6 @@ Allows command-line harmonization of melodies with MusicXML, MIDI, and ASCII out
 
 import argparse
 import sys
-from pathlib import Path
 from src.harmony.core.types import Key
 from src.harmony.pipeline import Harmonizer
 
@@ -18,7 +17,7 @@ def parse_melody(melody_arg: str) -> list[dict]:
     pitches = [int(p.strip()) for p in melody_arg.split(",") if p.strip()]
     if not pitches:
         raise ValueError("Melody cannot be empty.")
-    
+
     # Simple metric heuristic: alternate downbeat / upbeat
     return [
         {"pitch": p, "is_downbeat": (i % 2 == 0)}

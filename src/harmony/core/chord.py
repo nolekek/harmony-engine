@@ -12,9 +12,9 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
-from .key import Key, Mode
+from .key import Key
 from .pitch import Pitch, PitchClass, ScaleDegree
 
 
@@ -211,14 +211,14 @@ class Inversion(str, Enum):
 class ChordDefinition:
     """
     Concrete chord definition in a specific key.
-    
+
     Contains:
     - function: harmonic function (T, S, D, II, VI, VII, K64)
     - inversion: inversion (53, 6, 64, 7, 65, 43, 2)
     - key: tonality
     - is_seventh: whether chord is a 7th chord
     - bass_factor: chord factor present in the bass ('root', 'third', 'fifth', 'seventh')
-    
+
     Provides factor pitch classes, bass pitch class, allowed doublings, and
     validation against Brigada textbook rules (docs/BRIGADE_RULES.md).
     """
@@ -292,7 +292,7 @@ class ChordDefinition:
     def third(self) -> PitchClass:
         """
         Third pitch class of the chord.
-        
+
         In D (Dominant) in minor keys, the third is always raised to the leading tone
         (гармонический вид — мажорная доминанта!).
         """
@@ -483,7 +483,7 @@ class ChordDefinition:
         """
         Validate whether the 4 voices in pitches (S, A, T, B) satisfy chord tones,
         bass requirement, and Brigada doubling rules.
-        
+
         Returns (is_valid: bool, reason: str).
         """
         if len(pitches) != 4:

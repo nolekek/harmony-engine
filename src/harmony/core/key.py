@@ -13,13 +13,13 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import ClassVar, Optional, Union
 
-from .pitch import Interval, Pitch, PitchClass, ScaleDegree
+from .pitch import Pitch, PitchClass, ScaleDegree
 
 
 class Mode(str, Enum):
     """
     Musical modes used in classical functional harmony.
-    
+
     Major (натуральный мажор)
     MinorHarmonic (гармонический минор - основной рабочий лад классической гармонии)
     MinorNatural (натуральный минор)
@@ -58,7 +58,7 @@ class Mode(str, Enum):
     def from_str(cls, s: str) -> Mode:
         """
         Parse Mode from diverse naming conventions.
-        
+
         Supports: 'Major', 'dur', 'мажор', 'MinorHarmonic', 'moll', 'minor', 'гармонический минор', etc.
         """
         cleaned = s.strip().lower().replace("-", "_").replace(" ", "_")
@@ -80,7 +80,7 @@ class Mode(str, Enum):
 class Key:
     """
     Tonality defined by a tonic PitchClass and a Mode.
-    
+
     Provides scale degree mapping, pitch membership queries, and melodic tendencies
     (ладовые тяготения: вводный тон VII, неустойчивые ступени II, IV, VI, VII).
     """
@@ -115,7 +115,7 @@ class Key:
     def from_string(cls, s: str) -> Key:
         """
         Parse Key from string representations.
-        
+
         Examples:
         - 'C Major', 'C:Major', 'C_Major', 'C-dur'
         - 'A MinorHarmonic', 'a-moll', 'G:Minor'
@@ -171,7 +171,7 @@ class Key:
     def pitch_class_for_degree(self, degree: Union[ScaleDegree, int]) -> PitchClass:
         """
         Compute the PitchClass for a given scale degree (1..7 or ScaleDegree).
-        
+
         Properly applies chromatic alterations if present (e.g., VII# in minor, bII).
         """
         if isinstance(degree, int):
@@ -194,7 +194,7 @@ class Key:
     ) -> Optional[ScaleDegree]:
         """
         Find the ScaleDegree corresponding to a pitch class, or None if non-scale.
-        
+
         prefer_flat: If True, prefer 'bII', 'bVI', 'bVII' over 'I#', 'V#', 'VI#'.
         """
         target_pc = pc.pitch_class if isinstance(pc, Pitch) else (
@@ -210,7 +210,6 @@ class Key:
         # 2. Check standard classical chromatic alterations
         # In classical harmony (Способин / Бригада):
         # bII (Neapolitan), #IV (tritone), bVI (minor subdominant), bVII (natural 7), #VII (leading tone in natural minor)
-        semitones_from_tonic = (target_pc.value - self.tonic.value) % 12
 
         if prefer_flat:
             candidates = [
@@ -258,7 +257,7 @@ class Key:
     def leading_tone(self) -> PitchClass:
         """
         The leading tone (вводный тон, VII degree).
-        
+
         In Major and MinorHarmonic, this is located 1 semitone below the tonic.
         """
         return self.pitch_class_for_degree(ScaleDegree(7, 0))
@@ -313,7 +312,7 @@ class Key:
     def get_tendency_resolutions(self, degree: ScaleDegree) -> list[ScaleDegree]:
         """
         Return the classical melodic resolution targets for an unstable degree.
-        
+
         VII -> I  (leading tone resolves up a half step to tonic)
         IV  -> III (subdominant tritone member resolves down to third)
         VI  -> V   (resolves down to fifth)

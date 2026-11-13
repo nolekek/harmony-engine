@@ -2,7 +2,6 @@
 Tests for T8: K64 Cadential Six-Four rules according to Brigade canon.
 """
 
-import pytest
 from src.harmony.core.types import Chord, Key, Voicing
 from src.harmony.rules.doubling import check_k64_doubling
 from src.harmony.rules.engine import RuleEngine

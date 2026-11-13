@@ -1,4 +1,5 @@
-﻿import pypdf, re, pathlib
+﻿import pypdf
+import pathlib
 r = pypdf.PdfReader(r"D:\aitraining\.research\brigade.pdf")
 out = []
 for i, p in enumerate(r.pages):

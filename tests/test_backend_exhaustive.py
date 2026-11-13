@@ -9,25 +9,20 @@ from __future__ import annotations
 import base64
 import io
 import xml.etree.ElementTree as ET
-from pathlib import Path
-from typing import Any
 
 import mido
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.api import router
 from backend.exporters import build_colored_musicxml, generate_midi_bytes
 from backend.grader import grade_satb_solution
 from backend.importers import (
-    midi_to_note_name,
     parse_midi_file,
     parse_musicxml_content,
     parse_text_melody,
 )
 from backend.main import app
-from src.harmony.core.types import Chord, Key, TimeSignature, Voicing
-from src.harmony.export.midi import export_to_midi
+from src.harmony.core.types import Voicing
 from src.harmony.export.musicxml import export_to_musicxml
 
 client = TestClient(app)

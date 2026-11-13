@@ -33,10 +33,22 @@ where = ["src"]
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+# .redteam/scratch — исторические redteam-скрипты (одноразовые охоты/зонды),
+# вне скоупа продуктовой гигиены кода.
+extend-exclude = [".redteam/scratch"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# E402 намеренный: скрипты бутстрапят sys.path (корень проекта) ДО импортов src.harmony.*,
+# чтобы работать без установленного пакета. Перестановка ломает запуск.
+"scripts/*" = ["E402"]
+# E402 намеренный: runtime compat-guard (monkey-patch engine.validate_voice_leading,
+# дефект M3) стоит МЕЖДУ импортами и должен отработать до импорта solver/export.
+# Перенос импортов наверх меняет порядок side-effects на import.
+"src/harmony/pipeline.py" = ["E402"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]

@@ -5,21 +5,15 @@ Exposes harmonization, student grading, file imports, exports, and key detection
 
 from __future__ import annotations
 
-import io
-import time
 from typing import Annotated, Any, Self
-from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, HTTPException, Request, Response, UploadFile
 from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 
-from src.harmony.core.types import Key, Chord, Voicing, PITCH_CLASS_NAMES, VALID_DURATIONS
-from src.harmony.pipeline import Harmonizer
-from src.harmony.syntax.grammar import HarmonicGrammar
-from src.harmony.solver.viterbi import ViterbiSolver
+from src.harmony.core.types import Key, Voicing, PITCH_CLASS_NAMES, VALID_DURATIONS
 from backend.importers import (
     parse_musicxml_content,
     parse_midi_file,
     parse_text_melody,
-    midi_to_note_name,
 )
 from backend.key_detector import CANONICAL_KEYS, detect_key_from_melody
 from backend.exporters import build_colored_musicxml, generate_midi_bytes

@@ -5,7 +5,6 @@ Target: 5 consecutive iterations of 24/24 successful, rule-compliant harmonizati
 """
 
 import sys
-import os
 import random
 from pathlib import Path
 from typing import Any
@@ -13,7 +12,7 @@ from typing import Any
 # Ensure project root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.harmony.core.types import Key, Chord, Voicing, parse_key
+from src.harmony.core.types import Key
 from src.harmony.core.metric import MetricGrid
 from src.harmony.pipeline import Harmonizer
 from src.harmony.rules.engine import RuleEngine

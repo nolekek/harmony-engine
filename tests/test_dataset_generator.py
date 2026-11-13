@@ -2,14 +2,11 @@
 Tests for Synthetic SATB Harmony Dataset Generator (scripts/generate_dataset.py).
 """
 
-import pytest
-from pathlib import Path
 from scripts.generate_dataset import (
     generate_classical_melody,
     get_scale_pitches,
     harmonize_single_sample,
 )
-from src.harmony.core.types import Key
 
 
 def test_get_scale_pitches_c_major():

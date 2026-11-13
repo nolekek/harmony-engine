@@ -10,7 +10,6 @@ Verifies:
 import struct
 import tempfile
 from pathlib import Path
-import pytest
 
 from src.harmony.core.types import Voicing
 from src.harmony.export.midi import export_to_midi

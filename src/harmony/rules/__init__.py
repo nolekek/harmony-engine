@@ -99,4 +99,8 @@ __all__ = [
     "validate_resolutions",
     # Engine
     "RuleEngine",
+    # Non-chord tones
+    "NonChordToneType",
+    "classify_melodic_tone",
+    "check_voice_embellishments",
 ]

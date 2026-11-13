@@ -4,7 +4,6 @@ Verifies Krumhansl-Schmuckler profile scoring, half cadences, authentic cadences
 duration weighting, and determinism.
 """
 
-import pytest
 from backend.key_detector import CANONICAL_KEYS, detect_key_from_melody
 
 

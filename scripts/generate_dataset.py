@@ -162,7 +162,7 @@ def main() -> None:
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"=== SATB Dataset Generator ===")
+    print("=== SATB Dataset Generator ===")
     print(f"Target count: {args.count}")
     print(f"Output path:  {out_path}")
     print(f"Workers:      {args.workers}")
@@ -175,7 +175,7 @@ def main() -> None:
 
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
         active_futures = set()
-        
+
         # Prime initial tasks
         for _ in range(args.workers * 2):
             active_futures.add(executor.submit(generate_batch, next_id, chunk_size, args.seed))

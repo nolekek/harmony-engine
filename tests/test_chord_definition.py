@@ -3,7 +3,7 @@
 import pytest
 from src.harmony.core.chord import ChordDefinition, ChordFunction, Inversion
 from src.harmony.core.key import Key, Mode
-from src.harmony.core.pitch import PitchClass, Pitch
+from src.harmony.core.pitch import PitchClass
 
 
 @pytest.fixture

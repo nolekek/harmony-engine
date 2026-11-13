@@ -3,14 +3,13 @@ Unit and integration tests for chromatic harmony layer (Neapolitan chord N and c
 Tests Brigade rules, triad tones, solver integration, and FastAPI /api/grade validation.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
 from src.harmony.core.chord import ChordFunction, ChordDefinition, Inversion
 from src.harmony.core.key import Key as CoreKey, Mode
 from src.harmony.core.pitch import PitchClass, ScaleDegree
-from src.harmony.rules.doubling import get_triad_tones, check_doubling
+from src.harmony.rules.doubling import get_triad_tones
 from src.harmony.pipeline import Harmonizer
 
 

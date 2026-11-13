@@ -28,7 +28,7 @@ _RUSSIAN_NAMES: tuple[str, ...] = (
 class PitchClass(IntEnum):
     """
     Pitch class representation in modulo 12 arithmetic (Z_12).
-    
+
     Values range from 0 (C) through 11 (B).
     Enharmonic aliases are provided (e.g., C_SHARP == DB == 1).
     """
@@ -147,7 +147,7 @@ PitchClass.RUSSIAN_NAMES = _RUSSIAN_NAMES  # type: ignore[attr-defined]
 class Interval:
     """
     Musical interval representation with semitone distance and Russian music theory naming.
-    
+
     Supports simple and compound intervals:
     0: ч1, 1: м2, 2: б2, 3: м3 (или ув2), 4: б3, 5: ч4, 6: тритон (ув4/ум5),
     7: ч5, 8: м6, 9: б6, 10: м7, 11: б7, 12: ч8, etc.
@@ -330,7 +330,7 @@ class Interval:
 class ScaleDegree:
     """
     Scale degree (ступень лада) I..VII with optional chromatic alterations.
-    
+
     degree: 1 to 7 (corresponds to I, II, III, IV, V, VI, VII).
     alteration: -2 (bb), -1 (b), 0 (natural), +1 (#), +2 (##).
     """
@@ -466,7 +466,7 @@ ScaleDegree.FLAT_VI = ScaleDegree(6, -1)   # type: ignore[attr-defined]
 class Pitch:
     """
     Absolute musical pitch represented as a standard MIDI note number (0..127).
-    
+
     Middle C (C4) is MIDI 60.
     Provides octave calculation, pitch class projection, and arithmetic.
     """

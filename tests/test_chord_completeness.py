@@ -2,7 +2,6 @@
 Tests for T1: Unison prohibition and triad completeness according to Brigade rules.
 """
 
-import pytest
 from src.harmony.core.types import Chord, Key, Voicing
 from src.harmony.rules.spacing import check_voice_unison, validate_spacing
 from src.harmony.rules.doubling import check_triad_completeness

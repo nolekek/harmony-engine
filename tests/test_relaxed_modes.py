@@ -9,11 +9,11 @@ from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
 from src.harmony.core.types import Voicing, Chord, Key
-from src.harmony.rules.spacing import validate_spacing, check_voice_unison
+from src.harmony.rules.spacing import validate_spacing
 from src.harmony.solver.state_generator import generate_candidate_voicings, clear_candidate_cache
 from src.harmony.solver.viterbi import ViterbiSolver, clear_solver_cache
 from src.harmony.pipeline import Harmonizer
-from backend.service import HarmonizationService, clear_service_cache
+from backend.service import clear_service_cache
 from backend.api import router
 
 

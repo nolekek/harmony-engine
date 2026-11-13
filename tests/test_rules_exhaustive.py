@@ -21,13 +21,11 @@ from src.harmony.rules.voice_leading import (
     check_voice_overlapping,
     check_unisons,
     check_melodic_intervals,
-    validate_voice_leading,
 )
 from src.harmony.rules.spacing import (
     check_voice_ranges,
     check_voice_crossing,
     check_texture_spacing,
-    validate_spacing,
 )
 from src.harmony.rules.doubling import (
     check_main_triad_doubling,
@@ -35,7 +33,6 @@ from src.harmony.rules.doubling import (
     check_k64_doubling,
     check_deceptive_vi_doubling,
     check_secondary_dominant_doubling,
-    check_doubling,
 )
 from src.harmony.rules.resolutions import (
     check_seventh_resolution,
@@ -44,7 +41,6 @@ from src.harmony.rules.resolutions import (
     check_leading_tone_resolution,
     check_vii7_resolution,
     check_secondary_dominant_resolution,
-    validate_resolutions,
 )
 from src.harmony.rules.chromatic import check_false_relation
 from tests.corpus.benchmark_tasks import BENCHMARK_TASKS
@@ -263,7 +259,7 @@ class TestDoublingExhaustive:
         assert len(check_main_triad_doubling(v_good, chord_t, key=key)) == 0
 
         # Incomplete triad with tripled root (C, C, C, E) and single third: valid!
-        v_tripled_root = Voicing(soprano=64, alto=60, tenor=48, bass=36)  # allow extended bass or 48/60
+        Voicing(soprano=64, alto=60, tenor=48, bass=36)  # allow extended bass or 48/60
         v_tripled = Voicing(soprano=64, alto=60, tenor=48, bass=48)
         assert len(check_main_triad_doubling(v_tripled, chord_t, key=key)) == 0
 
@@ -273,7 +269,7 @@ class TestDoublingExhaustive:
         chord_d6 = Chord(function="D6")
 
         # 1. T6 with doubled root C (E, G, C, C): valid!
-        v_t6_root = Voicing(soprano=64, alto=60, tenor=55, bass=52)  # S=E, A=C, T=G, B=E(52) -> wait, bass of T6 is E (52)
+        Voicing(soprano=64, alto=60, tenor=55, bass=52)  # S=E, A=C, T=G, B=E(52) -> wait, bass of T6 is E (52)
         # T6 in C: bass is E3 (52). Root=C, Fifth=G.
         # Voicing: S=C5(72), A=G4(67), T=C4(60), B=E3(52) -> C doubled, E single, G single!
         v_t6_doubled_root = Voicing(soprano=72, alto=67, tenor=60, bass=52)
@@ -461,7 +457,7 @@ class TestResolutionsExhaustive:
 
     def test_secondary_dominant_resolution_targets_and_tendencies(self):
         key = Key(tonic="C", mode="Major")
-        c_dd = Chord(function="DD")
+        Chord(function="DD")
         c_dd7 = Chord(function="DD7")
         c_k64 = Chord(function="K64")
         c_d = Chord(function="D")

@@ -2,7 +2,6 @@
 Tests for CORS whitelist and API schema validation (T12 / REPORT #37, #38, #61, #62 / BK-08, BK-09).
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 

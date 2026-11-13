@@ -2,13 +2,8 @@
 Tests for backend API gateway, importers, grader, and exporters.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
-from backend.importers import parse_text_melody, parse_musicxml_content, parse_midi_file
-from backend.key_detector import detect_key_from_melody
-from backend.grader import grade_satb_solution
-from src.harmony.core.types import Key, Voicing
 
 client = TestClient(app)
 

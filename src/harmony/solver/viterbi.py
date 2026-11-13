@@ -4,13 +4,12 @@ Computes the globally optimal SATB voice leading trajectory over the admissible 
 minimizing total voice leading cost subject to zero Brigade hard rule violations.
 """
 
-from typing import Any, Sequence, NamedTuple
+from typing import Any, Sequence
 from dataclasses import dataclass, field
 from src.harmony.core.types import (
     Voicing,
     Key,
     Chord,
-    ValidationResult,
     calculate_metric_structure,
 )
 from src.harmony.rules.engine import RuleEngine

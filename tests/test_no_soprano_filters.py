@@ -8,7 +8,7 @@ import importlib.util
 from pathlib import Path
 import pytest
 
-from src.harmony.core.types import Key, calculate_metric_structure, TimeSignature
+from src.harmony.core.types import Key
 from src.harmony.pipeline import Harmonizer
 from src.harmony.solver.viterbi import ViterbiSolver
 from src.harmony.syntax.grammar import HarmonicGrammar

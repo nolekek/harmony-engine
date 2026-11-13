@@ -8,9 +8,9 @@ Implements Brigade Textbook rules for:
 """
 
 from enum import Enum
-from typing import Any, Sequence
+from typing import Any
 from dataclasses import dataclass
-from src.harmony.core.types import RuleViolation, Voicing, to_satb, parse_key
+from src.harmony.core.types import RuleViolation, to_satb
 
 
 class NonChordToneType(str, Enum):
@@ -40,7 +40,7 @@ def classify_nct(
     """
     Classifies a soprano melodic pitch relative to chord pitch classes.
     Returns: 'passing' | 'neighbor' | 'suspension' | 'chord_tone' | None
-    
+
     Rules:
     - chord_tone: curr_pitch % 12 is in chord_pcs.
     - suspension: tone held from previous pitch (d1 == 0), on downbeat (is_downbeat == True),

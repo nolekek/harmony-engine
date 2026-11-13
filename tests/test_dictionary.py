@@ -3,7 +3,6 @@ Tests for T16: Functional dictionary extensions (III, III6, VII, VII6, VII7, II7
 and descending diatonic harmonization.
 """
 
-import pytest
 from src.harmony.core.types import Key
 from src.harmony.core.key import Key as CoreKey
 from src.harmony.core.pitch import ScaleDegree

@@ -1,8 +1,7 @@
 """Unit tests for II7 chord resolution gaps according to Brigade Harmony textbook."""
 
 import pytest
-from src.harmony.core.types import Voicing, Chord, Key
-from src.harmony.core.chord import ChordDefinition, ChordFunction, Inversion
+from src.harmony.core.types import Voicing
 from src.harmony.rules.resolutions import (
     check_ii7_resolution,
     validate_resolutions,

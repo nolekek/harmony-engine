@@ -4,7 +4,6 @@ Verifies melodies ending on degrees 1, 2, 5, 7 yield legal final chords
 (D or VI for half cadence, T for authentic), and never D7, T6, or K64.
 """
 
-import pytest
 from src.harmony.pipeline import Harmonizer
 
 

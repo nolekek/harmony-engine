@@ -6,13 +6,11 @@ Tests for melodic context and voice-leading rule enhancements:
 (d) contrary fifths 31 -> 19 -> CONTRARY_FIFTHS
 (e) contrary motion 12 -> 0 -> CONTRARY_OCTAVES with diagnostic mentioning unison
 """
-import pytest
 from src.harmony.core.types import Voicing, Key
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.rules.voice_leading import (
     check_melodic_intervals,
     check_contrary_fifths_and_octaves,
-    validate_voice_leading,
 )
 
 

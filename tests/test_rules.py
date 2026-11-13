@@ -127,7 +127,7 @@ class TestDoublingRules:
         chord_t = Chord(function="T")
 
         # Doubling root C: S=64(E), A=60(C), T=52(E), B=48(C) -> doubled E (third!)
-        v_double_third = Voicing(soprano=64, alto=60, tenor=52, bass=48)
+        Voicing(soprano=64, alto=60, tenor=52, bass=48)
         # Here pitches are: E4(4), C4(0), E3(4), C3(0). Root C is doubled, but Third E is also doubled!
         # In a triad with 4 voices, either root is doubled (C C E G) or third or fifth.
         # Let's create a triad with NO G (fifth) and doubled third E: C E E E or C C E E.

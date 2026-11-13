@@ -2,7 +2,6 @@
 Unit tests for non-chord tones validator (задержания, проходящие, вспомогательные, предъёмы).
 """
 
-import pytest
 from src.harmony.rules.non_chord_tones import (
     NonChordToneType,
     classify_melodic_tone,

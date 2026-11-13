@@ -1,7 +1,6 @@
 """
 Tests for voice leading, resolution, doubling, and viterbi cost fixes (T18).
 """
-import pytest
 from src.harmony.core.types import Voicing, Key, Chord
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.rules.voice_leading import (
@@ -10,7 +9,6 @@ from src.harmony.rules.voice_leading import (
     check_melodic_intervals,
     validate_voice_leading,
 )
-from src.harmony.rules.resolutions import check_seventh_resolution
 from src.harmony.rules.doubling import (
     check_seventh_chord_doubling,
     check_sextaccord_doubling,
@@ -52,9 +50,9 @@ def test_dim5_to_p5_similar_motion():
 
 def test_octave_repositioning_same_chord():
     """(c) Octave shift within the same chord is NOT a violation."""
-    engine = RuleEngine()
+    RuleEngine()
     chord_t = Chord(function="T")
-    key = Key(tonic="C", mode="Major")
+    Key(tonic="C", mode="Major")
 
     # C major triad: S leaps octave down G4(67) -> G3(55), B leaps octave down C3(48) -> C2(36)
     v1 = Voicing(soprano=67, alto=60, tenor=55, bass=48)

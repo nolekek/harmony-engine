@@ -5,6 +5,7 @@ Provides 24 canonical keys (12 major, 12 harmonic minor) and automatic key detec
 
 from __future__ import annotations
 
+import math
 from typing import Any, Sequence
 from src.harmony.core.types import Key
 
@@ -38,8 +39,6 @@ CANONICAL_KEYS = [
     {"tonic": "D", "mode": "MinorHarmonic", "name": "d-moll (Ре минор)", "fifths": -1},
 ]
 
-
-import math
 
 # Krumhansl-Kessler key profiles (distribution over 12 semitones from tonic)
 # Major profile: tonic, b2, 2, b3, 3, 4, #4, 5, b6, 6, b7, 7

@@ -9,8 +9,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Sequence
 
-from src.harmony.core.types import Chord, Key, Voicing
-from src.harmony.export.ascii import format_ascii_score
+from src.harmony.core.types import Chord, Voicing
 from src.harmony.export.midi import export_to_midi
 from src.harmony.export.musicxml import export_to_musicxml
 
@@ -49,7 +48,7 @@ def build_colored_musicxml(
         durations=durations,
         time_signature=time_signature,
     )
-    
+
     root = ET.fromstring(raw_xml)
 
     def _is_tie_continuation(note: ET.Element) -> bool:

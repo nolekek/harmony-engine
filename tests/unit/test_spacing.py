@@ -2,7 +2,6 @@
 Tests for voice ranges, crossing, and texture spacing.
 """
 
-import pytest
 from src.harmony.rules.spacing import (
     check_voice_ranges,
     check_voice_crossing,

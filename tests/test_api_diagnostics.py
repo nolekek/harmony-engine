@@ -3,7 +3,6 @@ Tests for structured API diagnostics under T9-backend.
 Verifies failure reporting with exact diagnostic codes and details.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 

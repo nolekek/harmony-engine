@@ -3,9 +3,8 @@ Tests for unified MetricGrid and metric structure calculations.
 Validates 4/4, 3/4, 2/4, 6/8, 3/8 meters, barline crossings, and explicit downbeat overrides.
 """
 
-import pytest
 from src.harmony.core.metric import MetricGrid, build_metric_grid
-from src.harmony.core.types import calculate_metric_structure, TimeSignature
+from src.harmony.core.types import calculate_metric_structure
 
 
 class TestMetricGrid:

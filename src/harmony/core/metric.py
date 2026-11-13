@@ -6,7 +6,6 @@ Provides deterministic, authoritative metric coordinates across 4/4, 3/4, 2/4, 6
 from __future__ import annotations
 
 from typing import Any, Sequence
-from dataclasses import dataclass
 
 from src.harmony.core.types import (
     TimeSignature,

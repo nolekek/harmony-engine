@@ -14,7 +14,6 @@ from src.harmony.pipeline import Harmonizer
 from src.harmony.core.types import (
     Key,
     Chord,
-    Voicing,
     TimeSignature,
     calculate_metric_structure,
 )
@@ -417,7 +416,7 @@ def test_pipeline_diverse_key_string_parsing():
     """
     Verifies that Harmonizer parses string key signatures accurately.
     """
-    h = Harmonizer()
+    Harmonizer()
     keys_to_test = [
         ("C Major", 0, "MAJOR"),
         ("A minor", 9, "MINORHARMONIC"),

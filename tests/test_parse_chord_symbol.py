@@ -2,7 +2,6 @@
 Tests for T3: parse_chord_symbol handling of ChordDefinition and ChordFunction enums.
 """
 
-import pytest
 from src.harmony.core.types import Chord, Key, Voicing, parse_chord_symbol
 from src.harmony.core.chord import ChordDefinition, ChordFunction, Inversion
 from src.harmony.rules.doubling import check_main_triad_doubling

@@ -4,8 +4,7 @@ Internal normalization and pitch spelling utilities for score exporters.
 
 from __future__ import annotations
 
-import re
-from typing import Any, Sequence, Tuple
+from typing import Any
 
 
 # Key signature fifths offset mapping

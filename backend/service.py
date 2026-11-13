@@ -11,7 +11,7 @@ import logging
 import time
 from typing import Any
 
-from src.harmony.core.types import Key, Chord, TimeSignature
+from src.harmony.core.types import Key, TimeSignature
 from src.harmony.core.metric import MetricGrid
 from src.harmony.syntax.grammar import HarmonicGrammar
 from src.harmony.solver.viterbi import ViterbiSolver

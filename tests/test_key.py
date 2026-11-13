@@ -1,6 +1,5 @@
 """Unit tests for harmony.core.key."""
 
-import pytest
 from harmony.core.key import Key, Mode
 from harmony.core.pitch import Pitch, PitchClass, ScaleDegree
 

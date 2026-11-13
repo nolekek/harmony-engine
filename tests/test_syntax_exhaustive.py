@@ -9,9 +9,7 @@ import pytest
 from src.harmony.core.types import Key
 from src.harmony.syntax.grammar import (
     HarmonicGrammar,
-    ALL_FUNCTIONS,
     DOMINANT_GROUP,
-    SUBDOMINANT_GROUP,
     SECONDARY_DOMINANT_GROUP,
 )
 

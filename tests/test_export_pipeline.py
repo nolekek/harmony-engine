@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import xml.etree.ElementTree as ET
 
-from src.harmony.core.types import Voicing, Key, Chord
+from src.harmony.core.types import Voicing, Key
 from src.harmony.export.musicxml import export_to_musicxml
 from src.harmony.export.midi import export_to_midi
 from src.harmony.export.ascii import format_ascii_score

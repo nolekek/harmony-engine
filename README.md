@@ -1,6 +1,6 @@
 # 🎼 Brigade Classical 4-Part Harmony Engine (Бригадный учебник)
 
-[![Tests](https://img.shields.io/badge/pytest-649%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/pytest-848%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.10%2B%20%7C%203.14%2B-blue.svg)](pyproject.toml)
 [![Architecture](https://img.shields.io/badge/architecture-Viterbi%20DP%20%2B%20CFG-orange.svg)](docs/MATH_MODEL.md)
 [![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688.svg)](backend/)
@@ -83,6 +83,13 @@ source .venv/bin/activate
 ```
 
 ### 2. Установка зависимостей проекта и dev-инструментов:
+
+Проект ведётся на [uv](https://docs.astral.sh/uv/) (`uv.lock` лежит в репозитории) — это рекомендуемый путь:
+```bash
+uv sync --extra dev --extra desktop
+```
+
+Альтернатива без uv:
 ```bash
 pip install -e .[dev]
 ```
@@ -95,6 +102,16 @@ python run_app.py
 ---
 
 ## 🚀 Быстрый старт
+
+### 0. Зависимости и самопроверка
+
+```bash
+# зависимости (проект на uv)
+uv sync --extra dev --extra desktop
+
+# прогон тестового сьюта (Windows, PowerShell)
+.venv\Scripts\python.exe -m pytest -q
+```
 
 ### 1. Запуск Web GUI в один клик
 
@@ -282,7 +299,7 @@ aitraining/
 │   ├── syntax/                # CFG гармоническая грамматика Способина
 │   ├── cli.py                 # Консольный интерфейс CLI
 │   └── pipeline.py            # Высокоуровневый оркестратор Harmonizer
-├── tests/                     # Сьют автоматических тестов (600+ тестов)
+├── tests/                     # Сьют автоматических тестов (848 тестов)
 ├── pyproject.toml             # Конфигурация сборки, ruff и pytest
 └── run_app.py                 # One-click скрипт запуска Web-приложения
 ```
@@ -295,12 +312,16 @@ aitraining/
 
 Запуск тестов:
 ```bash
+# в активированном окружении
 pytest -q
+
+# без активации (Windows, PowerShell)
+.venv\Scripts\python.exe -m pytest -q
 ```
 
-Фактический статус на ветке `redteam-p2`:
+Фактический статус на ветке `master` (ветка `redteam-p2` влита fast-forward и удалена):
 ```
-645 passed in ~32s
+848 passed, 0 failed, 0 skipped
 ```
 
 ### Реальная производительность

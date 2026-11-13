@@ -2,11 +2,9 @@
 Tests for T2: D43 vs D2 differentiation and resolutions according to Brigade rules.
 """
 
-import pytest
 from src.harmony.core.types import Chord, Key, Voicing
 from src.harmony.solver.state_generator import generate_candidate_voicings
 from src.harmony.rules.resolutions import check_d43_resolution, check_d2_resolution
-from src.harmony.rules.engine import RuleEngine
 from src.harmony.syntax.grammar import HarmonicGrammar
 
 
@@ -96,7 +94,7 @@ def test_d2_resolution_strictly_to_t6():
     v_d2 = Voicing(soprano=67, alto=62, tenor=59, bass=53)
 
     # Proper D2 -> T6: Bass F3(53) -> E3(52) (-1).
-    v_t6 = Voicing(soprano=67, alto=60, tenor=60, bass=52)
+    Voicing(soprano=67, alto=60, tenor=60, bass=52)
     # wait, S=67(G), A=64(E), T=60(C), B=52(E)
     v_t6_clean = Voicing(soprano=67, alto=64, tenor=60, bass=52)
     assert len(check_d2_resolution(v_d2, v_t6_clean, chord_d2, chord_t6, key=key)) == 0

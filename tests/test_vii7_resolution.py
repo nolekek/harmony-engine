@@ -2,7 +2,6 @@
 Unit tests for Leading-Tone Seventh Chord (VII7 -> T) Resolution with Doubled Third (Brigade Ch. 21).
 """
 
-import pytest
 from src.harmony.rules.resolutions import check_vii7_resolution
 from src.harmony.rules.doubling import check_doubling
 from src.harmony.core.types import Voicing, Key, Chord

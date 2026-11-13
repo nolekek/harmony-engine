@@ -2,12 +2,10 @@
 Unit tests for Chromatic Voice Leading and False Relation (Переченье) - Brigade Chapter 26/28.
 """
 
-import pytest
 from src.harmony.rules.chromatic import (
     check_false_relation,
-    validate_chromatic_rules,
 )
-from src.harmony.core.types import Voicing, Key, Chord
+from src.harmony.core.types import Voicing, Key
 from src.harmony.rules.engine import RuleEngine
 
 

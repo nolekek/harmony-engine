@@ -7,7 +7,7 @@ and sharp keys (fifths > 0) write notes with sharps (F#, C#, G#).
 import xml.etree.ElementTree as ET
 import pytest
 
-from src.harmony.core.types import Voicing, Key
+from src.harmony.core.types import Voicing
 from src.harmony.export.musicxml import export_to_musicxml, midi_to_pitch_element
 
 
@@ -22,7 +22,7 @@ def test_musicxml_spelling_f_major_bb():
     xml_str = export_to_musicxml(voicings, chords, key="F Major")
 
     root = ET.fromstring(xml_str)
-    
+
     # Check key signature in attributes
     fifths_elem = root.find(".//key/fifths")
     assert fifths_elem is not None
@@ -36,7 +36,7 @@ def test_musicxml_spelling_f_major_bb():
         if pitch_elem is not None:
             step = pitch_elem.find("step")
             alter = pitch_elem.find("alter")
-            octave = pitch_elem.find("octave")
+            pitch_elem.find("octave")
             if step is not None and step.text == "B" and alter is not None and alter.text == "-1":
                 b_notes.append(note)
 

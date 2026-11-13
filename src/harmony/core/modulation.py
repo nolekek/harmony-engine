@@ -13,11 +13,11 @@ from the Brigade harmony textbook (Дубовский, Евсеев, Спосо�
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import ClassVar, Optional, Sequence, Union
+from dataclasses import dataclass
+from typing import Optional, Union
 
 from .key import Key, Mode
-from .pitch import PitchClass, ScaleDegree
+from .pitch import PitchClass
 
 
 @dataclass(frozen=True, slots=True)

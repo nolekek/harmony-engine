@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, Iterator, Optional, Sequence, Union
+from typing import ClassVar, Iterator, Optional, Union
 
 from .chord import ChordDefinition
 from .pitch import Interval, Pitch, PitchClass
@@ -46,7 +46,7 @@ class Spacing(str, Enum):
 class Voicing:
     """
     A 4-part SATB chord voicing vertical slice: (Soprano, Alto, Tenor, Bass).
-    
+
     Immutable, hashable, and equipped with verification methods for:
     - Voice ordering (S >= A >= T >= B, no voice crossing)
     - Acoustic spacing limits (S-A <= 12, A-T <= 12, T-B <= 24)
@@ -267,12 +267,12 @@ class Voicing:
     def determine_spacing(self, chord_def: Optional[ChordDefinition] = None) -> Spacing:
         """
         Determine spacing (Close, Wide, or Mixed).
-        
+
         If chord_def is provided, spacing is evaluated by counting skipped chord tones:
         - Close: 0 chord tones skipped between S-A and 0 between A-T.
         - Wide: 1 chord tone skipped between S-A and 1 between A-T.
         - Mixed: any other distribution.
-        
+
         If chord_def is not provided, interval thresholds are used:
         - Close: S-A <= 4 and A-T <= 4.
         - Wide: 5 <= S-A <= 12 and 5 <= A-T <= 12.

@@ -2,12 +2,10 @@
 Tests for n-gram statistical style prior (NOT a neural network) and its integration into RuleEngine and Viterbi.
 """
 
-import pytest
 from pathlib import Path
 from src.harmony.ml.model import StylePriorModel
 from src.harmony.rules.engine import RuleEngine
 from src.harmony.core.types import Voicing, Key, Chord
-from src.harmony.solver.viterbi import ViterbiSolver
 
 
 def test_style_prior_initial_priors():

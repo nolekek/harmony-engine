@@ -73,8 +73,8 @@ def run_audit() -> dict:
     pct = (passed / total) * 100.0
     print("=" * 60)
     print(f"AUDIT SUMMARY: {passed}/{total} passed ({pct:.1f}%)")
-    print(f"BASELINE: ~40% (~6/15)")
-    print(f"TARGET: >= 70% (>= 11/15)")
+    print("BASELINE: ~40% (~6/15)")
+    print("TARGET: >= 70% (>= 11/15)")
     print(f"RESULT: {'MET (>= 70%)' if pct >= 70.0 else 'UNMET (< 70%)'}")
     print("=" * 60)
 

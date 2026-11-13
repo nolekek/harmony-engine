@@ -2,7 +2,6 @@
 Tests for T15: Non-Chord Tones (NCT) layer and classification.
 """
 
-import pytest
 from src.harmony.core.types import Key, Chord
 from src.harmony.rules.non_chord_tones import classify_nct
 from src.harmony.solver.state_generator import generate_candidate_voicings

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 from dataclasses import dataclass, asdict
 
-from src.harmony.core.types import Key, Voicing, Chord, to_satb, parse_key
+from src.harmony.core.types import Key, to_satb, parse_key
 from src.harmony.rules.engine import RuleEngine
 from backend.importers import midi_to_note_name
 

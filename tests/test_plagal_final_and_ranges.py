@@ -2,7 +2,6 @@
 Tests for plagal last-resort final cadence and auto-extended voice ranges.
 """
 
-import pytest
 from src.harmony.pipeline import Harmonizer
 from src.harmony.syntax.grammar import HarmonicGrammar
 from src.harmony.core.types import Voicing, Key, to_satb

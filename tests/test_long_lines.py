@@ -4,7 +4,6 @@ Verifies beam search adaptation, non-starvation, and performance thresholds.
 """
 
 import time
-import pytest
 from src.harmony.pipeline import Harmonizer
 
 
