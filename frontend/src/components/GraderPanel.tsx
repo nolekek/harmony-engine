@@ -2,9 +2,12 @@ import React, { useState } from "react";
 import { Award, Upload, BookOpen, Sparkles } from "lucide-react";
 import type { SATBVoicing } from "../audio/synth";
 import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
 import { GraderScoreMatrix } from "./grader/GraderScoreMatrix";
 import { GraderViolationsList } from "./grader/GraderViolationsList";
 import type { GraderReportData, GraderViolationItem } from "./grader/GraderViolationsList";
+import { SAMPLE_TESTS } from "./grader/sampleTests";
+import type { GraderSampleTest } from "./grader/sampleTests";
 
 export type { GraderReportData, GraderViolationItem };
 
@@ -28,36 +31,6 @@ interface GraderPanelProps {
   ) => void;
   onHighlightMeasure: (measure: number) => void;
 }
-
-const SAMPLE_TESTS = [
-  {
-    name: "Задача с грубыми ошибками (Параллельные квинты/октавы)",
-    key: { tonic: "C", mode: "Major" },
-    timeSignature: "4/4",
-    voicings: [
-      { soprano: 67, alto: 60, tenor: 55, bass: 48 },
-      { soprano: 69, alto: 62, tenor: 57, bass: 50 },
-      { soprano: 67, alto: 64, tenor: 55, bass: 48 },
-    ],
-    chords: ["T", "II", "T"],
-    durations: ["half", "half", "half"],
-  },
-  {
-    name: "Эталонное решение (Способин, без ошибок)",
-    key: { tonic: "C", mode: "Major" },
-    timeSignature: "4/4",
-    voicings: [
-      { soprano: 64, alto: 60, tenor: 55, bass: 48 },
-      { soprano: 65, alto: 60, tenor: 57, bass: 45 },
-      { soprano: 65, alto: 60, tenor: 57, bass: 41 },
-      { soprano: 64, alto: 60, tenor: 55, bass: 48 },
-      { soprano: 62, alto: 59, tenor: 55, bass: 43 },
-      { soprano: 60, alto: 60, tenor: 55, bass: 48 },
-    ],
-    chords: ["T", "VI", "S", "T", "D", "T"],
-    durations: ["half", "half", "half", "half", "half", "half"],
-  },
-];
 
 export const GraderPanel: React.FC<GraderPanelProps> = ({
   selectedKey,
@@ -177,7 +150,7 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
     }
   };
 
-  const loadSample = (sample: (typeof SAMPLE_TESTS)[0]) => {
+  const loadSample = (sample: GraderSampleTest) => {
     setVoicings(sample.voicings);
     const chordsStr = sample.chords.join(", ");
     setChordsInput(chordsStr);
@@ -200,23 +173,23 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl space-y-5">
+    <div className="bg-surface-card border border-border rounded-xl p-5 shadow-xl space-y-5">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-amber-400" />
-            <h2 className="text-base font-bold text-slate-100">
+            <Award className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+            <h2 className="text-base font-bold text-text-primary">
               Режим «Консерваторский инспектор»
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-text-muted mt-0.5">
             Строгая академическая проверка голосоведения по правилам бригадного учебника
           </p>
         </div>
 
-        <label className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 cursor-pointer transition-colors focus-ring">
-          <Upload className="w-3.5 h-3.5 text-indigo-400" />
+        <label className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-panel border border-border rounded-lg text-xs font-medium text-text-primary cursor-pointer transition-colors focus-ring">
+          <Upload className="w-3.5 h-3.5 text-brand" />
           <span>Загрузить партитуру</span>
           <input type="file" accept=".xml,.musicxml,.mid" className="hidden" onChange={handleFileUpload} />
         </label>
@@ -224,38 +197,39 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
 
       {/* Preset Pickers */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
+        <span className="text-xs font-semibold text-text-muted flex items-center gap-1">
           <BookOpen className="w-3.5 h-3.5" /> Примеры:
         </span>
         {SAMPLE_TESTS.map((sample, idx) => (
-          <button
+          <Button
             key={idx}
-            type="button"
+            variant="secondary"
+            size="xs"
             onClick={() => loadSample(sample)}
-            className="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors focus-ring"
           >
             {sample.name}
-          </button>
+          </Button>
         ))}
       </div>
 
       {/* Harmonic Functions */}
-      <div className="space-y-1.5 bg-slate-950/40 p-3 rounded-lg border border-slate-800">
+      <div className="space-y-1.5 bg-surface-subtle/40 p-3 rounded-lg border border-border-subtle">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-slate-300">
+          <span className="text-xs font-semibold text-text-secondary">
             Гармонические функции:
-          </label>
-          <span className="text-[11px] text-slate-400 font-mono">
+          </span>
+          <span className="text-[11px] text-text-muted font-mono">
             {currentKey.tonic} {currentKey.mode === "Major" ? "мажор" : "гарм. минор"} · {currentTimeSignature}
           </span>
         </div>
-        <input
+        <Input
           type="text"
+          inputSize="sm"
           value={chordsInput}
           onChange={(e) => setChordsInput(e.target.value)}
           placeholder="Например: T, S, D, T или T, II, T"
           aria-label="Гармонические функции"
-          className="w-full text-xs bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 font-mono focus-ring"
+          className="font-mono"
         />
       </div>
 
@@ -287,7 +261,7 @@ export const GraderPanel: React.FC<GraderPanelProps> = ({
       </Button>
 
       {errorMessage && (
-        <div role="alert" className="p-3 bg-rose-950/40 border border-rose-800 rounded-lg text-xs text-rose-300">
+        <div role="alert" aria-live="assertive" className="p-3 bg-rose-500/10 border border-rose-600/50 rounded-lg text-xs text-rose-700 dark:text-rose-300">
           {errorMessage}
         </div>
       )}

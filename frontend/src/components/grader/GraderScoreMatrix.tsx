@@ -13,16 +13,17 @@ interface GraderScoreMatrixProps {
   onRemoveChord: () => void;
 }
 
+/* SATB identity colors, AA-readable in both themes. */
 const VOICE_ROWS: Array<{
   key: "soprano" | "alto" | "tenor" | "bass";
   label: string;
   badgeClass: string;
   textClass: string;
 }> = [
-  { key: "soprano", label: "Сопрано (S)", badgeClass: "bg-blue-950/40 text-blue-400", textClass: "text-blue-300" },
-  { key: "alto", label: "Альт (A)", badgeClass: "bg-emerald-950/40 text-emerald-400", textClass: "text-emerald-300" },
-  { key: "tenor", label: "Тенор (T)", badgeClass: "bg-amber-950/40 text-amber-400", textClass: "text-amber-300" },
-  { key: "bass", label: "Бас (B)", badgeClass: "bg-rose-950/40 text-rose-400", textClass: "text-rose-300" },
+  { key: "soprano", label: "Сопрано (S)", badgeClass: "bg-blue-500/10", textClass: "text-blue-700 dark:text-blue-300" },
+  { key: "alto", label: "Альт (A)", badgeClass: "bg-emerald-500/10", textClass: "text-emerald-700 dark:text-emerald-300" },
+  { key: "tenor", label: "Тенор (T)", badgeClass: "bg-amber-500/10", textClass: "text-amber-700 dark:text-amber-300" },
+  { key: "bass", label: "Бас (B)", badgeClass: "bg-rose-500/10", textClass: "text-rose-700 dark:text-rose-300" },
 ];
 
 export const GraderScoreMatrix: React.FC<GraderScoreMatrixProps> = ({
@@ -34,7 +35,7 @@ export const GraderScoreMatrix: React.FC<GraderScoreMatrixProps> = ({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-300">
+        <span className="text-xs font-semibold text-text-secondary">
           Сетка аккордов (MIDI-ноты 4 голосов):
         </span>
         <div className="flex items-center gap-2">
@@ -46,7 +47,7 @@ export const GraderScoreMatrix: React.FC<GraderScoreMatrixProps> = ({
               variant="secondary"
               size="xs"
               onClick={onRemoveChord}
-              className="text-rose-400 hover:text-rose-300"
+              className="text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300"
             >
               - Удалить последний
             </Button>
@@ -54,26 +55,26 @@ export const GraderScoreMatrix: React.FC<GraderScoreMatrixProps> = ({
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-slate-800 rounded-lg">
+      <div className="overflow-x-auto border border-border rounded-lg">
         <table className="w-full text-xs text-left">
-          <thead className="bg-slate-800/80 text-slate-400 font-mono">
+          <thead className="bg-surface-elevated text-text-secondary font-mono">
             <tr>
-              <th className="p-2 border-r border-slate-700">Голос</th>
+              <th className="p-2 border-r border-border">Голос</th>
               {voicings.map((_, idx) => (
-                <th key={idx} className="p-2 text-center border-r border-slate-700/60 min-w-[54px]">
+                <th key={idx} className="p-2 text-center border-r border-border-subtle min-w-[54px]">
                   #{idx + 1}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/70 font-mono">
+          <tbody className="divide-y divide-border-subtle font-mono">
             {VOICE_ROWS.map(({ key, label, badgeClass, textClass }) => (
               <tr key={key} className={badgeClass}>
-                <td className="p-2 font-bold border-r border-slate-800 shrink-0">
+                <td className={`p-2 font-bold border-r border-border-subtle shrink-0 ${textClass}`}>
                   {label}
                 </td>
                 {voicings.map((v, i) => (
-                  <td key={i} className="p-1 border-r border-slate-800">
+                  <td key={i} className="p-1 border-r border-border-subtle">
                     <input
                       type="number"
                       aria-label={`${label}, аккорд #${i + 1}`}
@@ -81,7 +82,7 @@ export const GraderScoreMatrix: React.FC<GraderScoreMatrixProps> = ({
                       onChange={(e) =>
                         onVoicePitchChange(i, key, Number(e.target.value))
                       }
-                      className={`w-full text-center bg-slate-900 border border-slate-700 rounded px-1 py-1 ${textClass} font-bold focus-ring`}
+                      className={`w-full text-center bg-surface-panel border border-border rounded px-1 py-1 ${textClass} font-bold focus-ring`}
                     />
                   </td>
                 ))}

@@ -5,9 +5,14 @@ import type { MelodyNote } from "../../utils/durationUtils";
 
 interface MelodyFileUploadProps {
   onMelodyLoaded: (melody: MelodyNote[], timeSignature?: string, key?: { tonic: string; mode: string }) => void;
+  /** Current UI meter — sent to /api/parse-text (backend contract m1). */
+  timeSignature: string;
 }
 
-export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({ onMelodyLoaded }) => {
+export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({
+  onMelodyLoaded,
+  timeSignature,
+}) => {
   const [textInput, setTextInput] = useState("");
   const [isParsingText, setIsParsingText] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -26,7 +31,7 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({ onMelodyLoad
       const resp = await fetch("/api/parse-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: textInput }),
+        body: JSON.stringify({ text: textInput, time_signature: timeSignature }),
       });
       const data = await resp.json();
       if (resp.ok && data.melody) {
@@ -37,7 +42,7 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({ onMelodyLoad
         setIsError(true);
         setStatusMessage(data.detail || "Не удалось распознать нотный текст.");
       }
-    } catch (e) {
+    } catch {
       setIsError(true);
       setStatusMessage("Ошибка запроса к серверу парсинга текста.");
     } finally {
@@ -66,7 +71,7 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({ onMelodyLoad
         setIsError(true);
         setStatusMessage(data.detail || "Ошибка при чтении файла MusicXML/MIDI.");
       }
-    } catch (e) {
+    } catch {
       setIsError(true);
       setStatusMessage("Ошибка при загрузке файла на сервер.");
     } finally {
@@ -78,14 +83,14 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({ onMelodyLoad
   return (
     <div className="space-y-3 pt-2">
       {/* Text string input */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-start">
         <input
           type="text"
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           placeholder="Ввод строкой: E4/2, F4/2, G4/2, C4/1 или 64, 65, 67, 60..."
           aria-label="Ввод нот строкой"
-          className="flex-1 bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus-ring"
+          className="flex-1 bg-surface-panel border border-border rounded-lg px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus-ring transition-colors hover:border-border-strong"
           onKeyDown={(e) => {
             if (e.key === "Enter") handleParseText();
           }}
@@ -129,10 +134,11 @@ export const MelodyFileUpload: React.FC<MelodyFileUploadProps> = ({ onMelodyLoad
       {statusMessage && (
         <div
           role="status"
+          aria-live="polite"
           className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded border ${
             isError
-              ? "bg-rose-950/40 border-rose-800 text-rose-300"
-              : "bg-emerald-950/40 border-emerald-800 text-emerald-300"
+              ? "bg-rose-500/10 border-rose-600/50 text-rose-700 dark:text-rose-300"
+              : "bg-emerald-500/10 border-emerald-600/50 text-emerald-700 dark:text-emerald-300"
           }`}
         >
           {isError ? <AlertCircle className="w-3.5 h-3.5 shrink-0" /> : <Check className="w-3.5 h-3.5 shrink-0" />}

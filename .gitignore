@@ -17,5 +17,6 @@ htmlcov/
 frontend/dist/
 frontend/node_modules/
 .agent-teams/
+.playwright-mcp/
 .redteam/scratch/lead/server.out.log
 .redteam/scratch/lead/server.err.log

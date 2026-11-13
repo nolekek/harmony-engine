@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Piano, Clock, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { Piano, Clock } from "lucide-react";
 import { Card } from "./ui/Card";
 import { PianoKeyboard } from "./melody/PianoKeyboard";
 import { MidiInputBar } from "./melody/MidiInputBar";
@@ -17,7 +17,6 @@ export type { MelodyNote };
 interface MelodyInputProps {
   melody: MelodyNote[];
   onChange: (newMelody: MelodyNote[]) => void;
-  selectedKey: { tonic: string; mode: string };
   onAutoDetectKey: () => void;
   timeSignature?: string;
 }
@@ -40,18 +39,8 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
   const [activeDuration, setActiveDuration] = useState<string>("half");
   const [recentPitch, setRecentPitch] = useState<number | null>(null);
 
-  // Recalculate downbeats whenever meter changes
-  useEffect(() => {
-    if (melody.length > 0) {
-      const recalculated = recalculateDownbeats(melody, timeSignature);
-      const isChanged = recalculated.some(
-        (n, i) => n.is_downbeat !== melody[i]?.is_downbeat
-      );
-      if (isChanged) {
-        onChange(recalculated);
-      }
-    }
-  }, [timeSignature, melody, onChange]);
+  // Downbeat recalculation on meter change lives in useHarmonizer.setTimeSignature
+  // (event-driven, no setState-in-effect).
 
   const handleAddNote = (pitch: number, name?: string) => {
     const noteName = name || midiToNoteName(pitch);
@@ -93,32 +82,35 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
       title="Ввод мелодии (Soprano)"
       subtitle="Интерактивная клавиатура, MIDI-контроллер или файлы партитур"
       badge={
-        <div className="w-8 h-8 rounded-lg bg-indigo-950 border border-indigo-700/60 flex items-center justify-center text-indigo-400">
+        <div className="w-8 h-8 rounded-lg bg-brand-light border border-brand/40 flex items-center justify-center text-brand">
           <Piano className="w-4 h-4" />
         </div>
       }
-      className="border-slate-800"
     >
       <div className="space-y-4">
-        {/* WebMIDI device status */}
-        <MidiInputBar onNoteReceived={(pitch) => handleAddNote(pitch)} />
+        {/* WebMIDI device status + metronome recording */}
+        <MidiInputBar
+          onNoteReceived={(pitch) => handleAddNote(pitch)}
+          timeSignature={timeSignature}
+        />
 
         {/* Duration selector for subsequent note input */}
-        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-950/70 border border-slate-800 rounded-lg">
-          <div className="flex items-center gap-1 text-xs text-slate-400 mr-1">
-            <Clock className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-surface-subtle/70 border border-border rounded-lg">
+          <div className="flex items-center gap-1 text-xs text-text-muted mr-1">
+            <Clock className="w-3.5 h-3.5 text-brand" />
             <span className="font-medium">Длительность:</span>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Длительность добавляемых нот">
             {DURATIONS.map((dur) => (
               <button
                 key={dur.id}
                 type="button"
                 onClick={() => setActiveDuration(dur.id)}
+                aria-pressed={activeDuration === dur.id}
                 className={`px-2 py-0.5 rounded text-xs font-mono font-medium border transition-colors cursor-pointer focus-ring ${
                   activeDuration === dur.id
-                    ? "bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30"
-                    : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700"
+                    ? "bg-brand border-brand text-white shadow-sm shadow-brand/30"
+                    : "bg-surface-panel border-border text-text-secondary hover:text-text-primary hover:border-border-strong"
                 }`}
                 title={dur.hint}
               >
@@ -143,7 +135,10 @@ export const MelodyInput: React.FC<MelodyInputProps> = ({
         />
 
         {/* File and text upload options */}
-        <MelodyFileUpload onMelodyLoaded={handleLoadedFromFile} />
+        <MelodyFileUpload
+          onMelodyLoaded={handleLoadedFromFile}
+          timeSignature={timeSignature}
+        />
       </div>
     </Card>
   );

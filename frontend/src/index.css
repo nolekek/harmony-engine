@@ -1,60 +1,93 @@
 @import "tailwindcss";
 
-:root, [data-theme="dark"] {
-  --color-surface-base: #0a0e17;
-  --color-surface-panel: #111827;
-  --color-surface-card: #172033;
-  --color-surface-elevated: #1e293b;
-  --color-surface-overlay: rgba(10, 14, 23, 0.85);
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #94a3b8;
+/* Raw theme variables — runtime-switchable via [data-theme] on <html>. */
+:root,
+[data-theme="dark"] {
+  --app-surface-base: #0a0e17;
+  --app-surface-subtle: #0d1322;
+  --app-surface-panel: #111827;
+  --app-surface-card: #172033;
+  --app-surface-elevated: #1e293b;
+  --app-surface-overlay: rgba(10, 14, 23, 0.85);
 
-  --color-border-subtle: #1e293b;
-  --color-border-default: #334155;
-  --color-border-strong: #475569;
+  --app-text-primary: #f8fafc;
+  --app-text-secondary: #cbd5e1;
+  --app-text-muted: #94a3b8;
 
-  --color-brand-primary: #6366f1;
-  --color-brand-hover: #4f46e5;
-  --color-brand-light: rgba(99, 102, 241, 0.15);
+  --app-border-subtle: #1e293b;
+  --app-border-default: #334155;
+  --app-border-strong: #475569;
 
-  --color-score-card-bg: #fbf9f4;
-  --color-score-card-border: #2d3748;
+  --app-brand-primary: #6366f1;
+  --app-brand-hover: #4f46e5;
+  --app-brand-light: rgba(99, 102, 241, 0.15);
+
+  --app-score-card-bg: #fbf9f4;
+  --app-score-card-border: #2d3748;
 
   color-scheme: dark;
 }
 
 [data-theme="light"] {
-  --color-surface-base: #f8fafc;
-  --color-surface-panel: #ffffff;
-  --color-surface-card: #f1f5f9;
-  --color-surface-elevated: #e2e8f0;
-  --color-surface-overlay: rgba(255, 255, 255, 0.85);
+  --app-surface-base: #f8fafc;
+  --app-surface-subtle: #f1f5f9;
+  --app-surface-panel: #ffffff;
+  --app-surface-card: #f1f5f9;
+  --app-surface-elevated: #e2e8f0;
+  --app-surface-overlay: rgba(255, 255, 255, 0.85);
 
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #334155;
-  --color-text-muted: #64748b;
+  --app-text-primary: #0f172a;
+  --app-text-secondary: #334155;
+  --app-text-muted: #64748b;
 
-  --color-border-subtle: #e2e8f0;
-  --color-border-default: #cbd5e1;
-  --color-border-strong: #94a3b8;
+  --app-border-subtle: #e2e8f0;
+  --app-border-default: #cbd5e1;
+  --app-border-strong: #94a3b8;
 
-  --color-brand-primary: #4f46e5;
-  --color-brand-hover: #4338ca;
-  --color-brand-light: rgba(79, 70, 229, 0.1);
+  --app-brand-primary: #4f46e5;
+  --app-brand-hover: #4338ca;
+  --app-brand-light: rgba(79, 70, 229, 0.1);
 
-  --color-score-card-bg: #fcfbf9;
-  --color-score-card-border: #cbd5e1;
+  --app-score-card-bg: #fcfbf9;
+  --app-score-card-border: #cbd5e1;
 
   color-scheme: light;
+}
+
+/* Register design tokens as Tailwind v4 theme values. `inline` keeps the
+   var() references in utilities so [data-theme] switches apply live. */
+@theme inline {
+  --color-surface-base: var(--app-surface-base);
+  --color-surface-subtle: var(--app-surface-subtle);
+  --color-surface: var(--app-surface-panel);
+  --color-surface-panel: var(--app-surface-panel);
+  --color-surface-card: var(--app-surface-card);
+  --color-surface-elevated: var(--app-surface-elevated);
+  --color-surface-overlay: var(--app-surface-overlay);
+
+  --color-text-primary: var(--app-text-primary);
+  --color-text-secondary: var(--app-text-secondary);
+  --color-text-muted: var(--app-text-muted);
+
+  --color-border-subtle: var(--app-border-subtle);
+  --color-border: var(--app-border-default);
+  --color-border-strong: var(--app-border-strong);
+
+  --color-brand: var(--app-brand-primary);
+  --color-brand-hover: var(--app-brand-hover);
+  --color-brand-light: var(--app-brand-light);
+
+  --color-score-card-bg: var(--app-score-card-bg);
+  --color-score-card-border: var(--app-score-card-border);
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--color-surface-base);
-  color: var(--color-text-primary);
+  background-color: var(--app-surface-base);
+  color: var(--app-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   min-height: 100vh;
 }
@@ -65,23 +98,33 @@ body {
   flex-direction: column;
 }
 
-/* Custom scrollbars with accessible contrast */
+/* Custom scrollbars in the artifact's own visual language */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-surface-panel);
+  background: var(--app-surface-panel);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-default);
+  background: var(--app-border-default);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-strong);
+  background: var(--app-border-strong);
+}
+
+/* Firefox: scrollbar-color / scrollbar-width are inherited and they override
+   the ::-webkit-* rules there, so declaring them on <html> styles every
+   scroller. Declared on the same element as the [data-theme] palette, so the
+   var() tokens re-resolve live on theme switch. No hover analogue exists in
+   Firefox (thumb stays at --app-border-default). */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border-default) var(--app-surface-panel);
 }
 
 /* High-contrast focus visible utility */
@@ -89,6 +132,6 @@ body {
   outline: none;
 }
 .focus-ring:focus-visible {
-  outline: 2px solid var(--color-brand-primary);
+  outline: 2px solid var(--app-brand-primary);
   outline-offset: 2px;
 }

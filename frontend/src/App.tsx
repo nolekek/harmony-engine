@@ -86,9 +86,13 @@ export function App() {
       initialHarmonizeRef.current = true;
       handleHarmonize();
     }
+    // Capture the ref value in the effect body (react-hooks/exhaustive-deps):
+    // handleHarmonize sets abortControllerRef.current synchronously before its
+    // first await, so this snapshot is the in-flight request to abort on cleanup.
+    const controller = abortControllerRef.current;
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (controller) {
+        controller.abort();
       }
     };
   }, [handleHarmonize, abortControllerRef]);
@@ -176,7 +180,6 @@ export function App() {
               <MelodyInput
                 melody={melody}
                 onChange={setMelody}
-                selectedKey={selectedKey}
                 onAutoDetectKey={handleAutoDetectKey}
                 timeSignature={timeSignature}
               />

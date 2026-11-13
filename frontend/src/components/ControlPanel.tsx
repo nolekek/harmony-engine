@@ -8,6 +8,8 @@ import {
   Clock,
   ArrowRight,
 } from "lucide-react";
+import { Button } from "./ui/Button";
+import { Select } from "./ui/Select";
 
 export interface CandidateSolution {
   id: string;
@@ -61,16 +63,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onSelectCandidate,
 }) => {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="bg-surface-card border border-border rounded-xl p-5 shadow-lg space-y-6">
+      <div className="flex items-center justify-between border-b border-border-subtle pb-3">
         <div className="flex items-center gap-2">
-          <Sliders className="w-5 h-5 text-indigo-400" />
-          <h2 className="text-sm font-semibold tracking-wider uppercase text-slate-200">
+          <Sliders className="w-5 h-5 text-brand" />
+          <h2 className="text-sm font-semibold tracking-wider uppercase text-text-secondary">
             Панель управления гармонизацией
           </h2>
         </div>
         {latencyMs !== null && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 text-xs font-mono">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-600/50 text-emerald-700 dark:text-emerald-400 text-xs font-mono">
             <Clock className="w-3.5 h-3.5" />
             <span>{latencyMs} мс</span>
           </div>
@@ -78,52 +80,47 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </div>
 
       {/* Row 1: Key selection + Auto detect */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-slate-300">
-          Тональность (24 тональности)
-        </label>
-        <div className="flex items-center gap-2">
-          <select
-            className="flex-1 bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            value={`${selectedKey.tonic}:${selectedKey.mode}`}
-            onChange={(e) => {
-              const [tonic, mode] = e.target.value.split(":");
-              onKeyChange({ tonic, mode });
-            }}
-          >
-            {keys.map((k) => (
-              <option key={`${k.tonic}:${k.mode}`} value={`${k.tonic}:${k.mode}`}>
-                {k.name ?? k.title} ({k.tonic} {k.mode === "Major" ? "мажор" : "гарм. минор"})
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={onAutoDetectKey}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition-colors"
-            title="Автоопределить тональность по первой/последней ноте сопрано"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Авто</span>
-          </button>
-        </div>
+      <div className="flex items-end gap-2">
+        <Select
+          label="Тональность (24 тональности)"
+          value={`${selectedKey.tonic}:${selectedKey.mode}`}
+          onChange={(e) => {
+            const [tonic, mode] = e.target.value.split(":");
+            onKeyChange({ tonic, mode });
+          }}
+        >
+          {keys.map((k) => (
+            <option key={`${k.tonic}:${k.mode}`} value={`${k.tonic}:${k.mode}`}>
+              {k.name ?? k.title} ({k.tonic} {k.mode === "Major" ? "мажор" : "гарм. минор"})
+            </option>
+          ))}
+        </Select>
+        <Button
+          variant="secondary"
+          size="md"
+          onClick={onAutoDetectKey}
+          className="shrink-0"
+          title="Автоопределить тональность по первой/последней ноте сопрано"
+          icon={<Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />}
+        >
+          Авто
+        </Button>
       </div>
 
       {/* Time Signature (Meter) Selector */}
       <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-slate-300">
-          Размер (Метр)
-        </label>
-        <div className="flex gap-2">
+        <span className="block text-xs font-medium text-text-secondary">Размер (Метр)</span>
+        <div className="flex gap-2" role="group" aria-label="Размер (метр)">
           {["4/4", "3/4", "2/4", "6/8", "3/8"].map((ts) => (
             <button
               key={ts}
               type="button"
               onClick={() => onTimeSignatureChange(ts)}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+              aria-pressed={timeSignature === ts}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer focus-ring ${
                 timeSignature === ts
-                  ? "bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-500/30"
-                  : "bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 text-slate-300"
+                  ? "bg-brand border-brand text-white shadow-sm shadow-brand/30"
+                  : "bg-surface-elevated/80 hover:bg-surface-elevated border-border text-text-secondary"
               }`}
             >
               {ts}
@@ -134,18 +131,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
       {/* Row 2: Strictness Toggles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-        <label className="flex items-start gap-3 p-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 rounded-lg cursor-pointer transition-colors">
+        <label className="flex items-start gap-3 p-3 bg-surface-elevated/50 hover:bg-surface-elevated border border-border rounded-lg cursor-pointer transition-colors">
           <input
             type="checkbox"
-            className="mt-1 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500"
+            className="mt-1 rounded accent-[var(--app-brand-primary)] focus-ring"
             checked={allowExtendedRanges}
             onChange={(e) => onToggleExtendedRanges(e.target.checked)}
           />
           <div>
-            <div className="text-xs font-semibold text-slate-200">
-              Расширенный диапазон
-            </div>
-            <div className="text-[11px] text-slate-400 leading-tight">
+            <div className="text-xs font-semibold text-text-primary">Расширенный диапазон</div>
+            <div className="text-[11px] text-text-muted leading-tight">
               {allowExtendedRanges
                 ? "Инструментальный диапазон (C2-C6)"
                 : "Строгий классический хор SATB"}
@@ -153,18 +148,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           </div>
         </label>
 
-        <label className="flex items-start gap-3 p-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 rounded-lg cursor-pointer transition-colors">
+        <label className="flex items-start gap-3 p-3 bg-surface-elevated/50 hover:bg-surface-elevated border border-border rounded-lg cursor-pointer transition-colors">
           <input
             type="checkbox"
-            className="mt-1 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500"
+            className="mt-1 rounded accent-[var(--app-brand-primary)] focus-ring"
             checked={allowSecondaryDominants}
             onChange={(e) => onToggleSecondaryDominants(e.target.checked)}
           />
           <div>
-            <div className="text-xs font-semibold text-slate-200">
-              Побочные доминанты
-            </div>
-            <div className="text-[11px] text-slate-400 leading-tight">
+            <div className="text-xs font-semibold text-text-primary">Побочные доминанты</div>
+            <div className="text-[11px] text-text-muted leading-tight">
               Разрешить альтерированные DD, D7/x
             </div>
           </div>
@@ -172,27 +165,26 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </div>
 
       {/* Harmonize Action Button */}
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        size="lg"
         onClick={onHarmonize}
         disabled={isHarmonizing || isMelodyEmpty}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium text-sm rounded-xl shadow-lg shadow-indigo-500/20 active:scale-[0.99] transition-all disabled:opacity-50 disabled:pointer-events-none"
+        className="w-full shadow-lg shadow-brand/20"
+        icon={<Wand2 className={`w-4 h-4 ${isHarmonizing ? "animate-spin" : ""}`} />}
       >
-        <Wand2 className={`w-4 h-4 ${isHarmonizing ? "animate-spin" : ""}`} />
-        <span>
-          {isHarmonizing ? "Математический синтез (Viterbi)..." : "Гармонизовать мелодию"}
-        </span>
-      </button>
+        {isHarmonizing ? "Математический синтез (Viterbi)..." : "Гармонизовать мелодию"}
+      </Button>
 
-      {/* Candidate Selector (Carousel / Cards) */}
+      {/* Candidate Selector (Top-3 pool) */}
       {candidates.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-slate-800">
+        <div className="space-y-2 pt-2 border-t border-border-subtle">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-              <Layers className="w-4 h-4 text-indigo-400" />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <Layers className="w-4 h-4 text-brand" />
               <span>Пул гармонических планов (Топ-{candidates.length})</span>
             </div>
-            <span className="text-[11px] text-slate-400">1 клик для переключения</span>
+            <span className="text-[11px] text-text-muted">1 клик для переключения</span>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5">
@@ -204,6 +196,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   role="button"
                   tabIndex={0}
                   aria-label={`Выбрать решение #${cand.rank}: ${cand.description}`}
+                  aria-pressed={isSelected}
                   onClick={() => onSelectCandidate(cand)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -211,32 +204,34 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       onSelectCandidate(cand);
                     }
                   }}
-                  className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
+                  className={`p-3 rounded-lg border text-left cursor-pointer transition-all focus-ring ${
                     isSelected
-                      ? "bg-indigo-950/40 border-indigo-500 ring-1 ring-indigo-500 shadow-md"
-                      : "bg-slate-800/60 border-slate-700/70 hover:bg-slate-800 hover:border-slate-600"
+                      ? "bg-brand-light border-brand ring-1 ring-brand shadow-md"
+                      : "bg-surface-elevated/60 border-border hover:bg-surface-elevated hover:border-border-strong"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-xs px-2 py-0.5 rounded font-bold ${
+                        className={`text-xs px-2 py-0.5 rounded font-bold border ${
                           cand.rank === 1
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                            : "bg-slate-700 text-slate-300"
+                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-600/40"
+                            : "bg-surface-elevated text-text-secondary border-border"
                         }`}
                       >
                         #{cand.rank} {cand.rank === 1 ? "Оптимум" : "Вариант"}
                       </span>
-                      <span className="text-xs font-medium text-slate-200">
+                      <span className="text-xs font-medium text-text-primary">
                         {cand.description}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
+                    <div className="flex items-center gap-1 text-[11px] font-mono text-text-muted">
                       <span>Штраф:</span>
                       <span
                         className={`font-semibold ${
-                          cand.cost === 0 ? "text-emerald-400" : "text-amber-400"
+                          cand.cost === 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-amber-600 dark:text-amber-400"
                         }`}
                       >
                         {Math.abs(cand.cost)}
@@ -245,21 +240,21 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   </div>
 
                   {/* Chord progression preview */}
-                  <div className="flex items-center gap-1.5 flex-wrap text-xs font-mono font-semibold text-indigo-300">
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs font-mono font-semibold text-brand">
                     {cand.chords.map((chord, idx) => (
                       <React.Fragment key={idx}>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700">
+                        <span className="px-1.5 py-0.5 rounded bg-surface-panel border border-border">
                           {chord}
                         </span>
                         {idx < cand.chords.length - 1 && (
-                          <ArrowRight className="w-3 h-3 text-slate-500" />
+                          <ArrowRight className="w-3 h-3 text-text-muted" />
                         )}
                       </React.Fragment>
                     ))}
                   </div>
 
                   {isSelected && (
-                    <div className="mt-2 flex items-center gap-1 text-[11px] text-indigo-400">
+                    <div className="mt-2 flex items-center gap-1 text-[11px] text-brand">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Активное решение в партитуре и плеере</span>
                     </div>

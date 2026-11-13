@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { recalculateDownbeats } from "../utils/durationUtils";
 import type { MelodyNote } from "../utils/durationUtils";
 import type { CandidateSolution } from "../components/ControlPanel";
 import type { TabScoreState } from "../types/harmony";
@@ -18,7 +19,13 @@ export function useHarmonizer(initialMelody: MelodyNote[]) {
     tonic: "C",
     mode: "Major",
   });
-  const [timeSignature, setTimeSignature] = useState<string>("4/4");
+  const [timeSignature, setTimeSignatureState] = useState<string>("4/4");
+  // Event-driven meter change: recalculate downbeats here (not in an effect),
+  // keeping the auto-strong-beats feature without setState-in-effect.
+  const setTimeSignature = useCallback((next: string) => {
+    setTimeSignatureState(next);
+    setMelody((prev) => (prev.length > 0 ? recalculateDownbeats(prev, next) : prev));
+  }, []);
   const [allowExtendedRanges, setAllowExtendedRanges] = useState<boolean>(false);
   const [allowSecondaryDominants, setAllowSecondaryDominants] = useState<boolean>(true);
 

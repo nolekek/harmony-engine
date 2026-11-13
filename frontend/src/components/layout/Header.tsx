@@ -1,10 +1,27 @@
 import { Music, Award, FileMusic, Sun, Moon } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
+import { Tabs } from "../ui/Tabs";
+import type { TabItem } from "../ui/Tabs";
 
 interface HeaderProps {
   activeTab: "harmonizer" | "grader";
   onTabChange: (tab: "harmonizer" | "grader") => void;
 }
+
+const TAB_ITEMS: TabItem[] = [
+  {
+    id: "harmonizer",
+    label: "Гармонизация",
+    icon: <Music className="w-3.5 h-3.5" />,
+  },
+  {
+    id: "grader",
+    label: "Инспектор",
+    icon: <Award className="w-3.5 h-3.5" />,
+    activeClass:
+      "bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-md shadow-amber-600/20",
+  },
+];
 
 export function Header({ activeTab, onTabChange }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
@@ -34,46 +51,12 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
 
         {/* Right Section: Mode Tabs + Theme Toggle */}
         <div className="flex items-center gap-3">
-          {/* Navigation Tabs */}
-          <nav
-            role="tablist"
-            aria-label="Режимы работы"
-            className="flex items-center gap-1 bg-surface-subtle border border-border p-1 rounded-xl"
-          >
-            <button
-              id="tab-harmonizer"
-              role="tab"
-              type="button"
-              aria-selected={activeTab === "harmonizer"}
-              aria-controls="panel-harmonizer"
-              onClick={() => onTabChange("harmonizer")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all focus-ring ${
-                activeTab === "harmonizer"
-                  ? "bg-brand text-white shadow-md shadow-brand/20"
-                  : "text-text-muted hover:text-text-primary"
-              }`}
-            >
-              <Music className="w-3.5 h-3.5" />
-              <span>Гармонизация</span>
-            </button>
-
-            <button
-              id="tab-grader"
-              role="tab"
-              type="button"
-              aria-selected={activeTab === "grader"}
-              aria-controls="panel-grader"
-              onClick={() => onTabChange("grader")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all focus-ring ${
-                activeTab === "grader"
-                  ? "bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-md shadow-amber-600/20"
-                  : "text-text-muted hover:text-text-primary"
-              }`}
-            >
-              <Award className="w-3.5 h-3.5" />
-              <span>Инспектор</span>
-            </button>
-          </nav>
+          <Tabs
+            items={TAB_ITEMS}
+            activeId={activeTab}
+            onChange={(id) => onTabChange(id as "harmonizer" | "grader")}
+            ariaLabel="Режимы работы"
+          />
 
           {/* Theme Toggle */}
           <button
@@ -81,7 +64,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "Переключить на светлую тему" : "Переключить на тёмную тему"}
             title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
-            className="p-2 rounded-xl border border-border bg-surface-subtle hover:bg-surface-elevated text-text-muted hover:text-text-primary transition-all focus-ring"
+            className="p-2 rounded-xl border border-border bg-surface-subtle hover:bg-surface-elevated text-text-muted hover:text-text-primary transition-all focus-ring cursor-pointer"
           >
             {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-brand" />}
           </button>
