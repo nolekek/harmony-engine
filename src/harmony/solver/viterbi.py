@@ -25,6 +25,11 @@ def clear_solver_cache() -> None:
     _STATIC_STEP0_CACHE.clear()
 
 
+def _sorted_rule_histogram(counts: dict[str, int]) -> dict[str, int]:
+    """Deterministic {rule_id: count} view: count descending, rule_id as tie-break."""
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
 @dataclass
 class SolverStepDiagnostic:
     step_index: int
@@ -157,11 +162,12 @@ class ViterbiSolver:
                     step_diagnostics=None,
                 )
 
-        # Configure rule engine extended ranges and unisons
+        # Configure rule engine extended ranges and unisons.
+        # Unisons are governed exclusively by the thread-local set_unisons_allowed
+        # protocol consumed by spacing.validate_spacing; RuleEngine has no
+        # allow_unisons attribute (former assignments were dead code, defect #6).
         orig_extended = getattr(self.rule_engine, "allow_extended_ranges", False)
-        orig_unisons = getattr(self.rule_engine, "allow_unisons", False)
         self.rule_engine.allow_extended_ranges = allow_extended_ranges
-        self.rule_engine.allow_unisons = allow_adjacent_unisons
         set_unisons_allowed(allow_adjacent_unisons)
 
         try:
@@ -292,6 +298,10 @@ class ViterbiSolver:
 
             # Steps 1 to N-1
             trans_violations: list[list[list[str]]] = [[]]
+            # Defect #8 (additive diagnostics): per-step histogram of hard rule ids
+            # that pruned transitions. prev_step_blocking holds the histogram of the
+            # previous step for the "all predecessors unreachable" failure branch.
+            prev_step_blocking: dict[str, int] = {}
 
             for t in range(1, n):
                 curr_candidates = lattice[t]
@@ -303,6 +313,7 @@ class ViterbiSolver:
                 step_delta: list[float] = [float("inf")] * len(curr_candidates)
                 step_psi: list[int] = [-1] * len(curr_candidates)
                 step_trans_violations: list[list[str]] = [[] for _ in range(len(curr_candidates))]
+                blocking_counter: dict[str, int] = {}
 
                 # Pre-filter reachable predecessors and sort by accumulated cost for branch pruning
                 reachable_prev = [
@@ -325,6 +336,7 @@ class ViterbiSolver:
                             "chord": curr_chord.function,
                             "blocked": len(curr_candidates),
                             "message": msg,
+                            "blocking_rules": _sorted_rule_histogram(prev_step_blocking),
                         }],
                         message=msg,
                         step_diagnostics=step_diag,
@@ -374,6 +386,10 @@ class ViterbiSolver:
 
                         if hard_violations:
                             if not relax_hard_gates:
+                                # Defect #8: aggregate blocking rule ids from the
+                                # already-computed validate() result (no re-validation).
+                                for hv in hard_violations:
+                                    blocking_counter[hv.rule_id] = blocking_counter.get(hv.rule_id, 0) + 1
                                 continue
                             n_hard = len(hard_violations)
                             base_cost = res.cost if res.cost < float("inf") else self.rule_engine.compute_soft_cost(prev_v, curr_v)
@@ -411,10 +427,13 @@ class ViterbiSolver:
                             "chord": curr_chord.function,
                             "blocked": len(curr_candidates),
                             "message": msg,
+                            "blocking_rules": _sorted_rule_histogram(blocking_counter),
                         }],
                         message=msg,
                         step_diagnostics=step_diag,
                     )
+
+                prev_step_blocking = blocking_counter
 
             # 3. Backtrack optimal trajectory
             last_step_costs = delta[n - 1]
@@ -475,5 +494,4 @@ class ViterbiSolver:
             )
         finally:
             self.rule_engine.allow_extended_ranges = orig_extended
-            self.rule_engine.allow_unisons = orig_unisons
             set_unisons_allowed(False)

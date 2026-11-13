@@ -5,6 +5,7 @@ Executes hard-gate rule checks and computes soft heuristic costs for dynamic pro
 
 from typing import Any, Mapping
 import json
+import logging
 from pathlib import Path
 
 from src.harmony.core.types import (
@@ -19,6 +20,8 @@ from src.harmony.rules.voice_leading import validate_voice_leading
 from src.harmony.rules.doubling import check_doubling, get_triad_tones
 from src.harmony.rules.resolutions import validate_resolutions
 from src.harmony.rules.chromatic import validate_chromatic_rules
+
+logger = logging.getLogger(__name__)
 
 DOMINANT_GROUP = {"D", "D7", "D6", "D65", "D43", "D2"}
 SUBDOMINANT_GROUP = {"S", "S6", "S64", "s", "s6", "s64", "II", "II6", "II65"}
@@ -137,7 +140,6 @@ class RuleEngine:
         self.rules_registry: dict[str, dict[str, Any]] = {}
         self.weights: dict[str, float] = {
             "shortest_path": 1.0,
-            "contrary_bass_bonus": 0.0,
             "direct_bass_penalty": 3.0,
             "bass_leap_penalty": 2.0,
         }
@@ -152,13 +154,6 @@ class RuleEngine:
         rule = self.rules_registry.get(rule_id)
         if rule and isinstance(rule, dict) and "description" in rule:
             return rule["description"]
-        return None
-
-    def get_rule_severity(self, rule_id: str) -> str | None:
-        """Returns the severity of a rule from the catalog if loaded."""
-        rule = self.rules_registry.get(rule_id)
-        if rule and isinstance(rule, dict) and "severity" in rule:
-            return rule["severity"]
         return None
 
     def _load_catalog(self, path: str | Path | None) -> None:
@@ -179,8 +174,8 @@ class RuleEngine:
                     rid = r.get("id")
                     if rid:
                         self.rules_registry[rid] = r
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("rule catalog load failed: %s", exc)
 
     def check_syntax(
         self,
@@ -295,14 +290,12 @@ class RuleEngine:
         cost += movement_cost
 
         # Bass vs Soprano relative motion: non-negative scheme
+        # (contrary motion ds*db < 0 simply earns no penalty — former no-op branch removed)
         ds = curr_satb[0] - prev_satb[0]
         db = curr_satb[3] - prev_satb[3]
         if ds != 0 and db != 0:
             if ds * db > 0:
                 cost += self.weights.get("direct_bass_penalty", 3.0)
-            elif ds * db < 0:
-                # Contrary motion is rewarded by applying 0 penalty
-                pass
 
         # Smooth bass line: penalty for leaps wider than a fifth (> 7 semitones)
         abs_db = abs(db)

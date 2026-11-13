@@ -48,6 +48,7 @@ def _format_rule_message(
     v_prev: Any | None,
     v_curr: Any,
     voices_tuple: tuple[int, ...] | None,
+    ru_description: str | None = None,
 ) -> tuple[str, list[str], list[str]]:
     """Generates precise Russian critique with exact note names and voice names."""
     curr_satb = to_satb(v_curr)
@@ -216,6 +217,12 @@ def _format_rule_message(
     if rule_id == "CADENCE_FINAL_VI_REQUIRES_DOMINANT":
         return (f"Такт {measure}: Прерванная каденция (VI) обязана следовать за доминантовой группой, а не за тоникой или субдоминантой", involved_voices, involved_notes)
 
+    # Defect #6: for rule ids without a dedicated Russian formatting branch,
+    # prefer the Russian catalog description (docs/brigade_rules.json) before
+    # falling back to the raw validator description / bare rule id.
+    if ru_description:
+        return (f"Такт {measure}: {ru_description}", involved_voices, involved_notes)
+
     # Fallback to description
     return (f"Такт {measure}: {desc or rule_id}", involved_voices, involved_notes)
 
@@ -280,6 +287,7 @@ def grade_satb_solution(
             v_prev=v_prev,
             v_curr=v_curr,
             voices_tuple=viol.voices,
+            ru_description=engine.get_rule_description(viol.rule_id),
         )
         dedup_key = (measure_num, chord_idx, viol.rule_id, tuple(voices))
         if dedup_key in seen_violations:

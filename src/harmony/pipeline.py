@@ -71,6 +71,8 @@ class HarmonizationResult:
     had_relaxed_violations: bool = False
     relaxed_rule_ids: list[str] = field(default_factory=list)
     auto_extended_ranges: bool = False
+    # Defect #8 (additive): solver diagnostics of failed plans on failure; empty on success.
+    diagnostics: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Harmonizer:
@@ -229,12 +231,20 @@ class Harmonizer:
                 return replan_res
 
         if not solutions:
+            # Defect #8: surface WHY plans failed — pass through the blocking-rule
+            # diagnostics of the first few rejected plans (additive, failure-only).
+            failure_diagnostics: list[dict[str, Any]] = []
+            for _failed_plan, failed_res in failed_plans[:5]:
+                for diag in failed_res.diagnostics or []:
+                    if isinstance(diag, dict):
+                        failure_diagnostics.append(diag)
             return HarmonizationResult(
                 is_success=False,
                 solutions=[],
                 best_solution=None,
                 message="All candidate plans were rejected by hard voice-leading constraints.",
                 auto_extended_ranges=auto_extended,
+                diagnostics=failure_diagnostics[:5],
             )
 
         # Sort solutions by ascending cost and take top-3

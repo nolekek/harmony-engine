@@ -247,6 +247,244 @@
       "severity": "soft_penalty",
       "penalty": 2.0,
       "description": "Штраф за избыточные скачки баса шире кварты/квинты без необходимости."
+    },
+    {
+      "id": "FALSE_RELATION_PERECHENIE",
+      "category": "chromatic",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Переченье (ложное хроматическое соотношение): хроматическая альтерация ступени появляется в другом голосе, а не в том, где прозвучал диатонический звук предыдущего аккорда; хроматический полутон между разными голосами на соседних аккордах строго запрещён. Whitelist: диатонические секунды в контексте неаполитанского аккорда N (I ↔ bII) и пониженной VI ступени bVI/VII7 (V ↔ bVI) переченьем не считаются; диатонические малые секунды (E–F, B–C) не являются переченьем."
+    },
+    {
+      "id": "CADENCE_K64_INITIAL",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "K64 запрещён в качестве начального аккорда произведения; кадансовый квартсекстаккорд появляется только внутри каденционного оборота перед D/D7."
+    },
+    {
+      "id": "SYNTAX_NO_D_TO_K64",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Запрещённый функциональный откат из доминантовой группы (D, D7, D6, D65, D43, D2) в кадансовый квартсекстаккорд K64."
+    },
+    {
+      "id": "SYNTAX_K64_MUST_RESOLVE_TO_D",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "K64 обязан разрешаться в доминанту D или D7; любое другое продолжение запрещено."
+    },
+    {
+      "id": "SYNTAX_NO_CONSECUTIVE_III6",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Подряд идущие медиантовые трезвучия (III → III, III6 → III6 и т.п.) строго запрещены."
+    },
+    {
+      "id": "CADENCE_K64_FINAL",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "K64 не может быть финальным аккордом: он обязан разрешаться в D/D7."
+    },
+    {
+      "id": "CADENCE_FINAL_SEVENTH_FORBIDDEN",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Финальный аккорд не может быть септаккордом (D7, II65, D43 и т.п.): каденция закрывается трезвучием T, D или VI."
+    },
+    {
+      "id": "CADENCE_FINAL_INVERSION_FORBIDDEN",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Финальный аккорд не может быть обращением или некаденсовым аккордом (T6, D6, D65, D43, D2, VII6, VII, S6, II6, III6): допустимы только основные виды T, D или VI."
+    },
+    {
+      "id": "CADENCE_FINAL_VI_REQUIRES_DOMINANT",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Финальный VI (прерванная каденция) обязан следовать за доминантовой группой (D, D7, VII7, III); после тоники или субдоминанты (включая bVI) запрещён."
+    },
+    {
+      "id": "CADENCE_FINAL_T6_FORBIDDEN",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "T6 не может предшествовать финальной основной тонике T: требуется доминантовый или плаговый субдоминантовый подход."
+    },
+    {
+      "id": "CADENCE_FINAL_NON_CADENTIAL_FORBIDDEN",
+      "category": "syntax",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Финальный аккорд не может быть основной субдоминантой (S/II), если высота сопрано принадлежит T, D или VI: требуется автентическая или половинная каденция."
+    },
+    {
+      "id": "MELODIC_TWO_LEAPS_SAME_DIRECTION",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Два подряд идущих скачка в одном направлении в одном голосе (каждый шире большой терции, > 4 полутонов) запрещены."
+    },
+    {
+      "id": "MELODIC_DIMINISHED_SEVENTH",
+      "category": "voice_leading",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Мелодический скачок на уменьшенную септиму (9 полутонов, между VI и VII# ступенями гармонического минора/мажора) запрещён."
+    },
+    {
+      "id": "MELODIC_DIMINISHED_FOURTH_SOFT",
+      "category": "voice_leading",
+      "severity": "soft",
+      "penalty": 5.0,
+      "description": "Скачок на уменьшённую кварту (4 полутона, между VII# и III ступенями): мягкий штраф; допускается при разрешении внутрь."
+    },
+    {
+      "id": "NCT_SUSPENSION_UNRESOLVED",
+      "category": "non_chord_tones",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Задержание на сильной доле обязано разрешаться поступенно; скачок вместо поступенного разрешения запрещён."
+    },
+    {
+      "id": "NCT_PASSING_ON_DOWNBEAT",
+      "category": "non_chord_tones",
+      "severity": "soft_penalty",
+      "penalty": 3.0,
+      "description": "Акцентированный (на сильной доле) проходящий звук: допускается, но штрафуется в строгом классическом вокальном стиле."
+    },
+    {
+      "id": "NCT_ILLEGAL_LEAP_NON_CHORD_TONE",
+      "category": "non_chord_tones",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Незаконный неаккордовый тон: нота не подходит ни под один классический паттерн проходящего, вспомогательного, предъёма или задержания (скачок к неаккордовому звуку и/или скачок с него)."
+    },
+    {
+      "id": "RESOLUTION_DD2_TO_D6",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "DD2 (секундаккорд двойной доминанты) обязан разрешаться в доминантовую группу (D6, D, D7, D65) или K64, а не в тонику; бас идёт на секунду вниз."
+    },
+    {
+      "id": "RESOLUTION_VII7_SEVENTH_DOWN",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Септима вводного септаккорда VII7 (VI ступень) обязана разрешаться на ступень вниз."
+    },
+    {
+      "id": "RESOLUTION_VII7_FIFTH_DOWN",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Квинта вводного септаккорда VII7 (IV ступень) обязана разрешаться вниз в терцию тоники."
+    },
+    {
+      "id": "RESOLUTION_VII7_DOUBLED_THIRD",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "При разрешении VII7 в тонику терция тонического трезвучия обязана удваиваться во избежание параллельных квинт."
+    },
+    {
+      "id": "RESOLUTION_SECONDARY_DOMINANT",
+      "category": "resolution",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Голосоведение побочной доминанты: альтерированный вводный тон разрешается на полутон вверх (или хроматически на полутон вниз), септима — на ступень вниз (или удерживается в K64)."
+    },
+    {
+      "id": "DOUBLING_SECONDARY_DOMINANT",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В трезвучии побочной доминанты (DD) удваивается прима; удвоение терции (альтерированного вводного тона) строго запрещено."
+    },
+    {
+      "id": "DOUBLING_VII6_LEADING_TONE",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В вводном секстаккорде VII6 удвоение примы (вводного тона) строго запрещено; удваивается терция (бас) или квинта."
+    },
+    {
+      "id": "SEVENTH_CHORD_INVERSION_INCOMPLETE",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Обращения септаккордов (65, 43, 2) применяются только в полном виде: прима, терция, квинта и септима присутствуют по одному разу."
+    },
+    {
+      "id": "SEVENTH_CHORD_DISTRIBUTION",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "Септаккорд основного вида должен быть полным (все четыре тона по разу) или неполным (удвоенная прима, терция, септима, пропущенная квинта); для VII7 неполный вид строго запрещён."
+    },
+    {
+      "id": "CHORD_ROOT_MISSING",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В аккорде отсутствует прима (обязательна в септаккордах, неаполитанском аккорде N и хроматической субмедианте bVI)."
+    },
+    {
+      "id": "CHORD_THIRD_MISSING",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В аккорде отсутствует терция: терцовый тон обязателен в каждом аккорде и каждом обращении, включая финальный."
+    },
+    {
+      "id": "CHORD_FIFTH_MISSING",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В аккорде отсутствует квинта. Пропуск допустим только в неуменьшённом секстаккорде без удвоенного баса, в неполной финальной тонике с утроенной примой и в VI при прерванном обороте."
+    },
+    {
+      "id": "CHORD_SEVENTH_MISSING",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В септаккорде отсутствует септима."
+    },
+    {
+      "id": "DOUBLING_NEAPOLITAN_THIRD",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В неаполитанском секстаккорде N6 терция (бас, тоническая ступень) обязана удваиваться."
+    },
+    {
+      "id": "DOUBLING_NEAPOLITAN_ROOT_FORBIDDEN",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В неаполитанском секстаккорде N6 удвоение примы (ступени bII) строго запрещено."
+    },
+    {
+      "id": "DOUBLING_NEAPOLITAN_ROOT",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В неаполитанском аккорде N основного вида прима обязана удваиваться."
+    },
+    {
+      "id": "DOUBLING_BVI",
+      "category": "doubling",
+      "severity": "hard_gate",
+      "penalty": 100000.0,
+      "description": "В хроматической субмедианте bVI обязана удваиваться прима или терция; неполное трезвучие bVI запрещено."
     }
   ]
 }
