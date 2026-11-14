@@ -143,6 +143,12 @@ def _format_rule_message(
     if rule_id == "CHORD_FIFTH_MISSING":
         return (f"Такт {measure}: В аккорде отсутствует обязательный квинтовый тон", involved_voices, involved_notes)
 
+    if rule_id == "BASS_INVERSION_MISMATCH":
+        return (f"Такт {measure}: Бас противоречит цифровке: объявленная функция и обращение требуют иного басового звука", involved_voices, involved_notes)
+
+    if rule_id == "FOREIGN_TONE":
+        return (f"Такт {measure}: Посторонний тон: звук голоса не входит в состав объявленного аккорда и не является легальным неаккордовым звуком (проходящим, вспомогательным или задержанием)", involved_voices, involved_notes)
+
     if rule_id == "CADENCE_K64_INITIAL":
         return (f"Такт {measure}: Кадансовый квартсекстаккорд K64 запрещен в качестве начального аккорда", involved_voices, involved_notes)
 
@@ -329,6 +335,7 @@ def grade_satb_solution(
         is_downbeat = metric_info[i]["is_downbeat"]
         prev_v = voicings[i - 1]
         curr_v = voicings[i]
+        next_v = voicings[i + 1] if (i + 1) < len(voicings) else None
         prev_chord = chord_list[i - 1] if (i - 1) < len(chord_list) else None
         curr_chord = chord_list[i] if i < len(chord_list) else None
         is_final = (i == len(voicings) - 1)
@@ -341,6 +348,7 @@ def grade_satb_solution(
             key=parsed_key,
             is_downbeat=is_downbeat,
             is_final_chord=is_final,
+            next_voicing=next_v,
         )
 
         for viol in res_trans.violations:

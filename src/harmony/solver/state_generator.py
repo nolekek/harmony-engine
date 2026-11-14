@@ -7,7 +7,7 @@ pruning forbidden doublings and textural gaps before passing states to the DP gr
 from typing import Any
 from src.harmony.core.types import Voicing, parse_key
 from src.harmony.rules.spacing import STANDARD_VOICE_RANGES, EXTENDED_VOICE_RANGES
-from src.harmony.rules.doubling import get_triad_tones, check_doubling
+from src.harmony.rules.doubling import get_triad_tones, check_doubling, required_bass_pc_for
 from src.harmony.rules.non_chord_tones import classify_nct
 
 # Thread-safe global memoization caches for candidate voicings and static doubling checks
@@ -55,7 +55,7 @@ def generate_candidate_voicings(
        - K64: bass (fifth of chord) strictly doubled.
        - VI (in deceptive cadence): third strictly doubled.
        - Seventh chords: complete (1-3-5-7) or incomplete (doubled root, 3, 7).
-       - Inversions: bass note strictly matches required factor (5/3: root; 6: 3rd; 6/4: 5th; 6/5: 3rd; 4/3 & 2: 7th).
+       - Inversions: bass note strictly matches required factor (5/3: root; 6: 3rd; 6/4: 5th; 6/5: 3rd; 4/3: 5th; 2: 7th).
     """
     chord_sym = chord.function if hasattr(chord, "function") else str(chord)
     chord_bpc = getattr(chord, "bass_pitch_class", None)
@@ -143,25 +143,11 @@ def generate_candidate_voicings(
         else:
             return []
 
-    # Inversion bass pitch class requirement
-    # 5/3: root; 6: third; 6/4: fifth; 7: root; 6/5: third; 4/3: fifth/seventh; 2: seventh
-    required_bass_pc = None
-    if hasattr(chord, "bass_pitch_class") and chord.bass_pitch_class is not None:
-        b_val = chord.bass_pitch_class
-        required_bass_pc = int(b_val.value if hasattr(b_val, "value") else b_val) % 12
-    elif "64" in sym_clean or sym_clean.startswith("K"):
-        required_bass_pc = fifth_pc
-    elif "65" in sym_clean:
-        required_bass_pc = third_pc
-    elif "43" in sym_clean:
-        required_bass_pc = fifth_pc
-    elif sym_clean.endswith("2") or sym_clean in ("D2", "DD2", "II2", "VII2"):
-        required_bass_pc = seventh_pc
-    elif "6" in sym_clean:
-        required_bass_pc = third_pc
-    else:
-        # Root position (5/3, 7): bass MUST be the root of the chord
-        required_bass_pc = root_pc
+    # Inversion bass pitch class requirement — shared single source of truth
+    # (rules/doubling.py:required_bass_pc_for) with the RuleEngine hard gate
+    # BASS_INVERSION_MISMATCH.
+    # 5/3: root; 6: third; 6/4: fifth; 7: root; 6/5: third; 4/3: fifth; 2: seventh
+    required_bass_pc = required_bass_pc_for(chord, tonic_pc, mode)
 
     candidates: list[Voicing] = []
 

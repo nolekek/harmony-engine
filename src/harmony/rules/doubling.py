@@ -153,6 +153,79 @@ def get_triad_tones(symbol: str, tonic_pc: int, mode: str) -> tuple[int, int, in
     return tonic_pc, (tonic_pc + 3 if is_minor else tonic_pc + 4) % 12, (tonic_pc + 7) % 12
 
 
+def _seventh_pc_for(sym_clean: str, tonic_pc: int, mode: str) -> int:
+    """
+    Single pitch class of the chord seventh for an UPPER-case cleaned symbol.
+    Exact semantics of the solver state generator: DD/DV -> tonic; II -> tonic;
+    VII -> tonic+8 (minor) / tonic+9 (major); VI -> tonic+7; S/IV -> tonic+3|4;
+    dominant family -> tonic+5.
+    """
+    if sym_clean.startswith("DD") or sym_clean.startswith("DV"):
+        return tonic_pc % 12
+    if sym_clean.startswith("VII"):
+        return (tonic_pc + 8 if ("MINOR" in mode or sym_clean.islower()) else tonic_pc + 9) % 12
+    if sym_clean.startswith("II"):
+        return tonic_pc % 12
+    if sym_clean.startswith("VI"):
+        return (tonic_pc + 7) % 12
+    if sym_clean.startswith("IV") or sym_clean.startswith("S"):
+        return (tonic_pc + 3 if ("MINOR" in mode or sym_clean.islower()) else tonic_pc + 4) % 12
+    return (tonic_pc + 5) % 12
+
+
+def required_bass_pc_for(chord: Any, tonic_pc: int = 0, mode: str = "MAJOR") -> int | None:
+    """
+    Pitch class that MUST sound in the bass for the declared function + inversion.
+
+    Single source of truth shared by the solver state generator (candidate
+    pruning) and the RuleEngine (BASS_INVERSION_MISMATCH hard gate):
+    an explicit chord.bass_pitch_class wins; otherwise figured-bass semantics
+    64/K64 -> fifth, 65 -> third, 43 -> fifth, 2 -> seventh, 6 -> third,
+    root position (53, 7) -> root.
+    """
+    if chord is None:
+        return None
+    bpc = getattr(chord, "bass_pitch_class", None)
+    if bpc is not None:
+        return int(bpc.value if hasattr(bpc, "value") else bpc) % 12
+    chord_sym = chord.function if hasattr(chord, "function") else str(chord)
+    sym_clean = chord_sym.strip().upper().replace("/", "")
+    root_pc, third_pc, fifth_pc = get_triad_tones(chord_sym, tonic_pc, mode)
+    if "64" in sym_clean or sym_clean.startswith("K"):
+        return fifth_pc
+    if "65" in sym_clean:
+        return third_pc
+    if "43" in sym_clean:
+        return fifth_pc
+    if sym_clean.endswith("2") or sym_clean in ("D2", "DD2", "II2", "VII2"):
+        return _seventh_pc_for(sym_clean, tonic_pc, mode)
+    if "6" in sym_clean:
+        return third_pc
+    # Root position (5/3, 7): bass MUST be the root of the chord
+    return root_pc
+
+
+def chord_tone_pcs(chord: Any, tonic_pc: int, mode: str) -> set[int] | None:
+    """
+    Full pitch-class set of the declared chord (triad tones plus seventh-chord
+    tones when applicable), or None when the symbol is not a recognized
+    triad/seventh-chord symbol — callers must then skip membership checks
+    instead of guessing chord tones.
+    """
+    if chord is None:
+        return None
+    sym = parse_chord_symbol(chord).strip().replace("/", "")
+    triad_match = _TRIAD_RE.match(sym)
+    seventh_match = _SEVENTH_RE.match(sym)
+    if not (triad_match or seventh_match):
+        return None
+    root, third, fifth = get_triad_tones(sym, tonic_pc, mode)
+    pcs = {root % 12, third % 12, fifth % 12}
+    if seventh_match:
+        pcs |= {pc % 12 for pc in _seventh_pcs(sym, tonic_pc, mode)}
+    return pcs
+
+
 TRIAD_SYMBOLS = {
     "T", "S", "D", "VI", "II", "III",
     "t", "s", "d", "vi", "ii", "iii",

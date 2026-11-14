@@ -80,6 +80,22 @@ def test_catalog_contains_wave4_rule_ids():
         assert isinstance(desc, str) and len(desc) > 0
 
 
+def test_catalog_contains_bass_inversion_and_foreign_tone_rules():
+    """G1/G2: new hard gates are catalogued with validator severity/penalty."""
+    engine = RuleEngine()
+    expected = {
+        "BASS_INVERSION_MISMATCH": ("hard_gate", 100000.0),
+        "FOREIGN_TONE": ("hard_gate", 100000.0),
+    }
+    for rule_id, (severity, penalty) in expected.items():
+        entry = engine.rules_registry.get(rule_id)
+        assert entry is not None, f"{rule_id} missing from docs/brigade_rules.json"
+        assert entry["severity"] == severity, f"{rule_id} severity mismatch"
+        assert float(entry["penalty"]) == penalty, f"{rule_id} penalty mismatch"
+        desc = engine.get_rule_description(rule_id)
+        assert isinstance(desc, str) and len(desc) > 0
+
+
 def test_catalog_covers_all_emitted_rule_ids():
     """Every statically emitted rule id in src/harmony must exist in the catalog."""
     src_root = Path(__file__).resolve().parents[1] / "src" / "harmony"

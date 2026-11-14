@@ -17,9 +17,15 @@ from src.harmony.core.types import (
 )
 from src.harmony.rules.spacing import validate_spacing
 from src.harmony.rules.voice_leading import validate_voice_leading
-from src.harmony.rules.doubling import check_doubling, get_triad_tones
+from src.harmony.rules.doubling import (
+    check_doubling,
+    get_triad_tones,
+    required_bass_pc_for,
+    chord_tone_pcs,
+)
 from src.harmony.rules.resolutions import validate_resolutions
 from src.harmony.rules.chromatic import validate_chromatic_rules
+from src.harmony.rules.non_chord_tones import classify_nct
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +127,98 @@ def check_syntax_rules(
             )
         )
 
+    return violations
+
+
+def check_bass_inversion(
+    curr_voicing: Any,
+    curr_chord: Any | None,
+    key: Any = None,
+) -> list[RuleViolation]:
+    """
+    Hard gate: the bass must sound the pitch class required by the declared
+    function + figured-bass inversion (5/3, 7: root; 6, 6/5: third; 6/4, 4/3:
+    fifth; 2: seventh; K64: fifth). Uses required_bass_pc_for — the same single
+    source of truth the solver state generator prunes candidates with.
+    """
+    if curr_chord is None:
+        return []
+    sym = parse_chord_symbol(curr_chord)
+    if not sym:
+        return []
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    required = required_bass_pc_for(curr_chord, tonic_pc, mode)
+    if required is None:
+        return []
+    bass_pc = to_satb(curr_voicing)[3] % 12
+    if bass_pc == required % 12:
+        return []
+    return [
+        RuleViolation(
+            rule_id="BASS_INVERSION_MISMATCH",
+            severity="hard_gate",
+            penalty=100000.0,
+            description=(
+                f"Bass pitch class {bass_pc} contradicts the figured bass of '{sym}': "
+                f"the declared function and inversion require bass pitch class {required % 12}"
+            ),
+            voices=(3,),
+        )
+    ]
+
+
+def check_foreign_tones(
+    curr_voicing: Any,
+    curr_chord: Any | None,
+    key: Any = None,
+    prev_voicing: Any | None = None,
+    next_voicing: Any | None = None,
+    is_downbeat: bool = False,
+) -> list[RuleViolation]:
+    """
+    Hard gate: every sounding pitch must belong to the declared chord unless the
+    existing NCT classifier (classify_nct) recognizes it as a legal melodic
+    embellishment (passing / neighbor / suspension) in the melodic context of
+    its own voice. Voice-agnostic: applies to all four voices. classify_nct
+    requires both the previous and the next pitch of the voice; without full
+    context the tone cannot be classified and is therefore not flagged.
+    """
+    if curr_chord is None or prev_voicing is None or next_voicing is None:
+        return []
+    tonic_pc, mode = parse_key(key) if key is not None else (0, "MAJOR")
+    allowed = chord_tone_pcs(curr_chord, tonic_pc, mode)
+    if not allowed:
+        return []
+    curr_satb = to_satb(curr_voicing)
+    prev_satb = to_satb(prev_voicing)
+    next_satb = to_satb(next_voicing)
+    sym = parse_chord_symbol(curr_chord)
+    violations: list[RuleViolation] = []
+    for idx in range(4):
+        pitch = curr_satb[idx]
+        if pitch % 12 in allowed:
+            continue
+        nct = classify_nct(
+            prev_pitch=prev_satb[idx],
+            curr_pitch=pitch,
+            next_pitch=next_satb[idx],
+            chord_pcs=allowed,
+            is_downbeat=is_downbeat,
+        )
+        if nct in ("passing", "neighbor", "suspension"):
+            continue
+        violations.append(
+            RuleViolation(
+                rule_id="FOREIGN_TONE",
+                severity="hard_gate",
+                penalty=100000.0,
+                description=(
+                    f"Voice {idx} sounds pitch {pitch} (PC {pitch % 12}) foreign to chord "
+                    f"'{sym}' and it is not a legal non-chord tone in its melodic context"
+                ),
+                voices=(idx,),
+            )
+        )
     return violations
 
 
@@ -392,10 +490,13 @@ class RuleEngine:
         is_final_chord: bool = False,
         phrase_boundary: bool = False,
         prev2_voicing: Any | None = None,
+        next_voicing: Any | None = None,
     ) -> ValidationResult:
         """
         Validates transition from prev_voicing to curr_voicing or evaluates
         a single starting vertical slice if prev_voicing is None.
+        next_voicing (optional) supplies the forward melodic context required
+        by the FOREIGN_TONE gate to classify non-chord tones per voice.
         """
         violations: list[RuleViolation] = []
 
@@ -410,6 +511,19 @@ class RuleEngine:
                 key=key,
                 prev_chord=prev_chord,
                 is_final_chord=is_final_chord,
+            )
+        )
+        violations.extend(
+            check_bass_inversion(curr_voicing, curr_chord, key=key)
+        )
+        violations.extend(
+            check_foreign_tones(
+                curr_voicing,
+                curr_chord,
+                key=key,
+                prev_voicing=prev_voicing,
+                next_voicing=next_voicing,
+                is_downbeat=is_downbeat,
             )
         )
 
