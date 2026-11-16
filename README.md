@@ -1,6 +1,6 @@
 # 🎼 Brigade Classical 4-Part Harmony Engine (Бригадный учебник)
 
-[![Tests](https://img.shields.io/badge/pytest-848%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/pytest-901%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.10%2B%20%7C%203.14%2B-blue.svg)](pyproject.toml)
 [![Architecture](https://img.shields.io/badge/architecture-Viterbi%20DP%20%2B%20CFG-orange.svg)](docs/MATH_MODEL.md)
 [![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688.svg)](backend/)
@@ -14,6 +14,19 @@
 - **REST API микросервер** на базе FastAPI / Uvicorn с полной поддержкой импорта/экспорта MusicXML/MIDI.
 - **Интерактивный Web GUI** на React 19 + TypeScript + OpenSheetMusicDisplay (OSMD) для мгновенной визуализации партитур.
 - **One-click запуск**: скрипт [`run_app.py`](run_app.py) поднимает бэкенд и сразу открывает браузер.
+
+---
+
+## 📚 Канонические документы проекта
+
+| Документ | Назначение |
+|---|---|
+| [PROJECT_MAP.md](PROJECT_MAP.md) | карта репозитория, модули и точки входа |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | архитектурные границы и ключевые инварианты |
+| [SPECIFICATION.md](SPECIFICATION.md) | функциональные, доменные и REST-контракты |
+| [DECISIONS.md](DECISIONS.md) | зафиксированные технические решения |
+| [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | подтверждённые дефекты, ограничения и долг |
+| [TASK_LOG.md](TASK_LOG.md) | хроника существенных работ и верификаций |
 
 ---
 
@@ -84,7 +97,8 @@ source .venv/bin/activate
 
 ### 2. Установка зависимостей проекта и dev-инструментов:
 
-Проект ведётся на [uv](https://docs.astral.sh/uv/) (`uv.lock` лежит в репозитории) — это рекомендуемый путь:
+Рекомендуемый путь — [uv](https://docs.astral.sh/uv/). `uv.lock` не закоммичен и добавляется в `.gitignore`,
+поэтому он генерируется локально при `uv sync`:
 ```bash
 uv sync --extra dev --extra desktop
 ```
@@ -299,7 +313,7 @@ aitraining/
 │   ├── syntax/                # CFG гармоническая грамматика Способина
 │   ├── cli.py                 # Консольный интерфейс CLI
 │   └── pipeline.py            # Высокоуровневый оркестратор Harmonizer
-├── tests/                     # Сьют автоматических тестов (848 тестов)
+├── tests/                     # Сьют автоматических тестов (901 тест)
 ├── pyproject.toml             # Конфигурация сборки, ruff и pytest
 └── run_app.py                 # One-click скрипт запуска Web-приложения
 ```
@@ -319,9 +333,9 @@ pytest -q
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Фактический статус на ветке `master` (ветка `redteam-p2` влита fast-forward и удалена):
+Фактический статус на ветке `master` по живому прогону 2026-11-16:
 ```
-848 passed, 0 failed, 0 skipped
+901 passed, 0 failed, 0 skipped, 0 errors
 ```
 
 ### Реальная производительность
