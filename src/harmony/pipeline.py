@@ -148,11 +148,18 @@ class Harmonizer:
                 # start (offset 0.0) defines the primary downbeat; secondary
                 # accents (offset > 0.0) are unaccented for NCT classification.
                 db = (info["offset_in_measure"] == 0.0)
-            processed_melody.append({
+            processed_note = {
                 "pitch": info["pitch"],
                 "duration": info["duration"],
                 "is_downbeat": db,
-            })
+            }
+            if isinstance(raw_item, dict):
+                explicit_phrase_boundary = raw_item.get("phrase_boundary")
+                if explicit_phrase_boundary is None:
+                    explicit_phrase_boundary = raw_item.get("is_phrase_boundary")
+                if explicit_phrase_boundary is not None:
+                    processed_note["phrase_boundary"] = explicit_phrase_boundary
+            processed_melody.append(processed_note)
         durations_list = [info["duration"] for info in metric_info]
         melody_pitches = [m["pitch"] for m in processed_melody]
         auto_extended = (not allow_extended_ranges) and any(p < 60 or p > 81 for p in melody_pitches)
@@ -351,7 +358,12 @@ class Harmonizer:
                 if target_step > 0:
                     cand_alts = [
                         fn for fn in cand_alts
-                        if grammar.is_valid_syntax_transition(prev_fn, fn, is_downbeat=is_db)
+                        if grammar.is_valid_syntax_transition(
+                            prev_fn,
+                            fn,
+                            is_downbeat=is_db,
+                            phrase_boundary=bool(melody[target_step].get("phrase_boundary", False)),
+                        )
                     ]
                 else:
                     tonic_pc_0, mode_0 = parse_key(key)
@@ -485,7 +497,12 @@ class Harmonizer:
                             for score, path in beams:
                                 last_c = path[-1]
                                 for cand_c in k_cands:
-                                    if not grammar.is_valid_syntax_transition(last_c, cand_c, is_downbeat=k_db):
+                                    if not grammar.is_valid_syntax_transition(
+                                        last_c,
+                                        cand_c,
+                                        is_downbeat=k_db,
+                                        phrase_boundary=bool(melody[k].get("phrase_boundary", False)),
+                                    ):
                                         continue
                                     if k_final and cand_c in ("VI", "vi") and last_c not in allowed_deceptive_preds:
                                         continue
