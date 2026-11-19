@@ -6,6 +6,7 @@ Addresses REPORT §4.2, §4.7; DEF-01: macro-grammar + micro-infeasibility recov
 import pytest
 from src.harmony.pipeline import Harmonizer
 from src.harmony.core.types import Key
+from src.harmony.solver.viterbi import SolverResult
 
 
 @pytest.fixture
@@ -97,3 +98,31 @@ class TestReplanning:
         b = harmonizer.harmonize(explicit_none, key="C Major")
         assert a.is_success == b.is_success
         assert [c.function for c in a.best_solution.chords] == [c.function for c in b.best_solution.chords]
+
+    @pytest.mark.parametrize("boundary_field", ["phrase_boundary", "is_phrase_boundary"])
+    @pytest.mark.parametrize("phrase_boundary", [True, False])
+    def test_explicit_phrase_boundary_reaches_solver_and_replanning(self, boundary_field, phrase_boundary):
+        class RecordingSolver:
+            received_melodies = []
+
+            def solve(self, *, melody, **_kwargs):
+                self.received_melodies.append([dict(note) for note in melody])
+                return SolverResult(False, None, float("inf"), [{"step": 1}])
+
+        solver = RecordingSolver()
+        harmonizer = Harmonizer(solver=solver)
+        replanned_melody = []
+
+        def capture_replanning(**kwargs):
+            replanned_melody.extend(dict(note) for note in kwargs["melody"])
+            return None
+
+        harmonizer._replan = capture_replanning
+        harmonizer.harmonize(
+            [{"pitch": 60, boundary_field: phrase_boundary}, 62, 64],
+            key="C Major",
+        )
+
+        assert solver.received_melodies
+        assert all(melody[0]["phrase_boundary"] is phrase_boundary for melody in solver.received_melodies)
+        assert replanned_melody[0]["phrase_boundary"] is phrase_boundary
